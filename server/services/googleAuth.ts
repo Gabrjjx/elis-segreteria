@@ -8,8 +8,8 @@ const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets', // Accesso completo a tutti i fogli
 ];
 
-// Token cache file
-const TOKEN_PATH = '.google-token.json';
+// Token cache file - usiamo un percorso con permessi di scrittura
+const TOKEN_PATH = './google-token.json';
 
 // Stato globale del token
 let oAuth2Client: OAuth2Client | null = null;
