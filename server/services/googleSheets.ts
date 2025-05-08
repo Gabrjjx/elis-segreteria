@@ -105,10 +105,51 @@ export function convertToCSV(data: string[][]): string {
 }
 
 /**
- * Legge i dati delle richieste di manutenzione dal foglio Google 
+ * Legge i dati delle richieste di manutenzione dal foglio Google
  * e li restituisce in formato CSV
  */
 export async function getMaintenanceRequestsCSV(): Promise<string> {
-  const data = await readGoogleSheet();
-  return convertToCSV(data);
+  try {
+    const data = await readGoogleSheet();
+    
+    // Verifica se il foglio è nel formato ELIS (controlla le intestazioni)
+    const isElisFormat = data.length > 0 && 
+      (data[0][0]?.toLowerCase()?.includes('segnalato') || 
+       data[0][0]?.toLowerCase()?.includes('risolto'));
+    
+    if (isElisFormat) {
+      console.log('Rilevato formato ELIS');
+      
+      // Per il formato ELIS, adatta le colonne al formato che ci aspettiamo
+      // Il formato ELIS è:
+      // A: Stato, B: Data, C: Stanza, D: Luogo, E: Descrizione, F: Dettagli
+      
+      let formattedData = [
+        ['Stato', 'Data', 'Stanza', 'Luogo', 'Descrizione', 'Dettagli']
+      ];
+      
+      // Aggiungi le righe dei dati, saltando l'intestazione
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        if (row.length < 6) continue; // Salta righe incomplete
+        
+        formattedData.push([
+          row[0] || '', // Stato
+          row[1] || '', // Data
+          row[2] || '', // Stanza
+          row[3] || '', // Luogo
+          row[4] || '', // Descrizione
+          row[5] || ''  // Dettagli
+        ]);
+      }
+      
+      return convertToCSV(formattedData);
+    } else {
+      // Formato standard (Google Forms o altro)
+      return convertToCSV(data);
+    }
+  } catch (error) {
+    console.error('Errore durante l\'elaborazione del foglio Google:', error);
+    throw error;
+  }
 }

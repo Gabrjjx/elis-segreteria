@@ -239,43 +239,110 @@ export class DatabaseStorage implements IStorage {
     try {
       // Parse CSV data (simple implementation)
       const lines = csvData.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',');
       
-      // Map field indices
-      const fieldMap = {
-        timestamp: headers.findIndex(h => h.includes('Timestamp')),
-        requesterName: headers.findIndex(h => h.includes('Nome')),
-        requesterEmail: headers.findIndex(h => h.includes('Email')),
-        roomNumber: headers.findIndex(h => h.includes('Numero di stanza')),
-        requestType: headers.findIndex(h => h.includes('Tipo di richiesta')),
-        description: headers.findIndex(h => h.includes('Descrizione')),
-        location: headers.findIndex(h => h.includes('Luogo')),
-      };
+      // Verifica se è il formato del vecchio foglio Excel dell'ELIS
+      const isElisFormat = lines[0].includes('segnalato') || lines[0].includes('risolto');
       
-      // Process each line
-      for (let i = 1; i < lines.length; i++) {
-        try {
-          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-          
-          if (values.length <= 1) continue; // Skip empty lines
-          
-          const request: InsertMaintenanceRequest = {
-            requesterName: values[fieldMap.requesterName] || 'Sconosciuto',
-            requesterEmail: values[fieldMap.requesterEmail] || 'sconosciuto@example.com',
-            roomNumber: values[fieldMap.roomNumber] || 'N/D',
-            requestType: values[fieldMap.requestType] || 'Altro',
-            description: values[fieldMap.description] || 'Nessuna descrizione',
-            location: values[fieldMap.location] || 'N/D',
-            status: MaintenanceRequestStatus.PENDING,
-            priority: MaintenanceRequestPriority.MEDIUM,
-            notes: '',
-          };
-          
-          await this.createMaintenanceRequest(request);
-          success++;
-        } catch (error) {
-          console.error(`Error importing row ${i}:`, error);
-          failed++;
+      if (isElisFormat) {
+        // Formato ELIS Excel:
+        // Colonna A: Stato (segnalato/risolto)
+        // Colonna B: Data e ora
+        // Colonna C: Numero di stanza/spazio
+        // Colonna D: Luogo/Area
+        // Colonna E: Descrizione dell'ubicazione
+        // Colonna F: Dettagli del difetto
+        
+        // Salta l'intestazione
+        for (let i = 1; i < lines.length; i++) {
+          try {
+            const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+            
+            if (values.length < 6) continue; // Skip incomplete lines
+            
+            const status = values[0].toLowerCase();
+            const timestamp = values[1];
+            const roomNumber = values[2];
+            const location = values[3];
+            const description = values[4];
+            const issue = values[5];
+            
+            // Determina lo stato in base al valore 'segnalato' o 'risolto'
+            let requestStatus = MaintenanceRequestStatus.PENDING;
+            if (status.includes('risolto')) {
+              requestStatus = MaintenanceRequestStatus.COMPLETED;
+            }
+            
+            // Determina priorità in base al contenuto della descrizione o della segnalazione
+            let priority = MaintenanceRequestPriority.MEDIUM;
+            const combinedText = (description + ' ' + issue).toLowerCase();
+            if (combinedText.includes('urgente') || combinedText.includes('urgent')) {
+              priority = MaintenanceRequestPriority.URGENT;
+            } else if (combinedText.includes('alta') || combinedText.includes('high')) {
+              priority = MaintenanceRequestPriority.HIGH;
+            } else if (combinedText.includes('bassa') || combinedText.includes('low')) {
+              priority = MaintenanceRequestPriority.LOW;
+            }
+            
+            const request: InsertMaintenanceRequest = {
+              timestamp: timestamp,
+              requesterName: 'Segnalazione Excel ELIS',
+              requesterEmail: 'segreteria@elis.org',
+              roomNumber: roomNumber,
+              requestType: 'Manutenzione',
+              description: `${description} - ${issue}`,
+              location: location,
+              status: requestStatus,
+              priority: priority,
+              notes: `Importato dal foglio Excel ELIS. Stato originale: ${status}`,
+            };
+            
+            await this.createMaintenanceRequest(request);
+            success++;
+          } catch (error) {
+            console.error(`Error importing row ${i}:`, error);
+            failed++;
+          }
+        }
+      } else {
+        // Formato Google Forms (formato originale)
+        const headers = lines[0].split(',');
+        
+        // Map field indices
+        const fieldMap = {
+          timestamp: headers.findIndex(h => h.includes('Timestamp')),
+          requesterName: headers.findIndex(h => h.includes('Nome')),
+          requesterEmail: headers.findIndex(h => h.includes('Email')),
+          roomNumber: headers.findIndex(h => h.includes('Numero di stanza')),
+          requestType: headers.findIndex(h => h.includes('Tipo di richiesta')),
+          description: headers.findIndex(h => h.includes('Descrizione')),
+          location: headers.findIndex(h => h.includes('Luogo')),
+        };
+        
+        // Process each line
+        for (let i = 1; i < lines.length; i++) {
+          try {
+            const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+            
+            if (values.length <= 1) continue; // Skip empty lines
+            
+            const request: InsertMaintenanceRequest = {
+              requesterName: values[fieldMap.requesterName] || 'Sconosciuto',
+              requesterEmail: values[fieldMap.requesterEmail] || 'sconosciuto@example.com',
+              roomNumber: values[fieldMap.roomNumber] || 'N/D',
+              requestType: values[fieldMap.requestType] || 'Altro',
+              description: values[fieldMap.description] || 'Nessuna descrizione',
+              location: values[fieldMap.location] || 'N/D',
+              status: MaintenanceRequestStatus.PENDING,
+              priority: MaintenanceRequestPriority.MEDIUM,
+              notes: '',
+            };
+            
+            await this.createMaintenanceRequest(request);
+            success++;
+          } catch (error) {
+            console.error(`Error importing row ${i}:`, error);
+            failed++;
+          }
         }
       }
     } catch (error) {
