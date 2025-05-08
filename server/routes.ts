@@ -335,6 +335,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const status = req.body.status as typeof MaintenanceRequestStatus[keyof typeof MaintenanceRequestStatus];
       
+      // Otteniamo prima i dettagli della richiesta originale per la sincronizzazione
+      const originalRequest = await storage.getMaintenanceRequest(id);
+      if (!originalRequest) {
+        return res.status(404).json({ message: "Maintenance request not found" });
+      }
+      
       // Add completedAt date if completing the request
       const updates: any = { status };
       if (status === MaintenanceRequestStatus.COMPLETED) {
@@ -344,12 +350,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedRequest = await storage.updateMaintenanceRequest(id, updates);
       
       if (!updatedRequest) {
-        return res.status(404).json({ message: "Maintenance request not found" });
+        return res.status(404).json({ message: "Failed to update maintenance request" });
       }
       
-      res.json(updatedRequest);
+      // Se la richiesta è stata marcata come completata, proviamo ad aggiornare anche il foglio Google
+      let googleSheetUpdate = { success: false, message: "No update attempted" };
+      
+      if (status === MaintenanceRequestStatus.COMPLETED) {
+        try {
+          const { findRequestRowInGoogleSheet, updateGoogleSheetStatus } = require('./services/googleSheets');
+          
+          // Cerchiamo la riga corrispondente nel foglio Google
+          const timestamp = new Date(originalRequest.timestamp);
+          const richiedente = originalRequest.requesterName;
+          const stanza = originalRequest.roomNumber;
+          
+          console.log(`Cerco nel foglio Google la richiesta di: ${richiedente}, stanza: ${stanza}, data: ${timestamp}`);
+          const rowIndex = await findRequestRowInGoogleSheet(timestamp, richiedente, stanza);
+          
+          if (rowIndex >= 0) {
+            // Richiesta trovata, aggiorniamo lo stato
+            console.log(`Trovata richiesta nel foglio Google alla riga ${rowIndex + 1}, aggiorno stato a "risolto"`);
+            const updated = await updateGoogleSheetStatus(rowIndex, "risolto");
+            
+            googleSheetUpdate = {
+              success: updated,
+              message: updated 
+                ? `Aggiornato stato a "risolto" nella riga ${rowIndex + 1} del foglio Google` 
+                : `Impossibile aggiornare lo stato nel foglio Google alla riga ${rowIndex + 1}`
+            };
+          } else {
+            googleSheetUpdate = {
+              success: false,
+              message: "Richiesta non trovata nel foglio Google"
+            };
+          }
+        } catch (googleError) {
+          console.error("Errore durante l'aggiornamento del foglio Google:", googleError);
+          googleSheetUpdate = {
+            success: false,
+            message: `Errore durante l'aggiornamento: ${googleError instanceof Error ? googleError.message : "Errore sconosciuto"}`
+          };
+        }
+      }
+      
+      res.json({
+        ...updatedRequest,
+        googleSheetSync: googleSheetUpdate
+      });
     } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
+      console.error("Error updating maintenance request status:", error);
+      res.status(500).json({ 
+        message: "Error updating status", 
+        error: error instanceof Error ? error.message : "Internal server error" 
+      });
     }
   });
 
