@@ -327,7 +327,7 @@ export class DatabaseStorage implements IStorage {
             const request = {
               requesterName: sigla, // La sigla diventa il richiedente
               requesterEmail: 'segreteria@elis.org',
-              roomNumber: luogo, // Il luogo diventa la stanza/numero stanza
+              roomNumber: location, // Il luogo diventa la stanza/numero stanza
               requestType: 'Manutenzione',
               description: `${specificLocation}: ${issueDetails}`,
               location: location,

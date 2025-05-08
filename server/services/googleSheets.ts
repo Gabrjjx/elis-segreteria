@@ -130,125 +130,126 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
   try {
     const data = await readGoogleSheet();
     
-    console.log("Dati del foglio - prima riga:", data[0]);
-    console.log("Dati del foglio - seconda riga:", data[1]);
+    // Stampiamo i dati che riceviamo per capire meglio la struttura
+    console.log("FOGLIO RICEVUTO:");
+    console.log("Prima riga (intestazioni):", JSON.stringify(data[0]));
+    console.log("Seconda riga (primo record):", JSON.stringify(data[1]));
+    console.log("Terza riga (secondo record):", JSON.stringify(data[2]));
     
-    // Verifica il formato del foglio ELIS (verificato dalle schermate inviate)
-    const elisFormat = data[0] && 
-                      data[0][0]?.includes('Informazioni cronologiche') && 
-                      data[0][1]?.includes('Sigla') && 
-                      data[0][2]?.includes('Luogo');
+    // I dati che stiamo ricevendo sembrano diversi da quelli attesi
+    // Analizziamo meglio la struttura
     
-    if (elisFormat) {
-      console.log('Rilevato formato ELIS corretto dal foglio condiviso');
-      
-      // Questo è il formato del foglio ELIS che abbiamo visto nella schermata:
-      // [0]: Informazioni cronologiche | [1]: Sigla | [2]: Luogo | [3]: Ubicazione specifica | [4]: Dettagli del difetto
-      
-      let formattedData = [
-        ['Timestamp', 'Richiedente', 'Stanza', 'Tipo', 'Descrizione', 'Priorità', 'Note']
-      ];
-    
-      // Aggiungi le righe dei dati, saltando l'intestazione
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i];
-        if (!row || row.length < 3) continue; // Salta righe davvero incomplete
-        
-        // Prendiamo i dati dalle colonne corrette come visto nel foglio
-        const timestamp = row[0] || new Date().toISOString(); // Data dalla colonna "Informazioni cronologiche"
-        const sigla = row[1] || ''; // Sigla (es. T67, 136, 157)
-        const luogo = row[2] || ''; // Luogo (es. Palestra 2, Piscina 4)
-        const ubicazione = row.length > 3 ? row[3] || '' : ''; // Ubicazione specifica
-        const dettagli = row.length > 4 ? row[4] || '' : ''; // Dettagli del difetto
-        
-        // Mappiamo correttamente i campi nel formato richiesto dall'applicazione
-        formattedData.push([
-          timestamp, // Timestamp - usiamo direttamente la data di compilazione
-          sigla, // Richiedente - usiamo la sigla come richiesto
-          luogo, // Stanza - usiamo il luogo come richiesto
-          'Manutenzione', // Tipo fisso
-          dettagli, // Descrizione - dettagli del difetto
-          'Bassa', // Priorità default (non sembra essere nel foglio)
-          ubicazione // Note - mettiamo l'ubicazione specifica
-        ]);
-      }
-      
-      return convertToCSV(formattedData);
-    } else {
-      console.log('Il formato del foglio non corrisponde al formato ELIS atteso');
-      console.log('Tentativo di mappare automaticamente le colonne...');
-      
-      // Cerchiamo di capire la struttura delle colonne
-      let headerRow = data[0] || [];
-      let formattedData = [
-        ['Timestamp', 'Richiedente', 'Stanza', 'Tipo', 'Descrizione', 'Priorità', 'Note']
-      ];
-      
-      // Indici delle colonne che ci interessano
-      let infoIdx = -1;
-      let siglaIdx = -1;
-      let luogoIdx = -1;
-      let ubicazioneIdx = -1;
-      let dettagliIdx = -1;
-      
-      // Cerchiamo di trovare le colonne in base ai nomi
-      for (let i = 0; i < headerRow.length; i++) {
-        const header = (headerRow[i] || '').toLowerCase();
-        
-        if (header.includes('informazioni') || header.includes('cronologiche') || header.includes('data') || header.includes('timestamp')) {
-          infoIdx = i;
-        } 
-        else if (header.includes('sigla')) {
-          siglaIdx = i;
-        }
-        else if (header.includes('luogo') && !header.includes('ubicazione')) {
-          luogoIdx = i;
-        }
-        else if (header.includes('ubicazione') || header.includes('specifica')) {
-          ubicazioneIdx = i;
-        }
-        else if (header.includes('dettagli') || header.includes('difetto') || header.includes('problema')) {
-          dettagliIdx = i;
-        }
-      }
-      
-      console.log(`Indici trovati: Info=${infoIdx}, Sigla=${siglaIdx}, Luogo=${luogoIdx}, Ubicazione=${ubicazioneIdx}, Dettagli=${dettagliIdx}`);
-      
-      // Se non troviamo alcune colonne, usiamo indici di default basati sul formato che abbiamo visto
-      if (infoIdx === -1) infoIdx = 0;  // Prima colonna
-      if (siglaIdx === -1) siglaIdx = 1;  // Seconda colonna
-      if (luogoIdx === -1) luogoIdx = 2;  // Terza colonna
-      if (ubicazioneIdx === -1) ubicazioneIdx = 3;  // Quarta colonna
-      if (dettagliIdx === -1) dettagliIdx = 4;  // Quinta colonna
-      
-      // Aggiungi le righe dei dati, saltando l'intestazione
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i];
-        if (!row || row.length < 2) continue; // Salta righe vuote
-        
-        // Estrai i valori dalle posizioni identificate (o usa stringhe vuote se non disponibili)
-        const timestamp = infoIdx >= 0 && infoIdx < row.length ? row[infoIdx] || '' : '';
-        const sigla = siglaIdx >= 0 && siglaIdx < row.length ? row[siglaIdx] || '' : '';
-        const luogo = luogoIdx >= 0 && luogoIdx < row.length ? row[luogoIdx] || '' : '';
-        const ubicazione = ubicazioneIdx >= 0 && ubicazioneIdx < row.length ? row[ubicazioneIdx] || '' : '';
-        const dettagli = dettagliIdx >= 0 && dettagliIdx < row.length ? row[dettagliIdx] || '' : '';
-        
-        // Aggiungi solo se abbiamo almeno una sigla o un luogo significativo
-        if (sigla || luogo) {
-          formattedData.push([
-            timestamp || new Date().toISOString(),
-            sigla || 'Segnalazione Excel',
-            luogo || 'N/D',
-            'Manutenzione',
-            dettagli || 'Richiesta manutenzione',
-            'Bassa',
-            ubicazione || ''
-          ]);
-        }
-      }
-      
-      return convertToCSV(formattedData);
+    // Verifichiamo le dimensioni per capire meglio la struttura 
+    if (!data || data.length < 3) {
+      console.log("Dati insufficienti nel foglio");
+      return '';
     }
+    
+    // Il formato sembra avere la prima colonna vuota e poi le intestazioni
+    // Cerchiamo di identificare le colonne giuste
+    let headerRow = data[0] || [];
+    
+    // Identifichiamo gli indici delle colonne importanti
+    let siglaIdx = -1;
+    let luogoIdx = -1;
+    let infoIdx = -1;
+    let ubicazioneIdx = -1;
+    let dettagliIdx = -1;
+    
+    // Cerchiamo le colonne in base ai nomi
+    console.log("Analisi intestazioni:");
+    for (let i = 0; i < headerRow.length; i++) {
+      const header = String(headerRow[i] || '').toLowerCase();
+      console.log(`Colonna ${i}: "${headerRow[i]}" (${header})`);
+      
+      if (header.includes('sigla')) {
+        siglaIdx = i;
+        console.log(`-> Trovata colonna SIGLA all'indice ${i}`);
+      }
+      else if (header.includes('luogo') && !header.includes('ubicazione')) {
+        luogoIdx = i;
+        console.log(`-> Trovata colonna LUOGO all'indice ${i}`);
+      }
+      else if (header.includes('informazioni') || header.includes('cronologiche')) {
+        infoIdx = i;
+        console.log(`-> Trovata colonna INFORMAZIONI CRONOLOGICHE all'indice ${i}`);
+      }
+      else if (header.includes('ubicazione') || header.includes('specifica')) {
+        ubicazioneIdx = i;
+        console.log(`-> Trovata colonna UBICAZIONE all'indice ${i}`);
+      }
+      else if (header.includes('dettagli') || header.includes('difetto')) {
+        dettagliIdx = i;
+        console.log(`-> Trovata colonna DETTAGLI DIFETTO all'indice ${i}`);
+      }
+    }
+    
+    // Se ancora non troviamo le colonne facciamo un tentativo basato sui dati dello screenshot
+    if (siglaIdx === -1 && data[0].length > 2) siglaIdx = 2;  // Terza colonna
+    if (luogoIdx === -1 && data[0].length > 3) luogoIdx = 3;  // Quarta colonna
+    if (infoIdx === -1 && data[0].length > 1) infoIdx = 1;    // Seconda colonna
+    if (ubicazioneIdx === -1 && data[0].length > 4) ubicazioneIdx = 4; // Quinta colonna
+    if (dettagliIdx === -1 && data[0].length > 5) dettagliIdx = 5;   // Sesta colonna
+    
+    console.log(`Indici finali: Sigla=${siglaIdx}, Luogo=${luogoIdx}, Info=${infoIdx}, Ubicazione=${ubicazioneIdx}, Dettagli=${dettagliIdx}`);
+    
+    // Preparare il formato dei dati
+    let formattedData = [
+      ['Timestamp', 'Richiedente', 'Stanza', 'Tipo', 'Descrizione', 'Priorità', 'Note']
+    ];
+    
+    // Processa ogni riga di dati
+    console.log(`Processando ${data.length} righe dal foglio`);
+    let processed = 0;
+    
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row || row.length < Math.max(siglaIdx, luogoIdx, infoIdx) + 1) {
+        continue; // Salta righe troppo corte
+      }
+      
+      // Valori predefiniti
+      let timestamp = new Date().toISOString();
+      let sigla = "Segnalazione Excel";
+      let luogo = "N/D";
+      let descrizione = "Richiesta manutenzione";
+      let note = "";
+      
+      // Estraiamo i valori se disponibili
+      if (infoIdx >= 0 && infoIdx < row.length) timestamp = row[infoIdx] || timestamp;
+      if (siglaIdx >= 0 && siglaIdx < row.length) sigla = row[siglaIdx] || sigla;
+      if (luogoIdx >= 0 && luogoIdx < row.length) luogo = row[luogoIdx] || luogo;
+      
+      // Componiamo la descrizione e le note con informazioni aggiuntive
+      if (dettagliIdx >= 0 && dettagliIdx < row.length && row[dettagliIdx]) {
+        descrizione = row[dettagliIdx];
+      }
+      
+      if (ubicazioneIdx >= 0 && ubicazioneIdx < row.length && row[ubicazioneIdx]) {
+        note = `Ubicazione: ${row[ubicazioneIdx]}`;
+      }
+      
+      if (i <= 3) {
+        console.log(`Riga ${i} - Richiedente: "${sigla}", Stanza: "${luogo}", Data: "${timestamp}"`);
+      }
+      
+      // Aggiungi la riga se abbiamo dati significativi
+      formattedData.push([
+        timestamp,
+        sigla,
+        luogo,
+        'Manutenzione',
+        descrizione,
+        'Bassa',
+        note
+      ]);
+      
+      processed++;
+    }
+    
+    console.log(`Processate ${processed} righe con successo`);
+    
+    return convertToCSV(formattedData);
   } catch (error) {
     console.error('Errore durante l\'elaborazione del foglio Google:', error);
     throw error;
