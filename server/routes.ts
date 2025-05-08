@@ -13,6 +13,7 @@ import {
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { getMaintenanceRequestsCSV, readGoogleSheet, isSheetLoaded, findRequestRowInGoogleSheet, updateGoogleSheetStatus } from "./services/googleSheets";
+import { semanticSearch, analyzeSearchQuery } from "./services/aiService";
 import { 
   hasOAuth2Credentials, 
   hasValidToken, 
