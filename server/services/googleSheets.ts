@@ -230,11 +230,10 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
       let note = "";
       let priorita = "Bassa";
       
-      // Estraiamo i valori se disponibili
+      // Timestamp proviene da "Informazioni cronologiche"
       if (infoIdx >= 0 && infoIdx < row.length) timestamp = row[infoIdx] || timestamp;
       
-      // La sigla è stata identificata come campo numerico lunghissimo, ma deve essere una sigla
-      // Proviamo a gestire questo caso speciale
+      // Richiedente proviene da "Sigla"
       if (siglaIdx >= 0 && siglaIdx < row.length) {
         const rawSigla = row[siglaIdx];
         // Se la sigla è un numero molto lungo, potrebbe essere un ID di Google Forms, usiamo un placeholder
@@ -246,7 +245,7 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
         }
       }
       
-      // Luogo deve essere la stanza
+      // Stanza proviene da "Luogo"
       if (luogoIdx >= 0 && luogoIdx < row.length) luogo = row[luogoIdx] || luogo;
       
       // Componiamo la descrizione e le note con informazioni aggiuntive
