@@ -34,7 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, UploadCloud, RefreshCw, Filter, CloudSync } from "lucide-react";
+import { Loader2, Search, UploadCloud, RefreshCw, Filter, Cloud } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { formatDate } from "@/lib/utils";
 
@@ -455,6 +455,12 @@ export default function MaintenancePage() {
                     Questa operazione sincronizzerà automaticamente le richieste di manutenzione dal modulo Google Forms. 
                     Assicurati che GOOGLE_API_KEY e GOOGLE_SHEET_ID siano configurati correttamente.
                   </AlertDialogDescription>
+                  {syncGoogleSheetsMutation.isError && (
+                    <div className="mt-2 p-3 bg-red-50 text-red-800 rounded-md text-sm">
+                      <p className="font-semibold">Errore di sincronizzazione:</p>
+                      <p>Verifica che l'ID del foglio Google sia corretto e che l'API key abbia accesso.</p>
+                    </div>
+                  )}
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Annulla</AlertDialogCancel>

@@ -10,13 +10,25 @@ if (!process.env.GOOGLE_SHEET_ID) {
   throw new Error('GOOGLE_SHEET_ID non definita nelle variabili d\'ambiente');
 }
 
+// Estrae l'ID del foglio dall'URL, se necessario
+function extractSheetId(sheetIdOrUrl: string): string {
+  // Se l'ID contiene "spreadsheets/d/" è probabilmente un URL completo
+  if (sheetIdOrUrl.includes('spreadsheets/d/')) {
+    const matches = sheetIdOrUrl.match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    if (matches && matches[1]) {
+      return matches[1];
+    }
+  }
+  return sheetIdOrUrl; // Restituisce l'ID originale se non è un URL
+}
+
 // Configurazione dell'API Google Sheets
 const sheets = google.sheets({
   version: 'v4',
   auth: process.env.GOOGLE_API_KEY
 });
 
-const SHEET_ID = process.env.GOOGLE_SHEET_ID;
+const SHEET_ID = extractSheetId(process.env.GOOGLE_SHEET_ID || '');
 
 /**
  * Legge i dati di un foglio Google Sheets
