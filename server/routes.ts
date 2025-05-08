@@ -99,23 +99,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update a service
   app.put("/api/services/:id", async (req: Request, res: Response) => {
     try {
+      console.log("Ricevuti dati per aggiornamento servizio:", req.body);
+      
       const id = parseInt(req.params.id);
-      const updates = insertServiceSchema.partial().parse(req.body);
+      console.log("ID servizio da aggiornare:", id);
       
-      const updatedService = await storage.updateService(id, updates);
-      
-      if (!updatedService) {
-        return res.status(404).json({ message: "Service not found" });
+      // Verifica specifica per il campo date
+      if (req.body.date) {
+        console.log("Formato data ricevuto:", req.body.date, "tipo:", typeof req.body.date);
+        try {
+          const testDate = new Date(req.body.date);
+          console.log("Data convertita:", testDate, "valida:", !isNaN(testDate.getTime()));
+        } catch (dateError) {
+          console.error("Errore durante la conversione della data:", dateError);
+        }
       }
       
-      res.json(updatedService);
+      try {
+        const updates = insertServiceSchema.partial().parse(req.body);
+        console.log("Dati validati con successo:", updates);
+        
+        const updatedService = await storage.updateService(id, updates);
+        
+        if (!updatedService) {
+          return res.status(404).json({ message: "Service not found" });
+        }
+        
+        console.log("Servizio aggiornato con successo:", updatedService);
+        res.json(updatedService);
+      } catch (validationError) {
+        console.error("Errore di validazione:", validationError);
+        if (validationError instanceof ZodError) {
+          const formattedError = fromZodError(validationError);
+          console.error("Dettaglio errore Zod:", formattedError.message);
+          res.status(400).json({ message: formattedError.message });
+        } else {
+          throw validationError; // Rilancia per gestirlo nel catch esterno
+        }
+      }
     } catch (error) {
-      if (error instanceof ZodError) {
-        const validationError = fromZodError(error);
-        res.status(400).json({ message: validationError.message });
-      } else {
-        res.status(500).json({ message: "Internal server error" });
-      }
+      console.error("Errore durante l'aggiornamento del servizio:", error);
+      res.status(500).json({ 
+        message: "Internal server error", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 
