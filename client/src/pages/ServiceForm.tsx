@@ -80,7 +80,7 @@ export default function ServiceForm({ id }: ServiceFormProps) {
 
   // Create service mutation
   const createMutation = useMutation({
-    mutationFn: async (data: FormValues) => {
+    mutationFn: async (data: any) => {
       const response = await apiRequest("POST", "/api/services", data);
       return response.json();
     },
@@ -109,7 +109,12 @@ export default function ServiceForm({ id }: ServiceFormProps) {
   // Update service mutation
   const updateMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      const response = await apiRequest("PUT", `/api/services/${id}`, data);
+      // Prepare the data for the API by ensuring the date is an ISO string
+      const apiData = {
+        ...data,
+        date: data.date instanceof Date ? data.date.toISOString() : data.date
+      };
+      const response = await apiRequest("PUT", `/api/services/${id}`, apiData);
       return response.json();
     },
     onSuccess: () => {
@@ -136,10 +141,27 @@ export default function ServiceForm({ id }: ServiceFormProps) {
   });
 
   const onSubmit = (data: FormValues) => {
-    if (isEditing) {
-      updateMutation.mutate(data);
-    } else {
-      createMutation.mutate(data);
+    try {
+      // Prepare the data for the API by ensuring the date is an ISO string
+      const apiData = {
+        ...data,
+        date: data.date instanceof Date ? data.date.toISOString() : data.date
+      };
+      
+      console.log("Submitting data:", apiData);
+      
+      if (isEditing) {
+        updateMutation.mutate(apiData);
+      } else {
+        createMutation.mutate(apiData);
+      }
+    } catch (error) {
+      console.error("Error in form submission:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore nel processare i dati del form.",
+        variant: "destructive",
+      });
     }
   };
 
