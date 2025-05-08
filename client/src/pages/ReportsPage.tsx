@@ -300,13 +300,38 @@ export default function ReportsPage() {
   
   // Table columns for data export
   const tableColumns = [
-    { accessorKey: 'date', header: 'Data', cell: (item: Service) => formatDate(item.date) },
-    { accessorKey: 'sigla', header: 'Sigla' },
-    { accessorKey: 'type', header: 'Tipologia', cell: (item: Service) => getServiceTypeLabel(item.type) },
-    { accessorKey: 'pieces', header: 'Pezzi' },
-    { accessorKey: 'amount', header: 'Importo', cell: (item: Service) => formatAmount(item.amount) },
-    { accessorKey: 'status', header: 'Stato', cell: (item: Service) => getPaymentStatusLabel(item.status) },
-    { accessorKey: 'notes', header: 'Note' },
+    { 
+      accessorKey: 'date' as const, 
+      header: 'Data', 
+      cell: (item: Service) => formatDate(item.date) 
+    },
+    { 
+      accessorKey: 'sigla' as const, 
+      header: 'Sigla' 
+    },
+    { 
+      accessorKey: 'type' as const, 
+      header: 'Tipologia', 
+      cell: (item: Service) => getServiceTypeLabel(item.type) 
+    },
+    { 
+      accessorKey: 'pieces' as const, 
+      header: 'Pezzi' 
+    },
+    { 
+      accessorKey: 'amount' as const, 
+      header: 'Importo', 
+      cell: (item: Service) => formatAmount(item.amount) 
+    },
+    { 
+      accessorKey: 'status' as const, 
+      header: 'Stato', 
+      cell: (item: Service) => getPaymentStatusLabel(item.status) 
+    },
+    { 
+      accessorKey: 'notes' as const, 
+      header: 'Note' 
+    },
   ];
 
   // Handler for exporting data to CSV
@@ -413,7 +438,10 @@ export default function ReportsPage() {
                         mode="single"
                         selected={filters.startDate || undefined}
                         onSelect={(date) => 
-                          setFilters(prev => ({ ...prev, startDate: date }))
+                          setFilters(prev => ({ 
+                            ...prev, 
+                            startDate: date || null 
+                          }))
                         }
                         disabled={(date) => 
                           filters.endDate ? date > filters.endDate : false
@@ -427,7 +455,10 @@ export default function ReportsPage() {
                         mode="single"
                         selected={filters.endDate || undefined}
                         onSelect={(date) => 
-                          setFilters(prev => ({ ...prev, endDate: date }))
+                          setFilters(prev => ({ 
+                            ...prev, 
+                            endDate: date || null 
+                          }))
                         }
                         disabled={(date) => 
                           filters.startDate ? date < filters.startDate : false
