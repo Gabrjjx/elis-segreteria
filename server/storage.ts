@@ -679,8 +679,16 @@ export class DatabaseStorage implements IStorage {
 
   // Service operations
   async getServices(params: ServiceSearch): Promise<{ services: Service[], total: number }> {
-    // Start with a basic query
-    let query = db.select().from(services);
+    // Start with a basic query che include il join con gli studenti
+    let query = db.select({
+      service: services,
+      student: {
+        firstName: students.firstName,
+        lastName: students.lastName
+      }
+    })
+    .from(services)
+    .leftJoin(students, eq(services.sigla, students.sigla));
     
     // Apply filters
     if (params.query) {
@@ -706,7 +714,6 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Get the total count with the same filters
-    // Clona la query per usare gli stessi filtri nella count query
     const countQuery = db.select({ count: count() }).from(services);
     
     // Log dei parametri filtro ricevuti
@@ -745,58 +752,50 @@ export class DatabaseStorage implements IStorage {
     const limit = params.limit || 10;
     const offset = (page - 1) * limit;
     
-    const resultServices = await query
+    const results = await query
       .orderBy(desc(services.date))
       .limit(limit)
       .offset(offset);
     
-    // Arricchisci i risultati con i dati degli studenti
-    const enrichedServices = await Promise.all(
-      resultServices.map(async (service) => {
-        if (service.sigla) {
-          const student = await this.getStudentBySigla(service.sigla);
-          if (student) {
-            return {
-              ...service,
-              student: {
-                firstName: student.firstName,
-                lastName: student.lastName
-              }
-            };
-          }
-        }
-        return service;
-      })
-    );
+    // Trasforma i risultati nel formato atteso
+    const formattedServices = results.map(result => ({
+      ...result.service,
+      student: result.student.firstName ? {
+        firstName: result.student.firstName,
+        lastName: result.student.lastName
+      } : null
+    }));
     
     return {
-      services: enrichedServices,
+      services: formattedServices,
       total: Number(total)
     };
   }
 
   async getService(id: number): Promise<(Service & { student?: { firstName: string, lastName: string } }) | undefined> {
-    const [service] = await db.select().from(services).where(eq(services.id, id));
+    const result = await db.select({
+      service: services,
+      student: {
+        firstName: students.firstName,
+        lastName: students.lastName
+      }
+    })
+    .from(services)
+    .leftJoin(students, eq(services.sigla, students.sigla))
+    .where(eq(services.id, id));
     
-    if (!service) {
+    if (!result || result.length === 0) {
       return undefined;
     }
-    
-    // Ottieni informazioni sullo studente se presente
-    if (service.sigla) {
-      const student = await this.getStudentBySigla(service.sigla);
-      if (student) {
-        return {
-          ...service,
-          student: {
-            firstName: student.firstName,
-            lastName: student.lastName
-          }
-        };
-      }
-    }
-    
-    return service;
+
+    // Trasforma i risultati nel formato atteso
+    return {
+      ...result[0].service,
+      student: result[0].student.firstName ? {
+        firstName: result[0].student.firstName,
+        lastName: result[0].student.lastName
+      } : undefined
+    };
   }
 
   async createService(insertService: InsertService): Promise<Service> {
@@ -968,10 +967,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPendingPayments(dateFilter?: { startDate?: Date, endDate?: Date }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]> {
-    let query = db
-      .select()
-      .from(services)
-      .where(eq(services.status, PaymentStatus.UNPAID));
+    let query = db.select({
+      service: services,
+      student: {
+        firstName: students.firstName,
+        lastName: students.lastName
+      }
+    })
+    .from(services)
+    .leftJoin(students, eq(services.sigla, students.sigla))
+    .where(eq(services.status, PaymentStatus.UNPAID));
     
     // Applicare i filtri di data se presenti
     if (dateFilter?.startDate) {
@@ -981,34 +986,28 @@ export class DatabaseStorage implements IStorage {
       query = query.where(lte(services.date, dateFilter.endDate));
     }
     
-    const resultServices = await query.orderBy(desc(services.date));
+    const results = await query.orderBy(desc(services.date));
     
-    // Arricchisci i risultati con i dati degli studenti
-    const enrichedServices = await Promise.all(
-      resultServices.map(async (service) => {
-        if (service.sigla) {
-          const student = await this.getStudentBySigla(service.sigla);
-          if (student) {
-            return {
-              ...service,
-              student: {
-                firstName: student.firstName,
-                lastName: student.lastName
-              }
-            };
-          }
-        }
-        return service;
-      })
-    );
-    
-    return enrichedServices;
+    // Trasforma i risultati nel formato atteso
+    return results.map(result => ({
+      ...result.service,
+      student: result.student.firstName ? {
+        firstName: result.student.firstName,
+        lastName: result.student.lastName
+      } : undefined
+    }));
   }
 
   async getRecentServices(limit: number, dateFilter?: { startDate?: Date, endDate?: Date }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]> {
-    let query = db
-      .select()
-      .from(services);
+    let query = db.select({
+      service: services,
+      student: {
+        firstName: students.firstName,
+        lastName: students.lastName
+      }
+    })
+    .from(services)
+    .leftJoin(students, eq(services.sigla, students.sigla));
     
     // Applicare i filtri di data se presenti
     if (dateFilter?.startDate) {
@@ -1018,30 +1017,18 @@ export class DatabaseStorage implements IStorage {
       query = query.where(lte(services.date, dateFilter.endDate));
     }
     
-    const resultServices = await query
+    const results = await query
       .orderBy(desc(services.date))
       .limit(limit);
-      
-    // Arricchisci i risultati con i dati degli studenti
-    const enrichedServices = await Promise.all(
-      resultServices.map(async (service) => {
-        if (service.sigla) {
-          const student = await this.getStudentBySigla(service.sigla);
-          if (student) {
-            return {
-              ...service,
-              student: {
-                firstName: student.firstName,
-                lastName: student.lastName
-              }
-            };
-          }
-        }
-        return service;
-      })
-    );
     
-    return enrichedServices;
+    // Trasforma i risultati nel formato atteso
+    return results.map(result => ({
+      ...result.service,
+      student: result.student.firstName ? {
+        firstName: result.student.firstName,
+        lastName: result.student.lastName
+      } : undefined
+    }));
   }
 
   // Initialize sample data - only used for first setup
