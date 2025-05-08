@@ -5,7 +5,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, CheckCircle, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Service, ServiceType } from "@shared/schema";
@@ -49,13 +49,6 @@ export default function PendingPayments({ pendingPayments }: PendingPaymentsProp
 
   const handleMarkAsPaid = (id: number) => {
     mutation.mutate(id);
-  };
-
-  const handleSendReminder = (id: number) => {
-    toast({
-      title: "Promemoria inviato",
-      description: "Il promemoria di pagamento è stato inviato con successo.",
-    });
   };
 
   if (!pendingPayments || pendingPayments.length === 0) {
@@ -128,7 +121,6 @@ export default function PendingPayments({ pendingPayments }: PendingPaymentsProp
                 <Button
                   onClick={() => handleMarkAsPaid(payment.id)}
                   disabled={processingId === payment.id}
-                  className="mr-3"
                 >
                   {processingId === payment.id ? (
                     <span className="animate-spin mr-2">⟳</span>
@@ -136,10 +128,6 @@ export default function PendingPayments({ pendingPayments }: PendingPaymentsProp
                     <CheckCircle className="mr-2 h-4 w-4" />
                   )}
                   Segna come pagato
-                </Button>
-                <Button variant="outline" onClick={() => handleSendReminder(payment.id)}>
-                  <Send className="mr-2 h-4 w-4" />
-                  Invia promemoria
                 </Button>
               </div>
             </div>
