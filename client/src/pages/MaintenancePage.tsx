@@ -34,7 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, UploadCloud, RefreshCw, Filter } from "lucide-react";
+import { Loader2, Search, UploadCloud, RefreshCw, Filter, CloudSync } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { formatDate } from "@/lib/utils";
 
@@ -145,6 +145,7 @@ export default function MaintenancePage() {
   // Stato temporaneo per la ricerca
   const [searchInput, setSearchInput] = useState("");
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [csvData, setCsvData] = useState("");
   
   // Query per ottenere le richieste di manutenzione
@@ -247,6 +248,30 @@ export default function MaintenancePage() {
     }
   });
   
+  const syncGoogleSheetsMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('/api/maintenance/sync-google-sheets', {
+        method: 'POST'
+      });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });
+      toast({
+        title: "Sincronizzazione completata",
+        description: `Importate con successo ${data.imported} richieste (fallite: ${data.failed})`,
+      });
+      setIsSyncDialogOpen(false);
+    },
+    onError: (error) => {
+      console.error("Errore sincronizzazione:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante la sincronizzazione con Google Sheets",
+        variant: "destructive"
+      });
+    }
+  });
+  
   // Gestori eventi
   const handleSearch = () => {
     setFilters(prev => ({ ...prev, query: searchInput, page: 1 }));
@@ -300,6 +325,10 @@ export default function MaintenancePage() {
   
   const handleDelete = (id: number) => {
     deleteMutation.mutate(id);
+  };
+  
+  const handleSyncGoogleSheets = () => {
+    syncGoogleSheetsMutation.mutate();
   };
   
   // Definizione colonne per la tabella
@@ -410,41 +439,76 @@ export default function MaintenancePage() {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Richieste di Manutenzione</h1>
           
-          <AlertDialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" className="flex items-center">
-                <UploadCloud className="mr-2 h-4 w-4" />
-                Importa da CSV
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Importa richieste di manutenzione</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Incolla qui sotto i dati CSV esportati dal form Google. Assicurati che il formato sia corretto.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <textarea
-                value={csvData}
-                onChange={(e) => setCsvData(e.target.value)}
-                className="min-h-[200px] p-2 w-full border rounded-md"
-                placeholder="Incolla qui i dati CSV..."
-              />
-              <AlertDialogFooter>
-                <AlertDialogCancel>Annulla</AlertDialogCancel>
-                <AlertDialogAction onClick={handleImport} disabled={importCsvMutation.isPending}>
-                  {importCsvMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Importazione...
-                    </>
-                  ) : (
-                    "Importa"
-                  )}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <div className="flex space-x-2">
+            {/* Pulsante per sincronizzare da Google Sheets */}
+            <AlertDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="flex items-center">
+                  <CloudSync className="mr-2 h-4 w-4" />
+                  Sincronizza da Google
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Sincronizza richieste di manutenzione</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Questa operazione sincronizzerà automaticamente le richieste di manutenzione dal modulo Google Forms. 
+                    Assicurati che GOOGLE_API_KEY e GOOGLE_SHEET_ID siano configurati correttamente.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annulla</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleSyncGoogleSheets} disabled={syncGoogleSheetsMutation.isPending}>
+                    {syncGoogleSheetsMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sincronizzazione...
+                      </>
+                    ) : (
+                      "Sincronizza"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
+            {/* Pulsante per importare manualmente da CSV */}
+            <AlertDialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="flex items-center">
+                  <UploadCloud className="mr-2 h-4 w-4" />
+                  Importa da CSV
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Importa richieste di manutenzione</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Incolla qui sotto i dati CSV esportati dal form Google. Assicurati che il formato sia corretto.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <textarea
+                  value={csvData}
+                  onChange={(e) => setCsvData(e.target.value)}
+                  className="min-h-[200px] p-2 w-full border rounded-md"
+                  placeholder="Incolla qui i dati CSV..."
+                />
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annulla</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleImport} disabled={importCsvMutation.isPending}>
+                    {importCsvMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Importazione...
+                      </>
+                    ) : (
+                      "Importa"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
         
         <div className="flex flex-col md:flex-row gap-4 items-center">
@@ -529,7 +593,7 @@ export default function MaintenancePage() {
               <div className="text-center">
                 <p className="text-gray-500">Nessuna richiesta di manutenzione trovata.</p>
                 <p className="text-sm text-gray-400 mt-1">
-                  Puoi importare le richieste dal form Google utilizzando il pulsante "Importa da CSV".
+                  Puoi importare le richieste utilizzando il pulsante "Sincronizza da Google" o manualmente con "Importa da CSV".
                 </p>
               </div>
             </CardContent>
