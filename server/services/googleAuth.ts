@@ -98,7 +98,7 @@ export async function startDeviceFlow(): Promise<DeviceCodeResponse> {
   if (!oAuth2Client) {
     throw new Error('Impossibile creare il client OAuth2');
   }
-
+  
   try {
     // Usiamo la Google Auth Library per avviare il Device Flow
     const response = await oAuth2Client.getDeviceCode({

@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, ExternalLink, Check, KeyRound, Cloud, Download, Upload, RefreshCw } from "lucide-react";
+import { AlertCircle, ExternalLink, Check, KeyRound, Cloud, Download, Upload, RefreshCw, Smartphone, Clock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLoading } from "@/contexts/loading-context";
 
@@ -394,7 +394,8 @@ export default function GoogleAuthPage() {
   const anyMutationPending = getAuthUrlMutation.isPending || 
                             submitCodeMutation.isPending ||
                             importSheetsMutation.isPending ||
-                            exportStatusMutation.isPending;
+                            exportStatusMutation.isPending ||
+                            startDeviceFlowMutation.isPending;
 
   // Utilizziamo una variabile di stato per lo status di caricamento
   const [localLoading, setLocalLoading] = useState(false);
@@ -417,6 +418,12 @@ export default function GoogleAuthPage() {
   // Handler functions
   function handleGetAuthUrl() {
     getAuthUrlMutation.mutate();
+  }
+
+  function handleStartDeviceFlow() {
+    setDeviceFlowStatus("idle"); // Reset
+    setDeviceFlowError("");
+    startDeviceFlowMutation.mutate();
   }
 
   function handleSubmitCode() {
@@ -546,38 +553,161 @@ export default function GoogleAuthPage() {
                           </AlertDescription>
                         </Alert>
 
-                        <div className="space-y-2">
-                          <Button onClick={handleGetAuthUrl} disabled={isLoading}>
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Ottieni autorizzazione
-                          </Button>
+                        <div className="space-y-6">
+                          <Tabs defaultValue="device-flow">
+                            <TabsList className="mb-4">
+                              <TabsTrigger value="device-flow">
+                                <Smartphone className="h-4 w-4 mr-2" />
+                                Metodo semplificato (consigliato)
+                              </TabsTrigger>
+                              <TabsTrigger value="redirect">
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                Metodo con URL
+                              </TabsTrigger>
+                            </TabsList>
+                            
+                            <TabsContent value="device-flow">
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle>Autorizzazione con Device Flow</CardTitle>
+                                  <CardDescription>
+                                    Metodo di autorizzazione semplificato senza necessità di URL di redirect.
+                                  </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                  {deviceFlowStatus === "idle" && !deviceCodeInfo && (
+                                    <div className="flex flex-col items-center space-y-4">
+                                      <div className="text-center mb-4">
+                                        <p className="text-sm text-gray-600 mb-2">
+                                          Clicca sul pulsante per ottenere un codice di autenticazione.
+                                        </p>
+                                      </div>
+                                      <Button onClick={handleStartDeviceFlow} disabled={isLoading}>
+                                        <KeyRound className="h-4 w-4 mr-2" />
+                                        Avvia autenticazione
+                                      </Button>
+                                    </div>
+                                  )}
+                                  
+                                  {deviceCodeInfo && deviceFlowStatus === "pending" && (
+                                    <div className="space-y-4">
+                                      <Alert className="bg-blue-50 border-blue-100">
+                                        <AlertCircle className="h-4 w-4 text-blue-600" />
+                                        <AlertTitle className="text-blue-800">Codice generato</AlertTitle>
+                                        <AlertDescription className="text-blue-700">
+                                          Segui le istruzioni per completare l'autenticazione.
+                                        </AlertDescription>
+                                      </Alert>
+                                      
+                                      <div className="bg-gray-50 p-4 rounded-lg border">
+                                        <div className="text-center mb-4">
+                                          <h3 className="font-semibold text-lg mb-1">Codice di autenticazione</h3>
+                                          <div className="text-2xl font-bold tracking-wider my-3 py-2 bg-white border rounded-md">
+                                            {deviceCodeInfo.user_code}
+                                          </div>
+                                        </div>
+                                        
+                                        <ol className="list-decimal list-inside space-y-3 text-sm">
+                                          <li>Vai su <a href={deviceCodeInfo.verification_url} 
+                                                      target="_blank" 
+                                                      rel="noopener noreferrer" 
+                                                      className="text-blue-600 underline font-medium">
+                                                {deviceCodeInfo.verification_url}
+                                              </a>
+                                          </li>
+                                          <li>Inserisci il codice mostrato sopra: <strong>{deviceCodeInfo.user_code}</strong></li>
+                                          <li>Accedi con il tuo account Google e concedi le autorizzazioni richieste</li>
+                                          <li>Attendi il completamento automatico dell'autorizzazione</li>
+                                        </ol>
+                                        
+                                        <div className="mt-4 text-center">
+                                          <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs">
+                                            <Clock className="h-3 w-3 mr-1" />
+                                            Scade tra {Math.round(deviceCodeInfo.expires_in / 60)} minuti
+                                          </div>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="flex justify-center">
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm" 
+                                          onClick={() => fetchAuthStatus()}
+                                        >
+                                          <RefreshCw className="h-3 w-3 mr-1" />
+                                          Verifica stato
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {deviceFlowStatus === "complete" && (
+                                    <Alert className="bg-green-50 border-green-100">
+                                      <Check className="h-4 w-4 text-green-600" />
+                                      <AlertTitle className="text-green-800">Autenticazione completata</AlertTitle>
+                                      <AlertDescription className="text-green-700">
+                                        Token di accesso ottenuto con successo.
+                                      </AlertDescription>
+                                    </Alert>
+                                  )}
+                                  
+                                  {deviceFlowStatus === "error" && (
+                                    <Alert variant="destructive">
+                                      <AlertCircle className="h-4 w-4" />
+                                      <AlertTitle>Errore di autenticazione</AlertTitle>
+                                      <AlertDescription>
+                                        {deviceFlowError || "Si è verificato un errore durante l'autenticazione. Riprova."}
+                                      </AlertDescription>
+                                    </Alert>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            </TabsContent>
+                            
+                            <TabsContent value="redirect">
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle>Autorizzazione con URL</CardTitle>
+                                  <CardDescription>
+                                    Metodo di autorizzazione alternativo con URL e codice manuale.
+                                  </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                  <Button onClick={handleGetAuthUrl} disabled={isLoading} className="w-full">
+                                    <ExternalLink className="h-4 w-4 mr-2" />
+                                    Ottieni URL di autorizzazione
+                                  </Button>
 
-                          {authUrl && (
-                            <div className="mt-4 space-y-2">
-                              <p className="text-sm">
-                                URL di autorizzazione Google:
-                              </p>
-                              <div className="p-2 bg-gray-50 border rounded-md text-xs font-mono break-all mb-3">
-                                {authUrl}
-                              </div>
-                              <p className="text-sm mb-2">
-                                Copia e incolla l'URL qui sopra in una nuova finestra del browser. 
-                                Dopo l'approvazione, copia il codice fornito da Google e incollalo qui sotto:
-                              </p>
-                              <div className="flex space-x-2">
-                                <input
-                                  type="text"
-                                  value={authCode}
-                                  onChange={(e) => setAuthCode(e.target.value)}
-                                  placeholder="Codice di autorizzazione"
-                                  className="flex-1 p-2 border rounded-md"
-                                />
-                                <Button onClick={handleSubmitCode} disabled={isLoading}>
-                                  Conferma
-                                </Button>
-                              </div>
-                            </div>
-                          )}
+                                  {authUrl && (
+                                    <div className="mt-4 space-y-2">
+                                      <p className="text-sm">
+                                        URL di autorizzazione Google:
+                                      </p>
+                                      <div className="p-2 bg-gray-50 border rounded-md text-xs font-mono break-all mb-3">
+                                        {authUrl}
+                                      </div>
+                                      <p className="text-sm mb-2">
+                                        Copia e incolla l'URL qui sopra in una nuova finestra del browser. 
+                                        Dopo l'approvazione, copia il codice fornito da Google e incollalo qui sotto:
+                                      </p>
+                                      <div className="flex space-x-2">
+                                        <input
+                                          type="text"
+                                          value={authCode}
+                                          onChange={(e) => setAuthCode(e.target.value)}
+                                          placeholder="Codice di autorizzazione"
+                                          className="flex-1 p-2 border rounded-md"
+                                        />
+                                        <Button onClick={handleSubmitCode} disabled={isLoading}>
+                                          Conferma
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            </TabsContent>
+                          </Tabs>
                         </div>
                       </div>
                     )}
