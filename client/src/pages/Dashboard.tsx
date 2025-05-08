@@ -10,7 +10,7 @@ import PendingPayments from "@/components/dashboard/PendingPayments";
 import ServiceList from "@/components/services/ServicesList";
 import { Plus, Search, Filter, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
@@ -27,15 +27,20 @@ export default function Dashboard() {
   });
 
   // Parametri per le query con il periodo selezionato
-  const queryParams = new URLSearchParams();
-  queryParams.append('startDate', filterPeriod.startDate.toISOString());
-  queryParams.append('endDate', filterPeriod.endDate.toISOString());
-  const queryString = queryParams.toString();
+  // Utilizziamo useMemo per ricalcolare i parametri quando filterPeriod cambia
+  const queryString = useMemo(() => {
+    const queryParams = new URLSearchParams();
+    queryParams.append('startDate', filterPeriod.startDate.toISOString());
+    queryParams.append('endDate', filterPeriod.endDate.toISOString());
+    console.log('Filtro aggiornato:', filterPeriod.startDate.toLocaleDateString(), 'a', filterPeriod.endDate.toLocaleDateString());
+    return queryParams.toString();
+  }, [filterPeriod]);
 
   // Fetch dashboard metrics
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery({
-    queryKey: ['/api/dashboard/metrics', queryString],
+    queryKey: ['/api/dashboard/metrics', filterPeriod],
     queryFn: async () => {
+      console.log('Fetching metrics with filter:', queryString);
       const response = await fetch(`/api/dashboard/metrics?${queryString}`);
       if (!response.ok) {
         throw new Error('Errore nel caricamento delle metriche');
@@ -46,8 +51,9 @@ export default function Dashboard() {
 
   // Fetch recent services
   const { data: recentServices, isLoading: isLoadingServices } = useQuery({
-    queryKey: ['/api/dashboard/recent-services', queryString],
+    queryKey: ['/api/dashboard/recent-services', filterPeriod],
     queryFn: async () => {
+      console.log('Fetching recent services with filter:', queryString);
       const response = await fetch(`/api/dashboard/recent-services?${queryString}`);
       if (!response.ok) {
         throw new Error('Errore nel caricamento dei servizi recenti');
@@ -58,8 +64,9 @@ export default function Dashboard() {
 
   // Fetch pending payments
   const { data: pendingPayments, isLoading: isLoadingPayments } = useQuery({
-    queryKey: ['/api/dashboard/pending-payments', queryString],
+    queryKey: ['/api/dashboard/pending-payments', filterPeriod],
     queryFn: async () => {
+      console.log('Fetching pending payments with filter:', queryString);
       const response = await fetch(`/api/dashboard/pending-payments?${queryString}`);
       if (!response.ok) {
         throw new Error('Errore nel caricamento dei pagamenti pendenti');
