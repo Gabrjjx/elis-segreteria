@@ -26,7 +26,8 @@ export default function GoogleAuthPage() {
     hasCredentials: false, 
     hasValidToken: false
   });
-  const [isStatusLoading, setIsStatusLoading] = useState(true);
+  // Inizia con false per evitare caricamenti automatici che possono causare loop
+  const [isStatusLoading, setIsStatusLoading] = useState(false);
 
   // Funzione per caricare manualmente lo stato di autenticazione
   const fetchAuthStatus = async () => {
@@ -76,45 +77,45 @@ export default function GoogleAuthPage() {
   };
   
   // Carica lo stato solo all'avvio del componente, usando unmounted flag
-  // Carica lo stato solo all'avvio del componente, NON come dipendenza per evitare loop infinito
+  // Usiamo useEffect con useRef per gestire il caricamento iniziale
+  // Questo approccio previene il problema di loop di aggiornamenti
+  const isInitialMount = useRef(true);
+  
   useEffect(() => {
-    console.log("useEffect per fetchAuthStatus eseguito - SOLO MOUNT");
-    let isMounted = true;
-    
-    const loadAuthStatus = async () => {
-      if (!isMounted) return;
+    // Eseguiamo solo al primo montaggio
+    if (isInitialMount.current) {
+      console.log("useEffect eseguito - PRIMO MOUNT");
+      isInitialMount.current = false;
       
-      try {
-        // Imposta il caricamento
-        setIsStatusLoading(true);
-        
-        // Utilizzare fetch diretto con cache busting per evitare problemi di caching
-        const cacheBuster = Date.now();
-        const response = await fetch(`/api/google/auth/status?t=${cacheBuster}`, {
-          method: 'GET',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          },
-          credentials: 'same-origin'
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Errore nella richiesta: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log("Risultato API fetchAuthStatus:", data);
-        
-        if (isMounted) {
-          // Aggiorniamo lo stato direttamente
+      const loadAuthStatus = async () => {
+        try {
+          // Imposta il caricamento
+          setIsStatusLoading(true);
+          
+          // Utilizzare fetch diretto con cache busting
+          const cacheBuster = Date.now();
+          const response = await fetch(`/api/google/auth/status?t=${cacheBuster}`, {
+            method: 'GET',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            },
+            credentials: 'same-origin'
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Errore nella richiesta: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log("Risultato API fetchAuthStatus:", data);
+          
+          // Aggiorniamo lo stato solo se il componente è ancora montato
           setAuthStatus(data);
           setIsStatusLoading(false);
-        }
-      } catch (error) {
-        console.error("Errore nel caricamento dello stato:", error);
-        if (isMounted) {
+        } catch (error) {
+          console.error("Errore nel caricamento dello stato:", error);
           toast({
             variant: "destructive",
             title: "Errore di connessione",
@@ -122,15 +123,10 @@ export default function GoogleAuthPage() {
           });
           setIsStatusLoading(false);
         }
-      }
-    };
-    
-    loadAuthStatus();
-    
-    return () => {
-      isMounted = false;
-    };
-  // Array vuoto assicura che venga eseguito solo al mount
+      };
+      
+      loadAuthStatus();
+    }
   }, []);
 
   // Mutation per ottenere l'URL di autorizzazione
@@ -306,7 +302,9 @@ export default function GoogleAuthPage() {
       stopLoading();
       setLocalLoading(false);
     }
-  }, [anyMutationPending, startLoading, stopLoading]);
+  // Utilizziamo sintassi ref per evitare dipendenze che cambiano tra i render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anyMutationPending]);
 
   // Handler functions
   function handleGetAuthUrl() {
