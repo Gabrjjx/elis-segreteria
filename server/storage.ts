@@ -217,10 +217,11 @@ export class DatabaseStorage implements IStorage {
   // Initialize sample data - only used for first setup
   async initializeSampleData(): Promise<void> {
     // Check if there's any data already
-    const [{ count }] = await db.select({ count: count() }).from(services);
+    const [countResult] = await db.select({ value: count() }).from(services);
+    const countValue = Number(countResult.value || 0);
     
     // Only seed if the database is empty
-    if (Number(count) === 0) {
+    if (countValue === 0) {
       // Add admin user
       await this.createUser({
         username: "admin",
