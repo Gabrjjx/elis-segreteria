@@ -27,14 +27,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const handleNavigation = (path: string, event: React.MouseEvent) => {
     event.preventDefault();
     
-    // Extract base path and search params
-    const [basePath, searchParams] = path.split('?');
+    // Use more reliable navigation with location API
+    window.location.href = path;
     
-    // Navigate to path
-    window.history.pushState({}, '', path);
-    
-    // Force rerender
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    // Log navigation for debugging
+    console.log("Navigating to:", path);
   };
 
   const routes = [
