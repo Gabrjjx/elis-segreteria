@@ -136,6 +136,25 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
     console.log("Seconda riga (primo record):", JSON.stringify(data[1]));
     console.log("Terza riga (secondo record):", JSON.stringify(data[2]));
     
+    // Controlliamo la prima colonna (colonna A) per verificare l'intestazione e i valori
+    if (data.length > 0 && data[0].length > 0) {
+      const headerA = data[0][0];
+      console.log(`Intestazione colonna A: "${headerA}"`);
+      
+      // Verifichiamo alcuni valori della colonna A per vedere se contengono "risolto"
+      let risolteCount = 0;
+      for (let i = 1; i < Math.min(data.length, 10); i++) {
+        if (data[i] && data[i][0]) {
+          const valA = data[i][0].toString().toLowerCase().trim();
+          if (valA === "risolto") {
+            risolteCount++;
+            console.log(`Riga ${i} ha "risolto" nella colonna A: "${data[i][0]}"`);
+          }
+        }
+      }
+      console.log(`Trovate ${risolteCount} righe con "risolto" nelle prime 10 righe`);
+    }
+    
     // I dati che stiamo ricevendo sembrano diversi da quelli attesi
     // Analizziamo meglio la struttura
     
@@ -210,10 +229,31 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
     
     // Verifichiamo se è presente una colonna di stato
     let statoIdx = -1;
-    if (data[0] && data[0].length > 0 && typeof data[0][0] === 'string' && 
-        data[0][0].toLowerCase().includes('stato')) {
-      statoIdx = 0;
-      console.log("Rilevata colonna di stato alla posizione 0");
+    if (data[0] && data[0].length > 0) {
+      const headerA = String(data[0][0] || '').toLowerCase();
+      console.log(`Intestazione prima colonna: "${data[0][0]}" (lowercase: "${headerA}")`);
+      
+      if (headerA === "risolto" || headerA.includes("stato")) {
+        statoIdx = 0;
+        console.log("✓ Rilevata colonna di stato alla posizione 0");
+        
+        // Conteggiamo quante righe hanno valore "risolto" nella prima colonna
+        let risolteCount = 0;
+        let nonRisolteCount = 0;
+        for (let i = 1; i < Math.min(data.length, 20); i++) {
+          if (data[i] && data[i][0]) {
+            const valA = String(data[i][0]).toLowerCase().trim();
+            if (valA === "risolto") {
+              risolteCount++;
+              console.log(`- Riga ${i} ha valore "risolto" nella colonna A: "${data[i][0]}"`);
+            } else {
+              nonRisolteCount++;
+              console.log(`- Riga ${i} NON ha valore "risolto" nella colonna A: "${data[i][0] || '<vuoto>'}"`)
+            }
+          }
+        }
+        console.log(`Nelle prime 20 righe: ${risolteCount} righe risolte, ${nonRisolteCount} righe non risolte/vuote`);
+      }
     }
     
     for (let i = 1; i < data.length; i++) {
@@ -222,14 +262,14 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
         continue; // Salta righe troppo corte
       }
       
-      // Controlla se la richiesta ha già uno stato (risolto/completato)
-      // Importa solo le richieste SENZA stato o con stato vuoto o "segnalato"
-      if (statoIdx >= 0 && row[statoIdx]) {
-        const statoValue = String(row[statoIdx]).toLowerCase();
-        if (statoValue === "risolto" || statoValue === "completato") {
+      // Controlla se la richiesta ha già uno stato nella prima colonna
+      // Importa solo le richieste che NON sono già "risolte"
+      if (row[0]) {
+        const statoValue = String(row[0]).toLowerCase().trim();
+        if (statoValue === "risolto") {
           // Salta richieste già risolte
-          if (i <= 5) {
-            console.log(`Riga ${i} saltata perché risulta già risolta (stato: "${row[statoIdx]}")`);
+          if (i <= 10) {
+            console.log(`Riga ${i} saltata perché risulta già risolta nella colonna A (valore: "${row[0]}")`);
           }
           continue;
         }
