@@ -52,7 +52,7 @@ interface ServiceFormProps {
 
 export default function ServiceForm({ id }: ServiceFormProps) {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
+  // Rimuovo la referenza a useToast che non è più importato
   const isEditing = !!id;
   
   // Get service data if editing
@@ -108,9 +108,9 @@ export default function ServiceForm({ id }: ServiceFormProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/recent-services'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/pending-payments'] });
       
-      // Sostituisco il toast con un log
+      // Sostituisco il toast con un alert
       console.log("Servizio creato con successo");
-      // alert("Il servizio è stato creato con successo.");
+      alert("Il servizio è stato creato con successo.");
       
       setLocation("/services");
     },
@@ -145,7 +145,7 @@ export default function ServiceForm({ id }: ServiceFormProps) {
       
       // Sostituisco il toast con un alert per evitare errori
       console.log("Servizio aggiornato con successo");
-      // alert("Il servizio è stato aggiornato con successo.");
+      alert("Il servizio è stato aggiornato con successo.");
       
       setLocation("/services");
     },
