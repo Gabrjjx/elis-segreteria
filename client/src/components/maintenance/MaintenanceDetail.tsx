@@ -111,7 +111,10 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   // Query per ottenere i dettagli della richiesta
   const { data: request, isLoading, isError } = useQuery({
     queryKey: ['/api/maintenance', requestId],
-    queryFn: () => apiRequest<MaintenanceRequest>(`/api/maintenance/${requestId}`),
+    queryFn: async () => {
+      const response = await apiRequest<MaintenanceRequest>(`/api/maintenance/${requestId}`);
+      return response;
+    },
     enabled: isOpen && requestId > 0,
     refetchOnWindowFocus: false
   });
@@ -158,6 +161,70 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   };
   
   if (!isOpen) return null;
+
+  // Funzioni di estrazione informazioni
+  const extractOriginalDate = (request?: MaintenanceRequest) => {
+    if (!request) return null;
+    
+    if (request.notes?.includes("Data:")) 
+      return request.notes.match(/Data:\s*([^\n]+)/)?.[1];
+    
+    if (request.notes?.includes("data:"))
+      return request.notes.match(/data:\s*([^\n]+)/)?.[1];
+    
+    if (request.description?.includes("Data originale:"))
+      return request.description.match(/Data originale:\s*([^)]+)/)?.[1];
+    
+    return null;
+  };
+  
+  const extractUbicazione = (request?: MaintenanceRequest) => {
+    if (!request) return null;
+    let ubicazione = "";
+    
+    // Cerca nei notes
+    if (request.notes?.includes("Ubicazione specifica")) {
+      const match = request.notes.match(/Ubicazione specifica[^:]*:\s*([^\n]+)/);
+      if (match && match[1]) ubicazione = match[1];
+    }
+    
+    // Cerca nella descrizione
+    if (!ubicazione && request.description) {
+      // Controlla se la descrizione ha il formato "ubicazione: dettagli"
+      if (request.description.includes(":") && !request.description.includes("Data originale:")) {
+        ubicazione = request.description.split(":")[0];
+      }
+    }
+    
+    return ubicazione || null;
+  };
+  
+  const extractDettagli = (request?: MaintenanceRequest) => {
+    if (!request) return null;
+    let dettagli = "";
+    
+    // Cerca nei notes
+    if (request.notes?.includes("Dettagli del difetto")) {
+      const match = request.notes.match(/Dettagli del difetto[^:]*:\s*([^\n]+)/);
+      if (match && match[1]) dettagli = match[1];
+    }
+    
+    // Cerca nella descrizione
+    if (!dettagli && request.description) {
+      // Controlla se la descrizione ha il formato "ubicazione: dettagli"
+      if (request.description.includes(":") && !request.description.includes("Data originale:")) {
+        const parts = request.description.split(":");
+        if (parts.length > 1) {
+          dettagli = parts[1].split("(Data originale")[0]?.trim();
+        }
+      } else if (!request.description.includes(":")) {
+        // Se non c'è separatore, usa tutta la descrizione come dettagli
+        dettagli = request.description;
+      }
+    }
+    
+    return dettagli || null;
+  };
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -220,56 +287,42 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
                 <p className="whitespace-pre-line">{request.description}</p>
               </div>
               
-              {/* Estrazione e visualizzazione dei dettagli dalle note */}
-              {request.notes && (
-                <>
-                  {/* Estrazione della data originale */}
-                  {request.notes.includes("data:") || request.notes.includes("Data:") ? (
-                    <div className="md:col-span-2 mt-2">
-                      <div className="bg-blue-50 p-3 rounded-md">
-                        <h3 className="font-medium text-blue-700">Data originale dal Google Sheet</h3>
-                        <p className="text-blue-800 font-semibold">
-                          {request.notes.includes("Data:") 
-                            ? request.notes.match(/Data:\s*([^\n]+)/)?.[1]
-                            : request.notes.match(/data:\s*([^\n]+)/)?.[1] || 
-                              request.description?.match(/Data originale:\s*([^)]+)/)?.[1]}
-                        </p>
-                      </div>
-                    </div>
-                  ) : null}
-                  
-                  {/* Estrai ubicazione e dettagli dalla descrizione se disponibili */}
-                  {request.description && request.description.includes(":") && (
-                    <div className="md:col-span-2 mt-2">
-                      <div className="bg-yellow-50 p-3 rounded-md">
-                        <h3 className="font-medium text-yellow-700">Ubicazione specifica</h3>
-                        <p className="text-yellow-800">
-                          {request.description.split(":")[0]}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Dettagli del difetto */}
-                  {request.description && request.description.includes(":") && (
-                    <div className="md:col-span-2 mt-2">
-                      <div className="bg-red-50 p-3 rounded-md">
-                        <h3 className="font-medium text-red-700">Dettagli del difetto rilevato</h3>
-                        <p className="text-red-800">
-                          {request.description.split(":")[1]?.split("(Data originale")[0]?.trim()}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Note originali complete */}
-                  <div className="md:col-span-2 mt-4">
-                    <details>
-                      <summary className="font-medium text-gray-700 cursor-pointer">Note complete</summary>
-                      <p className="whitespace-pre-line text-sm mt-2 pl-2 border-l-2 border-gray-200">{request.notes}</p>
-                    </details>
+              {/* Estrazione e visualizzazione dei dettagli */}
+              {extractOriginalDate(request) && (
+                <div className="md:col-span-2 mt-2">
+                  <div className="bg-blue-50 p-3 rounded-md">
+                    <h3 className="font-medium text-blue-700">Data originale dal Google Sheet</h3>
+                    <p className="text-blue-800 font-semibold">{extractOriginalDate(request)}</p>
                   </div>
-                </>
+                </div>
+              )}
+              
+              {extractUbicazione(request) && (
+                <div className="md:col-span-2 mt-2">
+                  <div className="bg-yellow-50 p-3 rounded-md">
+                    <h3 className="font-medium text-yellow-700">Ubicazione specifica</h3>
+                    <p className="text-yellow-800">{extractUbicazione(request)}</p>
+                  </div>
+                </div>
+              )}
+              
+              {extractDettagli(request) && (
+                <div className="md:col-span-2 mt-2">
+                  <div className="bg-red-50 p-3 rounded-md">
+                    <h3 className="font-medium text-red-700">Dettagli del difetto rilevato</h3>
+                    <p className="text-red-800">{extractDettagli(request)}</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Note originali complete */}
+              {request.notes && (
+                <div className="md:col-span-2 mt-4">
+                  <details>
+                    <summary className="font-medium text-gray-700 cursor-pointer">Note complete</summary>
+                    <p className="whitespace-pre-line text-sm mt-2 pl-2 border-l-2 border-gray-200">{request.notes}</p>
+                  </details>
+                </div>
               )}
               
               {request.attachmentUrl && (

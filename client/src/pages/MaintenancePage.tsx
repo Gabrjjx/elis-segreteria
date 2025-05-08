@@ -463,6 +463,18 @@ export default function MaintenancePage() {
   
   return (
     <div className="container mx-auto py-6">
+      {/* Dialog per i dettagli */}
+      {selectedRequestId && (
+        <MaintenanceDetail 
+          requestId={selectedRequestId}
+          isOpen={detailDialogOpen}
+          onClose={() => {
+            setDetailDialogOpen(false);
+            setSelectedRequestId(null);
+          }}
+        />
+      )}
+      
       <div className="flex flex-col space-y-4">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Richieste di Manutenzione</h1>
