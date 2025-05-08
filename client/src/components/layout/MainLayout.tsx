@@ -407,25 +407,54 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
               
-              <a
-                href="/payments"
-                className={cn(
-                  "flex-1 flex flex-col items-center py-3",
-                  location.includes("/payments") ? "text-primary" : "text-gray-600"
-                )}
-                onClick={(e) => handleNavigation("/payments", e)}
-              >
-                <Receipt className="h-5 w-5" />
-                <span className="text-xs mt-1">Pagamenti</span>
-              </a>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div
+                    className={cn(
+                      "flex-1 flex flex-col items-center py-3 cursor-pointer",
+                      location.includes("/payments") ? "text-primary" : "text-gray-600"
+                    )}
+                  >
+                    <Receipt className="h-5 w-5" />
+                    <span className="text-xs mt-1">Pagamenti</span>
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" side="top" sideOffset={8} className="w-48 rounded-xl mb-2 shadow-lg bg-white border border-gray-200">
+                  <DropdownMenuItem 
+                    onClick={(e) => handleNavigation("/payments", e)}
+                    className="flex items-center p-2.5 cursor-pointer"
+                  >
+                    <Receipt className="h-4 w-4 mr-2 text-primary" />
+                    <span>Tutti i pagamenti</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-1" />
+                  <DropdownMenuItem 
+                    onClick={(e) => handleNavigation("/services?status=unpaid", e)}
+                    className="flex items-center p-2.5 cursor-pointer"
+                  >
+                    <AlertCircle className="h-4 w-4 mr-2 text-red-500" />
+                    <span>Servizi da pagare</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               
-              <div
-                className="flex-1 flex flex-col items-center py-3 text-gray-400 cursor-not-allowed"
+              <a
+                href="#"
+                className="flex-1 flex flex-col items-center py-3 text-gray-600"
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Check if browser supports the camera
+                  if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
+                    // Open a QR scanner modal or redirect to a scanner page
+                    alert('Funzionalità scanner QR in arrivo!');
+                  } else {
+                    alert('Il tuo dispositivo non supporta la fotocamera.');
+                  }
+                }}
               >
-                <Hammer className="h-5 w-5" />
-                <span className="text-xs mt-1">Manutenzione</span>
-                <span className="text-[10px] mt-0.5 bg-gray-200 px-1 py-0.5 rounded-sm">Sospeso</span>
-              </div>
+                <Search className="h-5 w-5" />
+                <span className="text-xs mt-1">Scanner</span>
+              </a>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
