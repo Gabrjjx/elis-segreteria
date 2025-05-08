@@ -970,6 +970,7 @@ export class DatabaseStorage implements IStorage {
     let query = db.select({
       service: services,
       student: {
+        // Map the database snake_case to camelCase for frontend
         firstName: students.firstName,
         lastName: students.lastName
       }
@@ -991,7 +992,7 @@ export class DatabaseStorage implements IStorage {
     // Trasforma i risultati nel formato atteso
     return results.map(result => ({
       ...result.service,
-      student: result.student.firstName ? {
+      student: result.student && result.student.firstName ? {
         firstName: result.student.firstName,
         lastName: result.student.lastName
       } : undefined
@@ -1002,6 +1003,7 @@ export class DatabaseStorage implements IStorage {
     let query = db.select({
       service: services,
       student: {
+        // Map the database snake_case to camelCase for frontend
         firstName: students.firstName,
         lastName: students.lastName
       }
@@ -1024,7 +1026,7 @@ export class DatabaseStorage implements IStorage {
     // Trasforma i risultati nel formato atteso
     return results.map(result => ({
       ...result.service,
-      student: result.student.firstName ? {
+      student: result.student && result.student.firstName ? {
         firstName: result.student.firstName,
         lastName: result.student.lastName
       } : undefined
