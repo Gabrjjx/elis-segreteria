@@ -439,18 +439,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
               </DropdownMenu>
               
               <a
-                href="#"
-                className="flex-1 flex flex-col items-center py-3 text-gray-600"
-                onClick={(e) => {
-                  e.preventDefault();
-                  // Check if browser supports the camera
-                  if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
-                    // Open a QR scanner modal or redirect to a scanner page
-                    alert('Funzionalità scanner QR in arrivo!');
-                  } else {
-                    alert('Il tuo dispositivo non supporta la fotocamera.');
-                  }
-                }}
+                href="/scanner"
+                className={cn(
+                  "flex-1 flex flex-col items-center py-3",
+                  location === "/scanner" ? "text-primary" : "text-gray-600"
+                )}
+                onClick={(e) => handleNavigation("/scanner", e)}
               >
                 <Search className="h-5 w-5" />
                 <span className="text-xs mt-1">Scanner</span>
