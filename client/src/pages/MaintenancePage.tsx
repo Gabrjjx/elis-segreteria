@@ -208,7 +208,7 @@ export default function MaintenancePage() {
         body: JSON.stringify({ csvData })
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });
       toast({
         title: "Importazione completata",
@@ -254,7 +254,7 @@ export default function MaintenancePage() {
         method: 'POST'
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });
       toast({
         title: "Sincronizzazione completata",
