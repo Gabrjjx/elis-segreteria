@@ -269,10 +269,13 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl" aria-describedby="maintenance-request-description">
+      <DialogContent className="max-w-3xl">
         {isLoading ? (
           <>
             <DialogTitle>Caricamento in corso...</DialogTitle>
+            <DialogDescription>
+              Attendere il caricamento dei dati della richiesta...
+            </DialogDescription>
             <div className="flex justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
             </div>
@@ -280,6 +283,9 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
         ) : isError ? (
           <>
             <DialogTitle>Errore</DialogTitle>
+            <DialogDescription>
+              Si è verificato un problema durante il caricamento.
+            </DialogDescription>
             <div className="text-center py-8">
               <p className="text-red-500">Si è verificato un errore durante il caricamento dei dettagli della richiesta.</p>
               <Button 
