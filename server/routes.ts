@@ -449,19 +449,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get OAuth2 status
   app.get("/api/google/auth/status", async (_req: Request, res: Response) => {
     try {
+      // Log diretto delle variabili d'ambiente per debug
+      console.log("DEBUG OAuth2 credentials check:");
+      console.log("GOOGLE_CLIENT_ID exists:", !!process.env.GOOGLE_CLIENT_ID);
+      console.log("GOOGLE_CLIENT_SECRET exists:", !!process.env.GOOGLE_CLIENT_SECRET);
+      
+      const hasCredentials = hasOAuth2Credentials();
+      console.log("hasOAuth2Credentials() returned:", hasCredentials);
+      
       const status = {
-        hasCredentials: hasOAuth2Credentials(),
+        hasCredentials: hasCredentials,
         hasValidToken: false
       };
       
       if (status.hasCredentials) {
         try {
           status.hasValidToken = await verifyToken();
+          console.log("verifyToken() returned:", status.hasValidToken);
         } catch (error) {
           console.log("Errore nella verifica del token:", error);
         }
       }
       
+      console.log("Returning status:", status);
       res.json(status);
     } catch (error) {
       console.error("Error checking OAuth2 status:", error);
