@@ -20,10 +20,27 @@ import { insertServiceSchema, defaultPrices, ServiceType, PaymentStatus } from "
 
 // Extend the insertServiceSchema with client-side validations
 const formSchema = insertServiceSchema.extend({
-  date: z.coerce.date({
-    required_error: "La data è obbligatoria",
-    invalid_type_error: "La data non è valida",
-  })
+  // Accept date as string or Date, and coerce to a Date
+  date: z.union([
+    z.string(),
+    z.date()
+  ]).transform((val) => {
+    if (typeof val === 'string') {
+      const date = new Date(val);
+      // Validate the date is real
+      if (isNaN(date.getTime())) {
+        throw new Error("Data non valida");
+      }
+      return date;
+    }
+    return val;
+  }).refine((val) => {
+    // Additional validation to make sure we have a valid date
+    return val instanceof Date && !isNaN(val.getTime());
+  }, {
+    message: "La data non è valida",
+  }),
+  sigla: z.string().min(1, "La sigla è obbligatoria"),
 });
 
 type FormValues = z.infer<typeof formSchema>;

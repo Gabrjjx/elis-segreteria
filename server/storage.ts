@@ -114,20 +114,51 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createService(insertService: InsertService): Promise<Service> {
-    const [service] = await db
-      .insert(services)
-      .values(insertService)
-      .returning();
-    return service;
+    // Ensure date is properly parsed as Date object
+    const processedData = {
+      ...insertService,
+      date: new Date(insertService.date), // Convert to Date object
+    };
+    
+    console.log("Creating service with processed data:", processedData);
+    
+    try {
+      const [service] = await db
+        .insert(services)
+        .values(processedData)
+        .returning();
+      
+      console.log("Service created successfully:", service);
+      return service;
+    } catch (error) {
+      console.error("Error creating service in database:", error);
+      throw error;
+    }
   }
 
   async updateService(id: number, updates: Partial<InsertService>): Promise<Service | undefined> {
-    const [updatedService] = await db
-      .update(services)
-      .set(updates)
-      .where(eq(services.id, id))
-      .returning();
-    return updatedService;
+    // Process updates to ensure date is properly formatted if it exists
+    const processedUpdates: any = { ...updates };
+    
+    if (updates.date) {
+      processedUpdates.date = new Date(updates.date);
+    }
+    
+    console.log("Updating service with id:", id, "with data:", processedUpdates);
+    
+    try {
+      const [updatedService] = await db
+        .update(services)
+        .set(processedUpdates)
+        .where(eq(services.id, id))
+        .returning();
+        
+      console.log("Service updated successfully:", updatedService);
+      return updatedService;
+    } catch (error) {
+      console.error("Error updating service in database:", error);
+      throw error;
+    }
   }
 
   async deleteService(id: number): Promise<boolean> {
