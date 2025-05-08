@@ -207,6 +207,26 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   const extractOriginalDate = (request?: MaintenanceRequest) => {
     if (!request) return null;
     
+    // Prova a formattare la data del timestamp originale nel formato italiano
+    if (request.timestamp) {
+      try {
+        const date = new Date(request.timestamp);
+        if (!isNaN(date.getTime())) {
+          // Formato italiano: DD/MM/YYYY HH.MM.SS
+          const day = date.getDate().toString().padStart(2, '0');
+          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          const year = date.getFullYear();
+          const hours = date.getHours().toString().padStart(2, '0');
+          const minutes = date.getMinutes().toString().padStart(2, '0');
+          const seconds = date.getSeconds().toString().padStart(2, '0');
+          return `${day}/${month}/${year} ${hours}.${minutes}.${seconds}`;
+        }
+      } catch (e) {
+        console.error("Errore nella formattazione della data:", e);
+      }
+    }
+    
+    // Cerca nei campi notes e description come fallback
     if (request.notes?.includes("Data:")) 
       return request.notes.match(/Data:\s*([^\n]+)/)?.[1];
     
@@ -221,6 +241,19 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   
   const extractUbicazione = (request?: MaintenanceRequest) => {
     if (!request) return null;
+    
+    // Se abbiamo sia roomNumber che location, li combiniamo
+    if (request.roomNumber && request.location) {
+      if (request.roomNumber !== request.location) {
+        return `${request.roomNumber} - ${request.location}`;
+      }
+    }
+    
+    // Se abbiamo solo uno dei due campi
+    if (request.roomNumber && !request.location) return request.roomNumber;
+    if (!request.roomNumber && request.location) return request.location;
+    
+    // Fallback ai vecchi metodi
     let ubicazione = "";
     
     // Cerca nei notes
@@ -242,6 +275,18 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   
   const extractDettagli = (request?: MaintenanceRequest) => {
     if (!request) return null;
+    
+    // Se abbiamo description, usiamo quella
+    if (request.description && request.description.trim() !== '') {
+      return request.description;
+    }
+    
+    // Altrimenti usiamo requestType se disponibile
+    if (request.requestType && request.requestType.trim() !== '') {
+      return request.requestType;
+    }
+    
+    // Fallback ai vecchi metodi
     let dettagli = "";
     
     // Cerca nei notes
@@ -250,7 +295,7 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
       if (match && match[1]) dettagli = match[1];
     }
     
-    // Cerca nella descrizione
+    // Cerca nella descrizione come ultima risorsa
     if (!dettagli && request.description) {
       // Controlla se la descrizione ha il formato "ubicazione: dettagli"
       if (request.description.includes(":") && !request.description.includes("Data originale:")) {
