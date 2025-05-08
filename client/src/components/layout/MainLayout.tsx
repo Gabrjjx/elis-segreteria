@@ -333,158 +333,156 @@ export default function MainLayout({ children }: MainLayoutProps) {
             </div>
           </div>
 
-          {/* Mobile Navigation */}
+          {/* Mobile Navigation - Redesigned for better UX */}
           <nav className="md:hidden bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50 shadow-lg">
-            <div className="flex">
+            {/* Main tab navigation with larger buttons */}
+            <div className="flex items-center h-16">
               <a 
                 href="/"
                 className={cn(
-                  "flex-1 flex flex-col items-center py-3",
-                  location === "/" ? "text-primary" : "text-gray-600"
+                  "flex-1 flex flex-col items-center justify-center h-full",
+                  location === "/" 
+                    ? "text-primary border-t-2 border-primary bg-blue-50" 
+                    : "text-gray-600"
                 )}
                 onClick={(e) => handleNavigation("/", e)}
               >
-                <LayoutDashboard className="h-5 w-5" />
-                <span className="text-xs mt-1">Dashboard</span>
+                <LayoutDashboard className="h-6 w-6 mb-1" />
+                <span className="text-xs font-medium">Dashboard</span>
+              </a>
+              
+              <a 
+                href="/services"
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center h-full",
+                  location.includes("/services") && !location.includes("status=unpaid")
+                    ? "text-primary border-t-2 border-primary bg-blue-50" 
+                    : "text-gray-600"
+                )}
+                onClick={(e) => handleNavigation("/services", e)}
+              >
+                <PackageOpen className="h-6 w-6 mb-1" />
+                <span className="text-xs font-medium">Servizi</span>
+              </a>
+              
+              <a
+                href="/scanner"
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center h-full relative",
+                  location === "/scanner"
+                    ? "text-primary border-t-2 border-primary bg-blue-50" 
+                    : "text-gray-600"
+                )}
+                onClick={(e) => handleNavigation("/scanner", e)}
+              >
+                <div className="absolute -top-5 bg-primary text-white p-3 rounded-full shadow-lg">
+                  <Search className="h-6 w-6" />
+                </div>
+                <span className="text-xs font-medium mt-6">Scanner</span>
               </a>
               
               <a 
                 href="/students"
                 className={cn(
-                  "flex-1 flex flex-col items-center py-3",
-                  location === "/students" ? "text-primary" : "text-gray-600"
+                  "flex-1 flex flex-col items-center justify-center h-full",
+                  location === "/students"
+                    ? "text-primary border-t-2 border-primary bg-blue-50" 
+                    : "text-gray-600"
                 )}
                 onClick={(e) => handleNavigation("/students", e)}
               >
-                <KeySquare className="h-5 w-5" />
-                <span className="text-xs mt-1">Studenti</span>
+                <KeySquare className="h-6 w-6 mb-1" />
+                <span className="text-xs font-medium">Studenti</span>
               </a>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <div
                     className={cn(
-                      "flex-1 flex flex-col items-center py-3 cursor-pointer",
-                      location.includes("/services") && !location.includes("status=unpaid") ? "text-primary" : "text-gray-600"
+                      "flex-1 flex flex-col items-center justify-center h-full cursor-pointer",
+                      (location.includes("/payments") || location === "/reports" || location === "/settings" || location === "/google-auth")
+                        ? "text-primary border-t-2 border-primary bg-blue-50" 
+                        : "text-gray-600"
                     )}
                   >
-                    <PackageOpen className="h-5 w-5" />
-                    <span className="text-xs mt-1">Servizi</span>
+                    <Receipt className="h-6 w-6 mb-1" />
+                    <span className="text-xs font-medium">Menu</span>
                   </div>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" side="top" sideOffset={8} className="w-48 rounded-xl mb-2 shadow-lg bg-white border border-gray-200">
-                  <DropdownMenuItem 
-                    onClick={(e) => handleNavigation("/services", e)}
-                    className="flex items-center p-2.5 cursor-pointer"
-                  >
-                    <PackageOpen className="h-4 w-4 mr-2 text-primary" />
-                    <span>Tutti i servizi</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="my-1" />
-                  <DropdownMenuItem 
-                    onClick={(e) => handleNavigation("/services?type=siglatura", e)}
-                    className="flex items-center p-2.5 cursor-pointer"
-                  >
-                    <Tag className="h-4 w-4 mr-2 text-primary" />
-                    <span>Siglatura</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="my-1" />
-                  <DropdownMenuItem
-                    onClick={(e) => handleNavigation("/services?type=happy_hour", e)}
-                    className="flex items-center p-2.5 cursor-pointer"
-                  >
-                    <Beer className="h-4 w-4 mr-2 text-primary" />
-                    <span>Happy Hour</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="my-1" />
-                  <DropdownMenuItem
-                    onClick={(e) => handleNavigation("/services?type=riparazione", e)}
-                    className="flex items-center p-2.5 cursor-pointer"
-                  >
-                    <Drill className="h-4 w-4 mr-2 text-primary" />
-                    <span>Riparazioni</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <div
-                    className={cn(
-                      "flex-1 flex flex-col items-center py-3 cursor-pointer",
-                      location.includes("/payments") ? "text-primary" : "text-gray-600"
-                    )}
-                  >
-                    <Receipt className="h-5 w-5" />
-                    <span className="text-xs mt-1">Pagamenti</span>
+                <DropdownMenuContent align="end" side="top" sideOffset={16} className="w-56 rounded-xl mb-2 shadow-lg bg-white border border-gray-200">
+                  {/* Payments Section */}
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Pagamenti
                   </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" side="top" sideOffset={8} className="w-48 rounded-xl mb-2 shadow-lg bg-white border border-gray-200">
                   <DropdownMenuItem 
                     onClick={(e) => handleNavigation("/payments", e)}
-                    className="flex items-center p-2.5 cursor-pointer"
+                    className="flex items-center p-3 cursor-pointer"
                   >
-                    <Receipt className="h-4 w-4 mr-2 text-primary" />
-                    <span>Tutti i pagamenti</span>
+                    <Receipt className="h-5 w-5 mr-3 text-primary" />
+                    <span className="font-medium">Tutti i pagamenti</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator className="my-1" />
                   <DropdownMenuItem 
                     onClick={(e) => handleNavigation("/services?status=unpaid", e)}
-                    className="flex items-center p-2.5 cursor-pointer"
+                    className="flex items-center p-3 cursor-pointer"
                   >
-                    <AlertCircle className="h-4 w-4 mr-2 text-red-500" />
-                    <span>Servizi da pagare</span>
+                    <AlertCircle className="h-5 w-5 mr-3 text-red-500" />
+                    <span className="font-medium">Servizi da pagare</span>
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              <a
-                href="/scanner"
-                className={cn(
-                  "flex-1 flex flex-col items-center py-3",
-                  location === "/scanner" ? "text-primary" : "text-gray-600"
-                )}
-                onClick={(e) => handleNavigation("/scanner", e)}
-              >
-                <Search className="h-5 w-5" />
-                <span className="text-xs mt-1">Scanner</span>
-              </a>
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <div
-                    className={cn(
-                      "flex-1 flex flex-col items-center py-3 cursor-pointer",
-                      (location === "/reports" || location === "/settings" || location === "/google-auth") ? "text-primary" : "text-gray-600"
-                    )}
-                  >
-                    <Settings className="h-5 w-5" />
-                    <span className="text-xs mt-1">Altro</span>
+                  
+                  <DropdownMenuSeparator className="my-1" />
+                  
+                  {/* Service types */}
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Tipi di servizio
                   </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" side="top" sideOffset={8} className="w-48 rounded-xl mb-2 shadow-lg bg-white border border-gray-200">
+                  <DropdownMenuItem 
+                    onClick={(e) => handleNavigation("/services?type=siglatura", e)}
+                    className="flex items-center p-3 cursor-pointer"
+                  >
+                    <Tag className="h-5 w-5 mr-3 text-primary" />
+                    <span className="font-medium">Siglatura</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => handleNavigation("/services?type=happy_hour", e)}
+                    className="flex items-center p-3 cursor-pointer"
+                  >
+                    <Beer className="h-5 w-5 mr-3 text-primary" />
+                    <span className="font-medium">Happy Hour</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => handleNavigation("/services?type=riparazione", e)}
+                    className="flex items-center p-3 cursor-pointer"
+                  >
+                    <Drill className="h-5 w-5 mr-3 text-primary" />
+                    <span className="font-medium">Riparazioni</span>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator className="my-1" />
+                  
+                  {/* Administration */}
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Amministrazione
+                  </div>
                   <DropdownMenuItem 
                     onClick={(e) => handleNavigation("/reports", e)}
-                    className="flex items-center p-2.5 cursor-pointer"
+                    className="flex items-center p-3 cursor-pointer"
                   >
-                    <FileBarChart className="h-4 w-4 mr-2 text-primary" />
-                    <span>Report</span>
+                    <FileBarChart className="h-5 w-5 mr-3 text-primary" />
+                    <span className="font-medium">Report</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator className="my-1" />
                   <DropdownMenuItem 
                     onClick={(e) => handleNavigation("/settings", e)}
-                    className="flex items-center p-2.5 cursor-pointer"
+                    className="flex items-center p-3 cursor-pointer"
                   >
-                    <Settings className="h-4 w-4 mr-2 text-primary" />
-                    <span>Impostazioni</span>
+                    <Settings className="h-5 w-5 mr-3 text-primary" />
+                    <span className="font-medium">Impostazioni</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator className="my-1" />
                   <DropdownMenuItem
                     onClick={(e) => handleNavigation("/google-auth", e)}
-                    className="flex items-center p-2.5 cursor-pointer"
+                    className="flex items-center p-3 cursor-pointer"
                   >
-                    <Cloud className="h-4 w-4 mr-2 text-primary" />
-                    <span>Google Auth</span>
+                    <Cloud className="h-5 w-5 mr-3 text-primary" />
+                    <span className="font-medium">Google Auth</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

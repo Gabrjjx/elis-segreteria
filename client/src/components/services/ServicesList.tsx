@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ type ServiceWithStudent = Service & {
     lastName: string; 
   } 
 };
-import { Pencil, Receipt, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Pencil, Receipt, Trash2, AlertTriangle, ChevronLeft, ChevronRight, Tag, Beer, Drill } from "lucide-react";
 import { PaymentActions } from "@/components/payments/PaymentActions";
 
 interface ServicesListProps {
@@ -283,53 +284,92 @@ export default function ServiceList({
         </Table>
       </div>
 
-      {/* Mobile Card View */}
-      <div className="md:hidden space-y-4">
+      {/* Mobile Card View - Enhanced for better touch experience */}
+      <div className="md:hidden space-y-5">
         {services.map((service) => (
-          <div key={service.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <div className="text-lg font-semibold">{service.sigla}</div>
-                {service.student ? (
-                  <div className="text-xs text-gray-600">
-                    {service.student.firstName} {service.student.lastName}
+          <div 
+            key={service.id} 
+            className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm relative overflow-hidden"
+            onClick={() => handleEdit(service.id)}
+          >
+            {/* Status indicator stripe */}
+            <div 
+              className={cn(
+                "absolute top-0 right-0 left-0 h-1.5", 
+                service.status === PaymentStatus.PAID ? "bg-green-500" : "bg-red-500"
+              )} 
+            />
+
+            {/* Service header with sigla and amount */}
+            <div className="flex justify-between items-start mb-4 mt-2">
+              <div className="flex items-center">
+                <div className="mr-3">
+                  {service.type === ServiceType.SIGLATURA && <Tag className="h-7 w-7 text-primary" />}
+                  {service.type === ServiceType.HAPPY_HOUR && <Beer className="h-7 w-7 text-amber-500" />}
+                  {service.type === ServiceType.RIPARAZIONE && <Drill className="h-7 w-7 text-gray-700" />}
+                </div>
+                <div>
+                  <div className="text-xl font-bold flex items-center">
+                    {service.sigla}
+                    <span className="ml-3 text-sm">
+                      {getServiceTypeBadge(service.type)}
+                    </span>
                   </div>
-                ) : (
-                  <div className="text-xs text-gray-400 italic">
-                    Nessun studente associato
-                  </div>
-                )}
-                <div className="text-sm text-gray-500">{format(new Date(service.date), "dd/MM/yyyy")}</div>
+                  {service.student ? (
+                    <div className="text-sm text-gray-600 font-medium">
+                      {service.student.firstName} {service.student.lastName}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-400 italic">
+                      Nessun studente associato
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex flex-col items-end">
-                <div className="text-lg font-medium">€{service.amount.toFixed(2)}</div>
-                <div>{getPaymentStatusBadge(service.status)}</div>
+                <div className="text-xl font-bold">€{service.amount.toFixed(2)}</div>
+                <div className="text-sm text-gray-500">{format(new Date(service.date), "dd/MM/yyyy")}</div>
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <div>
-                <span className="text-sm text-gray-500">Tipologia:</span>
-                <div>{getServiceTypeBadge(service.type)}</div>
+            {/* Service details */}
+            <div className="flex items-center bg-gray-50 rounded-lg p-3 mb-4">
+              <div className="flex-1 text-center">
+                <div className="text-xs text-gray-500 uppercase">Pezzi</div>
+                <div className="font-bold text-lg">{service.pieces}</div>
               </div>
-              <div>
-                <span className="text-sm text-gray-500">N. Pezzi:</span>
-                <div className="font-medium">{service.pieces}</div>
+              <div className="h-8 w-px bg-gray-200"></div>
+              <div className="flex-1 text-center">
+                <div className="text-xs text-gray-500 uppercase">Stato</div>
+                <div className="font-medium">
+                  {service.status === PaymentStatus.PAID ? (
+                    <span className="text-green-600">Pagato</span>
+                  ) : (
+                    <span className="text-red-600">Da pagare</span>
+                  )}
+                </div>
               </div>
             </div>
             
-            <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-200">
+            {/* Action buttons */}
+            <div className="grid grid-cols-3 gap-2 mt-4">
               <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleEdit(service.id)}
-                className="flex items-center text-xs"
+                variant="secondary" 
+                size="lg"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEdit(service.id);
+                }}
+                className="h-12 flex items-center justify-center rounded-lg"
               >
-                <Pencil className="h-3 w-3 mr-1" />
-                Modifica
+                <Pencil className="h-5 w-5 mr-2" />
+                <span>Modifica</span>
               </Button>
               
-              <div className="flex flex-grow justify-center">
+              <div 
+                onClick={(e) => e.stopPropagation()} 
+                className="flex h-12 justify-center col-span-1"
+              >
                 <PaymentActions 
                   service={service}
                   onUpdate={() => {
@@ -345,11 +385,12 @@ export default function ServiceList({
                 <AlertDialogTrigger asChild>
                   <Button 
                     variant="outline" 
-                    size="sm"
-                    className="text-destructive border-destructive flex items-center text-xs"
+                    size="lg"
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-12 text-destructive border-destructive flex items-center justify-center rounded-lg"
                   >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    Elimina
+                    <Trash2 className="h-5 w-5 mr-2" />
+                    <span>Elimina</span>
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
