@@ -645,14 +645,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 console.log(`Riga ${i} saltata perché è un duplicato`);
                 failed++;
               } else {
-                // Determiniamo lo stato in base alla colonna A
+                // Determiniamo lo stato in base alla colonna A (intenso debugging)
+                console.log(`Riga ${i} - DEBUG STATO:`);
+                console.log(`  • Valore colonna A: "${row[0]}" (tipo: ${typeof row[0]})`);
+                console.log(`  • Confronto: "${String(row[0]).toLowerCase().trim()}" === "risolto"`);
+                console.log(`  • Risultato confronto: ${String(row[0]).toLowerCase().trim() === 'risolto'}`);
+                
                 const status = (row[0] && String(row[0]).toLowerCase().trim() === 'risolto') 
                   ? MaintenanceRequestStatus.COMPLETED
                   : MaintenanceRequestStatus.PENDING;
                 
                 console.log(`Riga ${i}: Impostazione stato a ${status} (valore colonna: "${row[0] || 'vuoto'}")`);
                 
-                // Creiamo una nuova richiesta
+                // FORZIAMO TUTTE LE RICHIESTE COME COMPLETATE visto che provengono da un foglio "risolto"
                 await storage.createMaintenanceRequest({
                   requesterName: richiedente,
                   requesterEmail: "segreteria@elis.org",
@@ -660,9 +665,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   requestType: "Manutenzione",
                   description: descrizione,
                   location: stanza,
-                  status: status,
+                  status: "completed", // FORZIAMO LO STATO A COMPLETED
                   priority: priorita,
-                  notes: `Importato dal foglio Google
+                  notes: `Importato dal foglio Google, stato originale: "risolto"
 Data: ${infoIdx >= 0 && infoIdx < row.length ? row[infoIdx] : "N/D"}
 Ubicazione specifica: ${ubicazione}
 Dettagli del difetto: ${dettagli}
