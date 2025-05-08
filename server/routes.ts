@@ -26,7 +26,6 @@ import {
 import {
   createOrder as createPaypalOrder,
   captureOrder as capturePaypalOrder,
-  cancelOrder as cancelPaypalOrder,
   checkOrderStatus as checkPaypalOrderStatus
 } from "./services/paypalService";
 

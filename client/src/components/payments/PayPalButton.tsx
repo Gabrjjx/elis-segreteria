@@ -53,101 +53,32 @@ export function PayPalButton({
       
       const { id: orderId } = await createOrderResponse.json();
       
-      // Step 2: Reindirizzare l'utente alla pagina di pagamento PayPal
-      // In una implementazione reale, qui si integrerebbe la API PayPal lato client
-      // Per semplicità, simuliamo un processo di pagamento
-      
-      // Apriamo una finestra popup per il pagamento (simulato)
-      const paymentWindow = window.open(
-        `https://www.sandbox.paypal.com/checkoutnow?token=${orderId}`,
-        "paypal-checkout",
-        "width=800,height=600"
-      );
-      
-      // Informiamo l'utente che sta avvenendo il pagamento
+      // Step 2: Informiamo l'utente che sta avvenendo il pagamento
       toast({
-        title: "Pagamento in corso",
-        description: "Completa il pagamento nella finestra PayPal appena aperta.",
+        title: "Simulazione pagamento",
+        description: "Stiamo simulando il pagamento...",
       });
       
-      // Step 3: Polling per verificare lo stato dell'ordine
-      // In realtà questo sarebbe gestito dal callback PayPal
-      // Ma per semplicità, lo simuliamo con un timer di polling
-      const checkOrderStatus = async () => {
-        try {
-          const statusResponse = await fetch(`/api/paypal/check-status/${orderId}`);
-          if (!statusResponse.ok) {
-            throw new Error("Errore durante la verifica dello stato dell'ordine");
-          }
-          
-          const statusData = await statusResponse.json();
-          
-          if (statusData.status === "COMPLETED") {
-            // Ordine completato, notifichiamo il completamento
-            toast({
-              title: "Pagamento completato",
-              description: "Il pagamento è stato elaborato con successo.",
-              variant: "success",
-            });
-            
-            // Invocare il callback per notificare il completamento
-            if (onPaymentComplete) {
-              onPaymentComplete(serviceId);
-            }
-            
-            setLoading(false);
-            return true; // Fine del polling
-          } else if (statusData.status === "CANCELED") {
-            // Ordine annullato
-            toast({
-              title: "Pagamento annullato",
-              description: "Il pagamento è stato annullato.",
-              variant: "default",
-            });
-            
-            if (onPaymentCancel) {
-              onPaymentCancel();
-            }
-            
-            setLoading(false);
-            return true; // Fine del polling
-          }
-          
-          // Se non è né completato né annullato, continuiamo il polling
-          return false;
-        } catch (error) {
-          console.error("Errore durante la verifica dello stato:", error);
-          return false; // Continuiamo il polling nonostante l'errore
-        }
-      };
-      
-      // Simuliamo il completamento dopo 3 secondi
-      // In una implementazione reale, utilizzeremmo un vero polling
-      // fino a quando l'utente non completa o annulla il pagamento
+      // Simulazione del pagamento (in un'applicazione reale, si userebbe l'integrazione del client SDK di PayPal)
       setTimeout(async () => {
         try {
-          // Simula la cattura dell'ordine (in un'implementazione reale questo 
-          // verrebbe chiamato dal webhook PayPal o dal ritorno dell'utente)
+          // Catturiamo direttamente l'ordine (simulando che l'utente ha completato il processo su PayPal)
           const captureResponse = await apiRequest("POST", `/api/paypal/capture/${orderId}`);
           
           if (!captureResponse.ok) {
             throw new Error("Errore durante la cattura del pagamento");
           }
           
-          // Verifichiamo che il pagamento sia andato a buon fine
-          const result = await checkOrderStatus();
+          // Pagamento completato con successo
+          toast({
+            title: "Pagamento completato",
+            description: "Il pagamento è stato elaborato con successo.",
+            variant: "success",
+          });
           
-          if (!result) {
-            // Se dopo la cattura lo stato non è ancora cambiato, forziamo il completamento
-            toast({
-              title: "Pagamento completato",
-              description: "Il pagamento è stato elaborato con successo.",
-              variant: "success",
-            });
-            
-            if (onPaymentComplete) {
-              onPaymentComplete(serviceId);
-            }
+          // Notifica il completamento del pagamento
+          if (onPaymentComplete) {
+            onPaymentComplete(serviceId);
           }
         } catch (error) {
           console.error("Errore durante il completamento del pagamento:", error);
@@ -156,10 +87,15 @@ export function PayPalButton({
             description: "Non è stato possibile completare il pagamento. Riprova più tardi.",
             variant: "destructive",
           });
+          
+          // Notifica la cancellazione del pagamento
+          if (onPaymentCancel) {
+            onPaymentCancel();
+          }
         } finally {
           setLoading(false);
         }
-      }, 3000); // Simuliamo un ritardo di 3 secondi
+      }, 2000); // Simuliamo un ritardo di 2 secondi
       
     } catch (error) {
       console.error("Errore durante il processo di pagamento:", error);
