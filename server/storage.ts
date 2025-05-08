@@ -679,6 +679,31 @@ export class DatabaseStorage implements IStorage {
 
   // Service operations
   async getServices(params: ServiceSearch): Promise<{ services: Service[], total: number }> {
+    // Costruisci le condizioni di query
+    const whereConditions = [];
+    
+    if (params.query) {
+      whereConditions.push(like(services.sigla, `%${params.query}%`));
+    }
+    
+    if (params.type && params.type !== 'all') {
+      whereConditions.push(eq(services.type, params.type));
+    }
+    
+    if (params.status && params.status !== 'all') {
+      whereConditions.push(eq(services.status, params.status));
+    }
+    
+    if (params.startDate) {
+      const startDate = new Date(params.startDate);
+      whereConditions.push(gte(services.date, startDate));
+    }
+    
+    if (params.endDate) {
+      const endDate = new Date(params.endDate);
+      whereConditions.push(lte(services.date, endDate));
+    }
+    
     // Start with a basic query che include il join con gli studenti
     let query = db.select({
       service: services,
@@ -690,64 +715,34 @@ export class DatabaseStorage implements IStorage {
     .from(services)
     .leftJoin(students, eq(services.sigla, students.sigla));
     
-    // Apply filters
-    if (params.query) {
-      query = query.where(like(services.sigla, `%${params.query}%`));
+    // Applica tutte le condizioni se ce ne sono
+    if (whereConditions.length > 0) {
+      query = query.where(and(...whereConditions));
     }
-    
-    if (params.type && params.type !== 'all') {
-      query = query.where(eq(services.type, params.type));
-    }
-    
-    if (params.status && params.status !== 'all') {
-      query = query.where(eq(services.status, params.status));
-    }
-    
-    if (params.startDate) {
-      const startDate = new Date(params.startDate);
-      query = query.where(gte(services.date, startDate));
-    }
-    
-    if (params.endDate) {
-      const endDate = new Date(params.endDate);
-      query = query.where(lte(services.date, endDate));
-    }
-    
-    // Get the total count with the same filters
-    const countQuery = db.select({ count: count() }).from(services);
     
     // Log dei parametri filtro ricevuti
     console.log("getServices - Parametri ricevuti:", params);
     console.log(`Tipo servizio: ${params.type}, Stato: ${params.status}`);
     
-    // Applica gli stessi filtri alla query di conteggio
+    // Usa le stesse condizioni già generate per la query principale
+    
+    // Esegui la query di conteggio con le condizioni accumulate
+    let total = 0;
     try {
-      if (params.query) {
-        countQuery = countQuery.where(like(services.sigla, `%${params.query}%`));
+      let countResult;
+      if (whereConditions.length > 0) {
+        countResult = await db
+          .select({ count: count() })
+          .from(services)
+          .where(and(...whereConditions));
+      } else {
+        countResult = await db
+          .select({ count: count() })
+          .from(services);
       }
       
-      if (params.type && params.type !== 'all') {
-        console.log(`Applicando filtro per tipo: ${params.type}`);
-        countQuery = countQuery.where(eq(services.type, params.type));
-      }
-      
-      if (params.status && params.status !== 'all') {
-        console.log(`Applicando filtro per stato: ${params.status}`);
-        countQuery = countQuery.where(eq(services.status, params.status));
-      }
-      
-      if (params.startDate) {
-        const startDate = new Date(params.startDate);
-        countQuery = countQuery.where(gte(services.date, startDate));
-      }
-      
-      if (params.endDate) {
-        const endDate = new Date(params.endDate);
-        countQuery = countQuery.where(lte(services.date, endDate));
-      }
-      
-      const countResult = await countQuery;
-      const total = countResult[0]?.count || 0;
+      total = Number(countResult[0]?.count || 0);
+      console.log("Conteggio totale servizi:", total);
     } catch (error) {
       console.error("Errore nell'esecuzione query conteggio:", error);
       return { services: [], total: 0 };
