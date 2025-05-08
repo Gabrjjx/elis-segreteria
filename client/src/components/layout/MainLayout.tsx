@@ -90,6 +90,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
       disabled: true, // Funzionalità temporaneamente sospesa
     },
     {
+      name: "Studenti",
+      path: "/students",
+      icon: <KeySquare className="h-5 w-5" />,
+    },
+    {
       name: "Report",
       path: "/reports",
       icon: <FileBarChart className="h-5 w-5" />,
@@ -341,6 +346,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
               >
                 <LayoutDashboard className="h-5 w-5" />
                 <span className="text-xs mt-1">Dashboard</span>
+              </a>
+              
+              <a 
+                href="/students"
+                className={cn(
+                  "flex-1 flex flex-col items-center py-3",
+                  location === "/students" ? "text-primary" : "text-gray-600"
+                )}
+                onClick={(e) => handleNavigation("/students", e)}
+              >
+                <KeySquare className="h-5 w-5" />
+                <span className="text-xs mt-1">Studenti</span>
               </a>
               
               <DropdownMenu>

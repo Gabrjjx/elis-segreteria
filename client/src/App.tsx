@@ -69,6 +69,7 @@ function Router() {
               <Route path="/payments" component={LazyPaymentsPage} />
               <Route path="/reports" component={LazyReportsPage} />
               <Route path="/maintenance" component={LazyMaintenancePage} />
+              <Route path="/students" component={LazyStudentsPage} />
               <Route path="/settings" component={LazySettingsPage} />
               <Route path="/google-auth" component={LazyGoogleAuthPage} />
               <Route component={NotFound} />
