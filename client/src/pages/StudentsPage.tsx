@@ -305,7 +305,8 @@ export default function StudentsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          {/* Desktop View */}
+          <div className="rounded-md border hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -357,6 +358,52 @@ export default function StudentsPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+          
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {isLoading ? (
+              <div className="flex justify-center py-10">
+                <div className="animate-spin w-8 h-8 border-3 border-primary border-t-transparent rounded-full"></div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8 text-red-500">
+                {error}
+              </div>
+            ) : students.length === 0 ? (
+              <div className="text-center py-8">
+                Nessuno studente trovato.
+              </div>
+            ) : (
+              students.map((student) => (
+                <div 
+                  key={student.id} 
+                  className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="flex items-center space-x-2 mb-1">
+                        <div className="bg-primary/10 text-primary font-mono px-2 py-1 rounded-md text-sm font-bold">
+                          {student.sigla}
+                        </div>
+                      </div>
+                      <div className="text-lg font-semibold">
+                        {student.firstName} {student.lastName}
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => handleDeleteStudent(student.id)}
+                      disabled={isDeleting}
+                      className="h-10 w-10 rounded-full border-red-200 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="h-5 w-5 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">

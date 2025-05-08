@@ -294,19 +294,19 @@ export default function ServiceList({
           >
             {/* Status indicator stripe */}
             <div 
-              className={cn(
-                "absolute top-0 right-0 left-0 h-1.5", 
-                service.status === PaymentStatus.PAID ? "bg-green-500" : "bg-red-500"
-              )} 
+              className={service.status === PaymentStatus.PAID 
+                ? "absolute top-0 right-0 left-0 h-1.5 bg-green-500"
+                : "absolute top-0 right-0 left-0 h-1.5 bg-red-500"
+              } 
             />
 
             {/* Service header with sigla and amount */}
             <div className="flex justify-between items-start mb-4 mt-2">
               <div className="flex items-center">
                 <div className="mr-3">
-                  {service.type === ServiceType.SIGLATURA && <Tag className="h-7 w-7 text-primary" />}
-                  {service.type === ServiceType.HAPPY_HOUR && <Beer className="h-7 w-7 text-amber-500" />}
-                  {service.type === ServiceType.RIPARAZIONE && <Drill className="h-7 w-7 text-gray-700" />}
+                  {service.type === ServiceType.SIGLATURA && <Pencil className="h-7 w-7 text-primary" />}
+                  {service.type === ServiceType.HAPPY_HOUR && <ChevronRight className="h-7 w-7 text-amber-500" />}
+                  {service.type === ServiceType.RIPARAZIONE && <AlertTriangle className="h-7 w-7 text-gray-700" />}
                 </div>
                 <div>
                   <div className="text-xl font-bold flex items-center">
