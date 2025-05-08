@@ -479,43 +479,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             // Timestamp dalle "Informazioni cronologiche"
-            let timestamp;
+            let timestamp = new Date(); // Default è la data corrente
             
             if (infoIdx >= 0 && infoIdx < row.length && row[infoIdx]) {
               // Formato tipico delle date nel foglio: "13/06/2022 16.37.17"
               const rawDate = row[infoIdx];
               
               try {
-                // Convertire la data dal formato italiano al formato ISO
+                // Convertire la data dal formato italiano a un oggetto Date
                 const parts = String(rawDate).split(' ');
                 if (parts.length >= 1) {
                   const dateParts = parts[0].split('/');
                   if (dateParts.length === 3) {
                     // La data è nel formato GG/MM/AAAA
-                    const day = dateParts[0].padStart(2, '0');
-                    const month = dateParts[1].padStart(2, '0'); 
-                    const year = dateParts[2];
+                    const day = parseInt(dateParts[0]);
+                    const month = parseInt(dateParts[1]) - 1; // I mesi in JavaScript sono 0-based
+                    const year = parseInt(dateParts[2]);
                     
-                    // Se è presente anche l'ora
-                    let timeStr = "";
+                    // Creiamo una data di base
+                    timestamp = new Date(year, month, day);
+                    
+                    // Se è presente anche l'ora, la aggiungiamo
                     if (parts.length > 1) {
-                      timeStr = parts[1].replace(/\./g, ':');
+                      const timeParts = parts[1].replace(/\./g, ':').split(':');
+                      if (timeParts.length >= 2) {
+                        const hours = parseInt(timeParts[0]);
+                        const minutes = parseInt(timeParts[1]);
+                        const seconds = timeParts.length > 2 ? parseInt(timeParts[2]) : 0;
+                        
+                        timestamp.setHours(hours, minutes, seconds);
+                      }
                     }
                     
-                    // Formato finale: AAAA-MM-GG oppure AAAA-MM-GG HH:MM:SS
-                    timestamp = timeStr ? `${year}-${month}-${day} ${timeStr}` : `${year}-${month}-${day}`;
+                    // Log per debug
+                    if (i <= 5) {
+                      console.log(`Convertita data "${rawDate}" in oggetto Date:`, timestamp);
+                    }
                   } else {
-                    timestamp = String(rawDate);
+                    console.log(`Formato data non riconosciuto: ${rawDate}, uso data corrente`);
                   }
-                } else {
-                  timestamp = String(rawDate);
                 }
               } catch (e) {
-                console.error("Errore parsing data:", e);
-                timestamp = String(rawDate);
+                console.error(`Errore parsing data '${rawDate}':`, e);
               }
-            } else {
-              timestamp = new Date().toISOString();
             }
             
             // Richiedente dalla "Sigla"
@@ -572,12 +578,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 requesterEmail: "segreteria@elis.org",
                 roomNumber: stanza,
                 requestType: "Manutenzione",
-                description: descrizione,
+                description: `${descrizione} (Data originale: ${infoIdx >= 0 && infoIdx < row.length ? row[infoIdx] || "" : ""})`,
                 location: stanza,
                 status: MaintenanceRequestStatus.PENDING,
                 priority: priorita,
-                notes: "",
-                timestamp: timestamp
+                notes: `Importato dal foglio Google, data: ${infoIdx >= 0 && infoIdx < row.length ? row[infoIdx] : "N/D"}`
               });
               success++;
             } else {
