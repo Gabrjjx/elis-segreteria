@@ -17,7 +17,9 @@ import {
   hasValidToken, 
   getAuthorizationUrl, 
   getTokenFromCode,
-  verifyToken
+  verifyToken,
+  startDeviceFlow,
+  checkDeviceFlowStatus
 } from "./services/googleAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -493,6 +495,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating auth URL:", error);
       res.status(500).json({ message: "Error generating auth URL" });
+    }
+  });
+  
+  // Start Device Flow (nuovo metodo di autenticazione, più semplice)
+  app.post("/api/google/auth/device", async (_req: Request, res: Response) => {
+    try {
+      if (!hasOAuth2Credentials()) {
+        return res.status(400).json({
+          message: "Google OAuth2 credentials are missing. Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET."
+        });
+      }
+      
+      const deviceCodeInfo = await startDeviceFlow();
+      console.log("Device Flow avviato con successo:", deviceCodeInfo);
+      res.json({
+        user_code: deviceCodeInfo.user_code,
+        verification_url: deviceCodeInfo.verification_url,
+        expires_in: deviceCodeInfo.expires_in,
+        interval: deviceCodeInfo.interval
+      });
+    } catch (error) {
+      console.error("Error starting Device Flow:", error);
+      res.status(500).json({ 
+        message: "Error starting Device Flow", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
+  // Check Device Flow status
+  app.get("/api/google/auth/device/status", async (_req: Request, res: Response) => {
+    try {
+      const status = await checkDeviceFlowStatus();
+      console.log("Device Flow status check:", status);
+      res.json(status);
+    } catch (error) {
+      console.error("Error checking Device Flow status:", error);
+      res.status(500).json({ 
+        message: "Error checking Device Flow status", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   });
   

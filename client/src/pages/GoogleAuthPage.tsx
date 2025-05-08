@@ -20,6 +20,16 @@ export default function GoogleAuthPage() {
   const { startLoading, stopLoading } = useLoading();
   const [authCode, setAuthCode] = useState("");
   const [authUrl, setAuthUrl] = useState<string | null>(null);
+  
+  // State per Device Flow
+  const [deviceCodeInfo, setDeviceCodeInfo] = useState<{
+    user_code: string;
+    verification_url: string;
+    expires_in: number;
+    interval: number;
+  } | null>(null);
+  const [deviceFlowStatus, setDeviceFlowStatus] = useState<string>("idle"); // idle, pending, complete, error
+  const [deviceFlowError, setDeviceFlowError] = useState<string>("");
 
   // Utilizziamo useState per lo stato di autenticazione con dati iniziali predefiniti
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ 
@@ -129,7 +139,7 @@ export default function GoogleAuthPage() {
     }
   }, []);
 
-  // Mutation per ottenere l'URL di autorizzazione
+  // Mutation per ottenere l'URL di autorizzazione (metodo classico)
   const getAuthUrlMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/google/auth/url", {
@@ -166,6 +176,104 @@ export default function GoogleAuthPage() {
       });
     }
   });
+  
+  // Mutation per avviare il Device Flow (metodo consigliato)
+  const startDeviceFlowMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/google/auth/device", {
+        method: 'POST',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Errore nella richiesta: ${res.status}`);
+      }
+      
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setDeviceCodeInfo(data);
+      setDeviceFlowStatus("pending");
+      // Mostra le istruzioni per l'utente
+      toast({
+        title: "Codice di autenticazione generato",
+        description: `Vai su ${data.verification_url} e inserisci il codice ${data.user_code}`,
+        duration: 10000
+      });
+      
+      // Avvia il polling per controllare lo stato
+      checkDeviceFlowStatus();
+    },
+    onError: (error) => {
+      console.error("Failed to start Device Flow:", error);
+      setDeviceFlowStatus("error");
+      setDeviceFlowError(error instanceof Error ? error.message : "Errore sconosciuto");
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Impossibile avviare il processo di autenticazione.",
+      });
+    }
+  });
+  
+  // Funzione di polling per controllare lo stato del Device Flow
+  const checkDeviceFlowStatus = async () => {
+    if (deviceFlowStatus !== "pending") return;
+    
+    try {
+      const res = await fetch("/api/google/auth/device/status", {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Errore nella richiesta: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      console.log("Device Flow status check:", data);
+      
+      if (data.status === "complete") {
+        setDeviceFlowStatus("complete");
+        toast({
+          title: "Autenticazione completata",
+          description: "Token di accesso Google ottenuto con successo.",
+        });
+        // Aggiorniamo manualmente lo stato dopo l'autorizzazione
+        setTimeout(() => {
+          fetchAuthStatus();
+        }, 500);
+      } else if (data.status === "error") {
+        setDeviceFlowStatus("error");
+        setDeviceFlowError(data.error || "Errore sconosciuto");
+        toast({
+          variant: "destructive",
+          title: "Errore di autenticazione",
+          description: data.error || "Si è verificato un errore durante l'autenticazione.",
+        });
+      } else {
+        // Continuiamo il polling
+        setTimeout(checkDeviceFlowStatus, 5000); // Controlla ogni 5 secondi
+      }
+    } catch (error) {
+      console.error("Error checking Device Flow status:", error);
+      setDeviceFlowStatus("error");
+      setDeviceFlowError(error instanceof Error ? error.message : "Errore sconosciuto");
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Impossibile verificare lo stato dell'autenticazione.",
+      });
+    }
+  };
 
   // Mutation per inviare il codice di autorizzazione
   const submitCodeMutation = useMutation({
