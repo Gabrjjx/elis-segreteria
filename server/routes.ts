@@ -1237,6 +1237,68 @@ RifID: ${hashId}`
     }
   });
 
+  // AI-powered search API
+  app.post("/api/search", async (req: Request, res: Response) => {
+    try {
+      const { query, limit = 10 } = req.body;
+      
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ message: "Query di ricerca mancante o non valida" });
+      }
+      
+      console.log(`Ricerca AI avviata con query: "${query}"`);
+      
+      // Verifica se l'API key di OpenAI è configurata
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(500).json({ 
+          message: "OpenAI API Key not configured. Please set the OPENAI_API_KEY environment variable."
+        });
+      }
+      
+      const searchResults = await semanticSearch(query, limit);
+      console.log(`Ricerca completata, trovati ${searchResults.results.length} risultati`);
+      
+      res.json(searchResults);
+    } catch (error) {
+      console.error("Errore durante la ricerca semantica:", error);
+      res.status(500).json({ 
+        message: "Errore durante la ricerca", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
+  // AI-powered query analyzer API
+  app.post("/api/analyze-query", async (req: Request, res: Response) => {
+    try {
+      const { query } = req.body;
+      
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ message: "Query di ricerca mancante o non valida" });
+      }
+      
+      console.log(`Analisi query AI avviata: "${query}"`);
+      
+      // Verifica se l'API key di OpenAI è configurata
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(500).json({ 
+          message: "OpenAI API Key not configured. Please set the OPENAI_API_KEY environment variable."
+        });
+      }
+      
+      const analysis = await analyzeSearchQuery(query);
+      console.log(`Analisi completata con successo:`, analysis);
+      
+      res.json(analysis);
+    } catch (error) {
+      console.error("Errore durante l'analisi della query:", error);
+      res.status(500).json({ 
+        message: "Errore durante l'analisi della query", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
