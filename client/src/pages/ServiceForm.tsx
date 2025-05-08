@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, ArrowLeft, Save } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+// Rimuovo l'import del toast che non usiamo più
+// import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertServiceSchema, defaultPrices, ServiceType, PaymentStatus } from "@shared/schema";
 
@@ -98,8 +99,8 @@ export default function ServiceForm({ id }: ServiceFormProps) {
   // Create service mutation
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/services", data);
-      return response.json();
+      // apiRequest già restituisce i dati JSON parseati, non serve chiamare .json()
+      return await apiRequest("POST", "/api/services", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/services'] });
@@ -107,19 +108,16 @@ export default function ServiceForm({ id }: ServiceFormProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/recent-services'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/pending-payments'] });
       
-      toast({
-        title: "Servizio creato",
-        description: "Il servizio è stato creato con successo.",
-      });
+      // Sostituisco il toast con un log
+      console.log("Servizio creato con successo");
+      // alert("Il servizio è stato creato con successo.");
       
       setLocation("/services");
     },
     onError: (error) => {
-      toast({
-        title: "Errore",
-        description: `Si è verificato un errore: ${error.message}`,
-        variant: "destructive",
-      });
+      // Sostituisco il toast con un alert
+      console.error("Errore durante la creazione del servizio:", error);
+      alert(`Si è verificato un errore: ${error.message}`);
     },
   });
 
@@ -135,8 +133,8 @@ export default function ServiceForm({ id }: ServiceFormProps) {
         date: formattedDate
       };
       console.log("Inviando dati formattati:", apiData);
-      const response = await apiRequest("PUT", `/api/services/${id}`, apiData);
-      return response.json();
+      // apiRequest già restituisce i dati JSON parseati, non serve chiamare .json()
+      return await apiRequest("PUT", `/api/services/${id}`, apiData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/services'] });
