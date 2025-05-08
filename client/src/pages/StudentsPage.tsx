@@ -360,8 +360,8 @@ export default function StudentsPage() {
             </Table>
           </div>
           
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-12 py-4">
+          {/* Mobile Card View - Redesigned with more spacing */}
+          <div className="md:hidden space-y-16 py-6">
             {isLoading ? (
               <div className="flex justify-center py-10">
                 <div className="animate-spin w-8 h-8 border-3 border-primary border-t-transparent rounded-full"></div>
@@ -378,16 +378,16 @@ export default function StudentsPage() {
               students.map((student) => (
                 <div 
                   key={student.id} 
-                  className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm"
+                  className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm"
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <div className="flex items-center space-x-2 mb-1">
-                        <div className="bg-primary/10 text-primary font-mono px-2 py-1 rounded-md text-sm font-bold">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="bg-primary/15 text-primary font-mono px-3 py-2 rounded-lg text-base font-bold">
                           {student.sigla}
                         </div>
                       </div>
-                      <div className="text-lg font-semibold">
+                      <div className="text-xl font-semibold">
                         {student.firstName} {student.lastName}
                       </div>
                     </div>
@@ -396,9 +396,9 @@ export default function StudentsPage() {
                       size="icon"
                       onClick={() => handleDeleteStudent(student.id)}
                       disabled={isDeleting}
-                      className="h-10 w-10 rounded-full border-red-200 hover:bg-red-50 hover:text-red-600"
+                      className="h-12 w-12 rounded-full border-red-200 hover:bg-red-50 hover:text-red-600"
                     >
-                      <Trash2 className="h-5 w-5 text-red-500" />
+                      <Trash2 className="h-6 w-6 text-red-500" />
                     </Button>
                   </div>
                 </div>

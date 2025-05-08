@@ -284,43 +284,45 @@ export default function ServiceList({
         </Table>
       </div>
 
-      {/* Mobile Card View - Enhanced for better touch experience */}
-      <div className="md:hidden space-y-12 py-4">
+      {/* Mobile Card View - Completely redesigned with more spacing */}
+      <div className="md:hidden space-y-16 py-6">
         {services.map((service) => (
           <div 
             key={service.id} 
-            className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm relative overflow-hidden"
+            className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm relative overflow-hidden"
             onClick={() => handleEdit(service.id)}
           >
             {/* Status indicator stripe */}
             <div 
               className={service.status === PaymentStatus.PAID 
-                ? "absolute top-0 right-0 left-0 h-1.5 bg-green-500"
-                : "absolute top-0 right-0 left-0 h-1.5 bg-red-500"
+                ? "absolute top-0 right-0 left-0 h-2 bg-green-500"
+                : "absolute top-0 right-0 left-0 h-2 bg-red-500"
               } 
             />
 
             {/* Service header with sigla and amount */}
-            <div className="flex justify-between items-start mb-4 mt-2">
+            <div className="flex justify-between items-start mb-6 mt-3">
               <div className="flex items-center">
-                <div className="mr-3">
-                  {service.type === ServiceType.SIGLATURA && <Pencil className="h-7 w-7 text-primary" />}
-                  {service.type === ServiceType.HAPPY_HOUR && <ChevronRight className="h-7 w-7 text-amber-500" />}
-                  {service.type === ServiceType.RIPARAZIONE && <AlertTriangle className="h-7 w-7 text-gray-700" />}
+                <div className="mr-4">
+                  {service.type === ServiceType.SIGLATURA && <Pencil className="h-8 w-8 text-primary" />}
+                  {service.type === ServiceType.HAPPY_HOUR && <ChevronRight className="h-8 w-8 text-amber-500" />}
+                  {service.type === ServiceType.RIPARAZIONE && <AlertTriangle className="h-8 w-8 text-gray-700" />}
                 </div>
                 <div>
-                  <div className="text-xl font-bold flex items-center">
+                  <div className="text-2xl font-bold flex items-center">
                     {service.sigla}
-                    <span className="ml-3 text-sm">
+                  </div>
+                  <div className="mt-1">
+                    <span className="text-sm px-2 py-1 rounded bg-gray-100">
                       {getServiceTypeBadge(service.type)}
                     </span>
                   </div>
                   {service.student ? (
-                    <div className="text-sm text-gray-600 font-medium">
+                    <div className="text-sm text-gray-600 font-medium mt-2">
                       {service.student.firstName} {service.student.lastName}
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-400 italic">
+                    <div className="text-sm text-gray-400 italic mt-2">
                       Nessun studente associato
                     </div>
                   )}
@@ -328,31 +330,33 @@ export default function ServiceList({
               </div>
               <div className="flex flex-col items-end">
                 <div className="text-xl font-bold">€{service.amount.toFixed(2)}</div>
-                <div className="text-sm text-gray-500">{format(new Date(service.date), "dd/MM/yyyy")}</div>
+                <div className="text-sm text-gray-500 mt-1">{format(new Date(service.date), "dd/MM/yyyy")}</div>
               </div>
             </div>
             
-            {/* Service details */}
-            <div className="flex items-center bg-gray-50 rounded-lg p-3 mb-4">
-              <div className="flex-1 text-center">
-                <div className="text-xs text-gray-500 uppercase">Pezzi</div>
-                <div className="font-bold text-lg">{service.pieces}</div>
+            {/* Service details - Completely redesigned */}
+            <div className="grid grid-cols-2 gap-5 my-6">
+              <div className="bg-gray-50 rounded-xl p-5 text-center">
+                <div className="text-xs text-gray-500 uppercase mb-2">Pezzi</div>
+                <div className="font-bold text-2xl">{service.pieces}</div>
               </div>
-              <div className="h-8 w-px bg-gray-200"></div>
-              <div className="flex-1 text-center">
-                <div className="text-xs text-gray-500 uppercase">Stato</div>
-                <div className="font-medium">
-                  {service.status === PaymentStatus.PAID ? (
-                    <span className="text-green-600">Pagato</span>
-                  ) : (
-                    <span className="text-red-600">Da pagare</span>
-                  )}
-                </div>
+              <div 
+                className={service.status === PaymentStatus.PAID 
+                  ? "bg-green-50 rounded-xl p-5 text-center"
+                  : "bg-red-50 rounded-xl p-5 text-center"
+                }
+              >
+                <div className="text-xs text-gray-500 uppercase mb-2">Stato</div>
+                {service.status === PaymentStatus.PAID ? (
+                  <div className="font-bold text-green-600 text-xl">Pagato</div>
+                ) : (
+                  <div className="font-bold text-red-600 text-xl">Da pagare</div>
+                )}
               </div>
             </div>
             
-            {/* Action buttons */}
-            <div className="grid grid-cols-3 gap-2 mt-4">
+            {/* Action buttons - With even more spacing */}
+            <div className="grid grid-cols-3 gap-5 mt-8">
               <Button 
                 variant="secondary" 
                 size="lg"
@@ -360,7 +364,7 @@ export default function ServiceList({
                   e.stopPropagation();
                   handleEdit(service.id);
                 }}
-                className="h-12 flex items-center justify-center rounded-lg"
+                className="h-14 flex items-center justify-center rounded-lg"
               >
                 <Pencil className="h-5 w-5 mr-2" />
                 <span>Modifica</span>
@@ -368,7 +372,7 @@ export default function ServiceList({
               
               <div 
                 onClick={(e) => e.stopPropagation()} 
-                className="flex h-12 justify-center col-span-1"
+                className="flex h-14 justify-center col-span-1"
               >
                 <PaymentActions 
                   service={service}
@@ -387,7 +391,7 @@ export default function ServiceList({
                     variant="outline" 
                     size="lg"
                     onClick={(e) => e.stopPropagation()}
-                    className="h-12 text-destructive border-destructive flex items-center justify-center rounded-lg"
+                    className="h-14 text-destructive border-destructive flex items-center justify-center rounded-lg"
                   >
                     <Trash2 className="h-5 w-5 mr-2" />
                     <span>Elimina</span>
