@@ -8,10 +8,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Service, ServiceType } from "@shared/schema";
+import { ServiceWithStudent, ServiceType } from "@shared/schema";
 
 interface PendingPaymentsProps {
-  pendingPayments: Service[];
+  pendingPayments: ServiceWithStudent[];
 }
 
 export default function PendingPayments({ pendingPayments }: PendingPaymentsProps) {
@@ -100,7 +100,18 @@ export default function PendingPayments({ pendingPayments }: PendingPaymentsProp
               <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
                 <div className="sm:col-span-1">
                   <dt className="text-sm font-medium text-gray-500">Sigla</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{payment.sigla}</dd>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {payment.sigla}
+                    {payment.student ? (
+                      <div className="text-xs text-gray-500">
+                        {payment.student.firstName} {payment.student.lastName}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-400 italic">
+                        Nessun studente associato
+                      </div>
+                    )}
+                  </dd>
                 </div>
                 <div className="sm:col-span-1">
                   <dt className="text-sm font-medium text-gray-500">Tipologia</dt>

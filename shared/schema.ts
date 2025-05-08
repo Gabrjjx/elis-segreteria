@@ -140,6 +140,14 @@ export type InsertService = z.infer<typeof insertServiceSchema>;
 export type Service = typeof services.$inferSelect;
 export type ServiceSearch = z.infer<typeof serviceSearchSchema>;
 
+// Tipo esteso per includere le informazioni dello studente
+export type ServiceWithStudent = Service & {
+  student?: {
+    firstName: string;
+    lastName: string;
+  }
+};
+
 // User schema - keeping it from the template for completeness
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
