@@ -114,60 +114,74 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Sidebar (desktop) */}
-      <aside className="w-64 bg-gray-800 text-white flex-shrink-0 hidden md:flex flex-col">
-        <div className="p-4 flex items-center border-b border-gray-700">
-          <LayoutDashboard className="mr-2 h-6 w-6" />
-          <h1 className="text-xl font-medium">ELIS Segreteria</h1>
+      {/* Sidebar (desktop) - Modern Style */}
+      <aside className="w-[256px] bg-white border-r border-gray-200 flex-shrink-0 hidden md:flex flex-col">
+        <div className="p-4 flex items-center">
+          <LayoutDashboard className="mr-2 h-6 w-6 text-primary" />
+          <h1 className="text-xl font-medium text-gray-800">ELIS Segreteria</h1>
         </div>
-        <nav className="flex-1">
-          <ul>
+        <nav className="flex-1 py-4">
+          <div className="space-y-0.5">
             {routes.map((route) => (
-              <li key={route.path} className="py-1">
+              <div key={route.path}>
                 {route.dropdown ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="w-full">
-                      <div className={cn(
-                        "flex items-center w-full px-4 py-2 hover:bg-gray-700 cursor-pointer",
-                        location.startsWith(route.path) && "bg-primary-dark"
-                      )}>
-                        {route.icon}
-                        <span className="ml-3">{route.name}</span>
-                        <ChevronDown className="ml-auto h-4 w-4" />
-                      </div>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="bg-gray-800 text-white border-gray-700 w-56 rounded-md p-1 shadow-lg z-50">
+                  <div className="mb-1">
+                    <div 
+                      className={cn(
+                        "flex items-center mx-2 px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 cursor-pointer",
+                        (location.startsWith(route.path) && !route.path.includes('?')) && "bg-blue-50 text-primary"
+                      )}
+                      onClick={() => {
+                        // Toggling a local state to control dropdown without the package
+                        const el = document.getElementById(`dropdown-${route.path.replace(/\//g, '-')}`);
+                        if (el) {
+                          el.classList.toggle('hidden');
+                        }
+                      }}
+                    >
+                      {route.icon}
+                      <span className="ml-3 font-medium">{route.name}</span>
+                      <ChevronDown className="ml-auto h-4 w-4" />
+                    </div>
+                    <div 
+                      id={`dropdown-${route.path.replace(/\//g, '-')}`}
+                      className={cn(
+                        "pl-2 mt-0.5 space-y-1",
+                        !location.startsWith(route.path) && "hidden"
+                      )}
+                    >
                       {route.children?.map((child) => (
-                        <DropdownMenuItem
+                        <a
                           key={child.path}
+                          href={child.path}
                           className={cn(
-                            "flex items-center py-2 px-3 rounded-sm hover:bg-gray-700 focus:bg-gray-700 cursor-pointer",
-                            location === child.path && "bg-gray-700"
+                            "flex items-center mx-2 pl-7 py-2 rounded-md text-gray-600 hover:bg-gray-100",
+                            location === child.path && "bg-blue-50 text-primary"
                           )}
                           onClick={(e) => handleNavigation(child.path, e)}
                         >
                           {child.icon}
                           <span className="ml-3">{child.name}</span>
-                        </DropdownMenuItem>
+                        </a>
                       ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    </div>
+                  </div>
                 ) : route.disabled ? (
                   <div className={cn(
-                    "flex items-center px-4 py-2 text-gray-500 cursor-not-allowed",
+                    "flex items-center mx-2 px-3 py-2 mb-1 text-gray-400 rounded-md cursor-not-allowed",
                   )}>
                     {route.icon}
-                    <span className="ml-3">{route.name}</span>
-                    <span className="ml-2 text-xs bg-gray-600 px-1.5 py-0.5 rounded">Sospeso</span>
+                    <span className="ml-3 font-medium">{route.name}</span>
+                    <span className="ml-2 text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">Sospeso</span>
                   </div>
                 ) : (
                   <a
                     href={route.path}
                     className={cn(
-                      "flex items-center px-4 py-2 hover:bg-gray-700",
+                      "flex items-center mx-2 px-3 py-2 mb-1 text-gray-700 rounded-md hover:bg-gray-100",
                       (location === route.path || 
                        (route.path.includes('?') && location === route.path.split('?')[0])) && 
-                      "bg-primary-dark"
+                      "bg-blue-50 text-primary font-medium"
                     )}
                     onClick={(e) => handleNavigation(route.path, e)}
                   >
@@ -175,9 +189,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     <span className="ml-3">{route.name}</span>
                   </a>
                 )}
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </nav>
       </aside>
 
@@ -198,33 +212,48 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   <span className="sr-only">Toggle menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 bg-gray-800 text-white">
-                <div className="p-4 flex items-center border-b border-gray-700">
-                  <LayoutDashboard className="mr-2 h-6 w-6" />
+              <SheetContent side="left" className="p-0 bg-white text-gray-800 border-r">
+                <div className="p-4 flex items-center border-b border-gray-100">
+                  <LayoutDashboard className="mr-2 h-6 w-6 text-primary" />
                   <h1 className="text-xl font-medium">ELIS Segreteria</h1>
                 </div>
-                <nav className="flex-1">
-                  <ul>
+                <nav className="flex-1 py-4">
+                  <div className="space-y-1">
                     {routes.map((route) => (
-                      <li key={route.path} className="py-1">
+                      <div key={route.path} className="py-0.5">
                         {route.dropdown ? (
-                          <div>
-                            <div className={cn(
-                              "flex items-center px-4 py-2 hover:bg-gray-700 cursor-pointer",
-                              location.startsWith(route.path) && "bg-primary-dark"
-                            )}>
+                          <div className="mb-1">
+                            <div 
+                              className={cn(
+                                "flex items-center mx-2 px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 cursor-pointer",
+                                (location.startsWith(route.path) && !route.path.includes('?')) && "bg-blue-50 text-primary"
+                              )}
+                              onClick={() => {
+                                // Toggle
+                                const el = document.getElementById(`mobile-dropdown-${route.path.replace(/\//g, '-')}`);
+                                if (el) {
+                                  el.classList.toggle('hidden');
+                                }
+                              }}
+                            >
                               {route.icon}
-                              <span className="ml-3">{route.name}</span>
+                              <span className="ml-3 font-medium">{route.name}</span>
                               <ChevronDown className="ml-auto h-4 w-4" />
                             </div>
-                            <div className="bg-gray-700">
+                            <div 
+                              id={`mobile-dropdown-${route.path.replace(/\//g, '-')}`}
+                              className={cn(
+                                "pl-2 mt-0.5 space-y-1",
+                                !location.startsWith(route.path) && "hidden"
+                              )}
+                            >
                               {route.children?.map((child) => (
                                 <a
                                   key={child.path}
                                   href={child.path}
                                   className={cn(
-                                    "flex items-center pl-10 pr-4 py-2 hover:bg-gray-600",
-                                    location === child.path && "bg-gray-600"
+                                    "flex items-center mx-2 pl-7 py-2 rounded-md text-gray-600 hover:bg-gray-100",
+                                    location === child.path && "bg-blue-50 text-primary"
                                   )}
                                   onClick={(e) => {
                                     handleNavigation(child.path, e);
@@ -239,20 +268,20 @@ export default function MainLayout({ children }: MainLayoutProps) {
                           </div>
                         ) : route.disabled ? (
                           <div className={cn(
-                            "flex items-center px-4 py-2 text-gray-500 cursor-not-allowed",
+                            "flex items-center mx-2 px-3 py-2 mb-1 text-gray-400 rounded-md cursor-not-allowed",
                           )}>
                             {route.icon}
-                            <span className="ml-3">{route.name}</span>
-                            <span className="ml-2 text-xs bg-gray-600 px-1.5 py-0.5 rounded">Sospeso</span>
+                            <span className="ml-3 font-medium">{route.name}</span>
+                            <span className="ml-2 text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">Sospeso</span>
                           </div>
                         ) : (
                           <a
                             href={route.path}
                             className={cn(
-                              "flex items-center px-4 py-2 hover:bg-gray-700",
+                              "flex items-center mx-2 px-3 py-2 mb-1 text-gray-700 rounded-md hover:bg-gray-100",
                               (location === route.path || 
                                (route.path.includes('?') && location === route.path.split('?')[0])) && 
-                              "bg-primary-dark"
+                              "bg-blue-50 text-primary font-medium"
                             )}
                             onClick={(e) => {
                               handleNavigation(route.path, e);
@@ -263,9 +292,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
                             <span className="ml-3">{route.name}</span>
                           </a>
                         )}
-                      </li>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </nav>
               </SheetContent>
             </Sheet>
