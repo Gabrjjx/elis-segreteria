@@ -14,6 +14,7 @@ import ServicesPage from "@/pages/ServicesPage";
 import ServiceForm from "@/pages/ServiceForm";
 import ReportsPage from "@/pages/ReportsPage";
 import SettingsPage from "@/pages/SettingsPage";
+import MaintenancePage from "@/pages/MaintenancePage";
 import NotFound from "@/pages/not-found";
 import { Suspense, lazy } from "react";
 
@@ -23,6 +24,7 @@ const LazyServicesPage = lazy(() => import("@/pages/ServicesPage"));
 const LazyServiceForm = lazy(() => import("@/pages/ServiceForm"));
 const LazyReportsPage = lazy(() => import("@/pages/ReportsPage"));
 const LazySettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const LazyMaintenancePage = lazy(() => import("@/pages/MaintenancePage"));
 
 function LoadingFallback() {
   return <LoadingScreen text="Caricamento pagina..." />;
@@ -42,6 +44,7 @@ function Router() {
             {params => <ServiceForm id={params.id} />}
           </Route>
           <Route path="/reports" component={LazyReportsPage} />
+          <Route path="/maintenance" component={LazyMaintenancePage} />
           <Route path="/settings" component={LazySettingsPage} />
           <Route component={NotFound} />
         </Switch>
