@@ -135,20 +135,24 @@ export default function GoogleAuthPage() {
   });
 
   // Gestisci lo stato di loading globale
-  const isLoading = isStatusLoading || 
-                    getAuthUrlMutation.isPending || 
-                    submitCodeMutation.isPending ||
-                    importSheetsMutation.isPending ||
-                    exportStatusMutation.isPending;
+  const anyMutationPending = getAuthUrlMutation.isPending || 
+                            submitCodeMutation.isPending ||
+                            importSheetsMutation.isPending ||
+                            exportStatusMutation.isPending;
 
-  // Update global loading state
+  // Utilizziamo una variabile di stato statica per il loading invece di calcolarla direttamente
+  // Questo evita il loop di aggiornamenti infiniti
+  const isLoading = isStatusLoading || anyMutationPending;
+  
+  // Update global loading state - usando solo le mutazioni per evitare i loop con isStatusLoading
   useEffect(() => {
-    if (isLoading) {
+    if (anyMutationPending) {
       startLoading();
-    } else {
+    } else if (!isStatusLoading) { // Importante: non cambiare lo stato mentre isStatusLoading è true
       stopLoading();
     }
-  }, [isLoading, startLoading, stopLoading]);
+    // Non includere isStatusLoading nelle dipendenze per prevenire loop
+  }, [anyMutationPending, startLoading, stopLoading]);
 
   // Handler functions
   function handleGetAuthUrl() {
