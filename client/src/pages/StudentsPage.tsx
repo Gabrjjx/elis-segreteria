@@ -51,7 +51,18 @@ export default function StudentsPage() {
         }
       }
       
-      return apiRequest("GET", `/api/students?${params.toString()}`).then(res => res.json());
+      const endpoint = `/api/students?${params.toString()}`;
+      console.log("Fetching students from:", endpoint);
+      const response = await apiRequest("GET", endpoint);
+      const jsonData = await response.json();
+      console.log("Received students data:", jsonData);
+      
+      if (!jsonData.students || !Array.isArray(jsonData.students)) {
+        console.error("Invalid response structure:", jsonData);
+        return { students: [], total: 0 };
+      }
+      
+      return jsonData;
     }
   });
   
@@ -260,14 +271,14 @@ export default function StudentsPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : data?.students?.length === 0 ? (
+                ) : !data?.students || data.students.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-10">
-                      Nessuno studente trovato
+                      Nessuno studente trovato. {data ? `Debug: ${JSON.stringify(data)}` : 'Nessun dato ricevuto'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data?.students?.map((student: Student) => (
+                  data.students.map((student: Student) => (
                     <TableRow key={student.id}>
                       <TableCell className="font-medium">{student.sigla}</TableCell>
                       <TableCell>{student.firstName}</TableCell>
