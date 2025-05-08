@@ -350,3 +350,33 @@ export const receiptSearchSchema = z.object({
 export type InsertReceipt = z.infer<typeof insertReceiptSchema>;
 export type Receipt = typeof receipts.$inferSelect;
 export type ReceiptSearch = z.infer<typeof receiptSearchSchema>;
+
+// Tabella per gli studenti della residenza
+export const students = pgTable("students", {
+  id: serial("id").primaryKey(),
+  sigla: text("sigla").notNull().unique(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Schema per l'inserimento degli studenti
+export const insertStudentSchema = createInsertSchema(students).pick({
+  sigla: true,
+  firstName: true,
+  lastName: true,
+});
+
+// Schema per la ricerca degli studenti
+export const studentSearchSchema = z.object({
+  sigla: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  page: z.number().int().positive().optional().default(1),
+  limit: z.number().int().positive().optional().default(10),
+});
+
+export type InsertStudent = z.infer<typeof insertStudentSchema>;
+export type Student = typeof students.$inferSelect;
+export type StudentSearch = z.infer<typeof studentSearchSchema>;

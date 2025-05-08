@@ -11,9 +11,22 @@ import {
   MaintenanceRequest,
   InsertMaintenanceRequest,
   MaintenanceRequestSearch,
+  PaypalOrderStatus,
+  PaypalOrder, 
+  PaypalOrderSearch,
+  Receipt, 
+  InsertReceipt, 
+  ReceiptSearch,
+  PaymentMethod,
+  Student, 
+  InsertStudent, 
+  StudentSearch,
   services,
   users,
-  maintenanceRequests
+  maintenanceRequests,
+  paypalOrders,
+  receipts,
+  students
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, gte, lte, desc, count, sum, or, and } from "drizzle-orm";
@@ -73,6 +86,15 @@ export interface IStorage {
   getReceipt(id: number): Promise<Receipt | undefined>;
   getReceiptByServiceId(serviceId: number): Promise<Receipt | undefined>;
   getReceipts(params: ReceiptSearch): Promise<{ receipts: Receipt[], total: number }>;
+  
+  // Student operations
+  getStudents(params: StudentSearch): Promise<{ students: Student[], total: number }>;
+  getStudent(id: number): Promise<Student | undefined>;
+  getStudentBySigla(sigla: string): Promise<Student | undefined>;
+  createStudent(student: InsertStudent): Promise<Student>;
+  updateStudent(id: number, student: Partial<InsertStudent>): Promise<Student | undefined>;
+  deleteStudent(id: number): Promise<boolean>;
+  importStudentsFromCSV(csvData: string): Promise<{ success: number, failed: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
