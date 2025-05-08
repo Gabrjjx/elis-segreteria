@@ -3,6 +3,13 @@ import { log } from '../vite';
 
 // Una variabile globale per memorizzare la struttura del foglio
 let globalSheetStructure: string[][] = [];
+// Flag per indicare se la struttura del foglio è stata caricata
+let globalSheetLoaded: boolean = false;
+
+// Funzione per verificare se il foglio è stato caricato
+export function isSheetLoaded(): boolean {
+  return globalSheetLoaded;
+}
 
 // Verifica che le variabili d'ambiente necessarie siano definite
 if (!process.env.GOOGLE_API_KEY) {
@@ -256,6 +263,7 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
     
     // Salviamo la struttura del foglio per riferimenti futuri
     globalSheetStructure = data;
+    globalSheetLoaded = true;
     
     // Controlliamo la prima colonna (colonna A) per verificare l'intestazione e i valori
     if (data.length > 0 && data[0].length > 0) {

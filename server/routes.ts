@@ -358,7 +358,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (status === MaintenanceRequestStatus.COMPLETED) {
         try {
-          const { findRequestRowInGoogleSheet, updateGoogleSheetStatus } = require('./services/googleSheets');
+          // Utilizziamo l'import già esistente invece di require
+          const { findRequestRowInGoogleSheet, updateGoogleSheetStatus } = await import('./services/googleSheets');
           
           // Cerchiamo la riga corrispondente nel foglio Google
           const timestamp = new Date(originalRequest.timestamp);
