@@ -361,7 +361,7 @@ export default function StudentsPage() {
           </div>
           
           {/* Mobile Card View */}
-          <div className="md:hidden space-y-4">
+          <div className="md:hidden space-y-8 py-2">
             {isLoading ? (
               <div className="flex justify-center py-10">
                 <div className="animate-spin w-8 h-8 border-3 border-primary border-t-transparent rounded-full"></div>

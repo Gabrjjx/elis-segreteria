@@ -285,11 +285,11 @@ export default function ServiceList({
       </div>
 
       {/* Mobile Card View - Enhanced for better touch experience */}
-      <div className="md:hidden space-y-5">
+      <div className="md:hidden space-y-8">
         {services.map((service) => (
           <div 
             key={service.id} 
-            className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm relative overflow-hidden"
+            className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm relative overflow-hidden mb-4"
             onClick={() => handleEdit(service.id)}
           >
             {/* Status indicator stripe */}
