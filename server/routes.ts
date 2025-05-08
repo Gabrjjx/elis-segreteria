@@ -194,21 +194,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard metrics
-  app.get("/api/dashboard/metrics", async (_req: Request, res: Response) => {
+  app.get("/api/dashboard/metrics", async (req: Request, res: Response) => {
     try {
-      const metrics = await storage.getServiceMetrics();
+      // Ottieni i parametri di filtro per le date se presenti
+      const filterParams: { startDate?: Date, endDate?: Date } = {};
+      
+      if (req.query.startDate) {
+        try {
+          filterParams.startDate = new Date(req.query.startDate as string);
+        } catch (e) {
+          console.error("Errore nella conversione della data di inizio:", e);
+        }
+      }
+      
+      if (req.query.endDate) {
+        try {
+          filterParams.endDate = new Date(req.query.endDate as string);
+        } catch (e) {
+          console.error("Errore nella conversione della data di fine:", e);
+        }
+      }
+      
+      const metrics = await storage.getServiceMetrics(filterParams);
       res.json(metrics);
     } catch (error) {
+      console.error("Errore durante il recupero delle metriche:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
 
   // Pending payments
-  app.get("/api/dashboard/pending-payments", async (_req: Request, res: Response) => {
+  app.get("/api/dashboard/pending-payments", async (req: Request, res: Response) => {
     try {
-      const pendingPayments = await storage.getPendingPayments();
+      // Ottieni i parametri di filtro per le date se presenti
+      const filterParams: { startDate?: Date, endDate?: Date } = {};
+      
+      if (req.query.startDate) {
+        try {
+          filterParams.startDate = new Date(req.query.startDate as string);
+        } catch (e) {
+          console.error("Errore nella conversione della data di inizio:", e);
+        }
+      }
+      
+      if (req.query.endDate) {
+        try {
+          filterParams.endDate = new Date(req.query.endDate as string);
+        } catch (e) {
+          console.error("Errore nella conversione della data di fine:", e);
+        }
+      }
+      
+      const pendingPayments = await storage.getPendingPayments(filterParams);
       res.json(pendingPayments);
     } catch (error) {
+      console.error("Errore durante il recupero dei pagamenti pendenti:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -217,9 +257,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/dashboard/recent-services", async (req: Request, res: Response) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
-      const recentServices = await storage.getRecentServices(limit);
+      
+      // Ottieni i parametri di filtro per le date se presenti
+      const filterParams: { startDate?: Date, endDate?: Date } = {};
+      
+      if (req.query.startDate) {
+        try {
+          filterParams.startDate = new Date(req.query.startDate as string);
+        } catch (e) {
+          console.error("Errore nella conversione della data di inizio:", e);
+        }
+      }
+      
+      if (req.query.endDate) {
+        try {
+          filterParams.endDate = new Date(req.query.endDate as string);
+        } catch (e) {
+          console.error("Errore nella conversione della data di fine:", e);
+        }
+      }
+      
+      const recentServices = await storage.getRecentServices(limit, filterParams);
       res.json(recentServices);
     } catch (error) {
+      console.error("Errore durante il recupero dei servizi recenti:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

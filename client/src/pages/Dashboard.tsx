@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { format } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { it } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -10,29 +10,98 @@ import PendingPayments from "@/components/dashboard/PendingPayments";
 import ServiceList from "@/components/services/ServicesList";
 import { Plus, Search, Filter, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const currentDate = new Date();
   const currentMonth = format(currentDate, 'MMMM yyyy', { locale: it });
+  
+  // Stato per il mese selezionato
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonth.toLowerCase());
+  const [filterPeriod, setFilterPeriod] = useState<{startDate: Date, endDate: Date}>({
+    startDate: startOfMonth(currentDate),
+    endDate: endOfMonth(currentDate)
+  });
+
+  // Parametri per le query con il periodo selezionato
+  const queryParams = new URLSearchParams();
+  queryParams.append('startDate', filterPeriod.startDate.toISOString());
+  queryParams.append('endDate', filterPeriod.endDate.toISOString());
+  const queryString = queryParams.toString();
 
   // Fetch dashboard metrics
   const { data: metrics, isLoading: isLoadingMetrics } = useQuery({
-    queryKey: ['/api/dashboard/metrics'],
+    queryKey: ['/api/dashboard/metrics', queryString],
+    queryFn: async () => {
+      const response = await fetch(`/api/dashboard/metrics?${queryString}`);
+      if (!response.ok) {
+        throw new Error('Errore nel caricamento delle metriche');
+      }
+      return response.json();
+    }
   });
 
   // Fetch recent services
   const { data: recentServices, isLoading: isLoadingServices } = useQuery({
-    queryKey: ['/api/dashboard/recent-services'],
+    queryKey: ['/api/dashboard/recent-services', queryString],
+    queryFn: async () => {
+      const response = await fetch(`/api/dashboard/recent-services?${queryString}`);
+      if (!response.ok) {
+        throw new Error('Errore nel caricamento dei servizi recenti');
+      }
+      return response.json();
+    }
   });
 
   // Fetch pending payments
   const { data: pendingPayments, isLoading: isLoadingPayments } = useQuery({
-    queryKey: ['/api/dashboard/pending-payments'],
+    queryKey: ['/api/dashboard/pending-payments', queryString],
+    queryFn: async () => {
+      const response = await fetch(`/api/dashboard/pending-payments?${queryString}`);
+      if (!response.ok) {
+        throw new Error('Errore nel caricamento dei pagamenti pendenti');
+      }
+      return response.json();
+    }
   });
 
   const handleAddNewService = () => {
     setLocation("/services/new");
+  };
+  
+  // Gestisce il cambio del mese
+  const handleMonthChange = (month: string) => {
+    setSelectedMonth(month);
+    
+    let startDate, endDate;
+    
+    switch (month) {
+      case 'maggio 2025':
+        startDate = startOfMonth(currentDate);
+        endDate = endOfMonth(currentDate);
+        break;
+      case 'aprile 2025':
+        startDate = startOfMonth(subMonths(currentDate, 1));
+        endDate = endOfMonth(subMonths(currentDate, 1));
+        break;
+      case 'marzo 2025':
+        startDate = startOfMonth(subMonths(currentDate, 2));
+        endDate = endOfMonth(subMonths(currentDate, 2));
+        break;
+      default:
+        startDate = startOfMonth(currentDate);
+        endDate = endOfMonth(currentDate);
+    }
+    
+    setFilterPeriod({ startDate, endDate });
+    
+    toast({
+      title: "Filtro applicato",
+      description: `Visualizzazione dati: ${format(startDate, 'dd/MM/yyyy')} - ${format(endDate, 'dd/MM/yyyy')}`,
+    });
   };
 
   return (
@@ -46,12 +115,12 @@ export default function Dashboard() {
           </div>
           <div className="mt-4 md:mt-0 flex items-center">
             <div className="relative inline-block text-left mr-2">
-              <Select defaultValue={currentMonth.toLowerCase()}>
+              <Select value={selectedMonth} onValueChange={handleMonthChange}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder={currentMonth} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={currentMonth.toLowerCase()}>{currentMonth}</SelectItem>
+                  <SelectItem value="maggio 2025">Maggio 2025</SelectItem>
                   <SelectItem value="aprile 2025">Aprile 2025</SelectItem>
                   <SelectItem value="marzo 2025">Marzo 2025</SelectItem>
                 </SelectContent>
