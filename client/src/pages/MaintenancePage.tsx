@@ -444,7 +444,7 @@ export default function MaintenancePage() {
             <AlertDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" className="flex items-center">
-                  <CloudSync className="mr-2 h-4 w-4" />
+                  <Cloud className="mr-2 h-4 w-4" />
                   Sincronizza da Google
                 </Button>
               </AlertDialogTrigger>

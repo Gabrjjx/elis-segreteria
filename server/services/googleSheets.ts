@@ -12,14 +12,39 @@ if (!process.env.GOOGLE_SHEET_ID) {
 
 // Estrae l'ID del foglio dall'URL, se necessario
 function extractSheetId(sheetIdOrUrl: string): string {
-  // Se l'ID contiene "spreadsheets/d/" è probabilmente un URL completo
+  console.log(`Trying to extract sheet ID from: ${sheetIdOrUrl}`);
+  
+  // Pattern 1: URLs in formato https://docs.google.com/spreadsheets/d/ID/edit
   if (sheetIdOrUrl.includes('spreadsheets/d/')) {
     const matches = sheetIdOrUrl.match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
     if (matches && matches[1]) {
+      console.log(`Extracted ID (pattern 1): ${matches[1]}`);
       return matches[1];
     }
   }
-  return sheetIdOrUrl; // Restituisce l'ID originale se non è un URL
+  
+  // Pattern 2: URLs in formato https://docs.google.com/spreadsheets/d/ID/edit#gid=0
+  const editMatch = sheetIdOrUrl.match(/\/d\/([a-zA-Z0-9-_]+)\/edit/);
+  if (editMatch && editMatch[1]) {
+    console.log(`Extracted ID (pattern 2): ${editMatch[1]}`);
+    return editMatch[1];
+  }
+  
+  // Pattern 3: URLs in formato https://docs.google.com/spreadsheets/d/ID/view
+  const viewMatch = sheetIdOrUrl.match(/\/d\/([a-zA-Z0-9-_]+)\/view/);
+  if (viewMatch && viewMatch[1]) {
+    console.log(`Extracted ID (pattern 3): ${viewMatch[1]}`);
+    return viewMatch[1];
+  }
+  
+  // Se l'input sembra già essere un ID (formato alfanumerico senza slashes o altri separatori)
+  if (/^[a-zA-Z0-9-_]+$/.test(sheetIdOrUrl)) {
+    console.log(`Input already appears to be an ID: ${sheetIdOrUrl}`);
+    return sheetIdOrUrl;
+  }
+  
+  console.log(`Could not extract ID, returning original: ${sheetIdOrUrl}`);
+  return sheetIdOrUrl; // Restituisce l'ID originale se non è un URL riconosciuto
 }
 
 // Configurazione dell'API Google Sheets
