@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Service, ServiceType, PaymentStatus } from "@shared/schema";
-import { Pencil, Receipt, Trash2, AlertTriangle } from "lucide-react";
+import { Pencil, Receipt, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface ServicesListProps {
   services: Service[];
@@ -176,7 +176,8 @@ export default function ServiceList({
 
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -270,8 +271,104 @@ export default function ServiceList({
         </Table>
       </div>
 
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-4">
+        {services.map((service) => (
+          <div key={service.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <div className="text-lg font-semibold">{service.sigla}</div>
+                <div className="text-sm text-gray-500">{format(new Date(service.date), "dd/MM/yyyy")}</div>
+              </div>
+              <div className="flex flex-col items-end">
+                <div className="text-lg font-medium">€{service.amount.toFixed(2)}</div>
+                <div>{getPaymentStatusBadge(service.status)}</div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div>
+                <span className="text-sm text-gray-500">Tipologia:</span>
+                <div>{getServiceTypeBadge(service.type)}</div>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">N. Pezzi:</span>
+                <div className="font-medium">{service.pieces}</div>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-200">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => handleEdit(service.id)}
+                className="flex items-center text-xs"
+              >
+                <Pencil className="h-3 w-3 mr-1" />
+                Modifica
+              </Button>
+              
+              {service.status === PaymentStatus.UNPAID ? (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleMarkAsPaid(service.id)}
+                  className="flex items-center text-xs"
+                >
+                  <Receipt className="h-3 w-3 mr-1" />
+                  Segna pagato
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleReceiptGeneration(service.id)}
+                  className="flex items-center text-xs"
+                >
+                  <Receipt className="h-3 w-3 mr-1" />
+                  Ricevuta
+                </Button>
+              )}
+              
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="text-destructive border-destructive flex items-center text-xs"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Elimina
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Sei sicuro di voler eliminare questo servizio?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Questa azione non può essere annullata. Eliminerai definitivamente il servizio
+                      e i relativi dati dal sistema.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annulla</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={() => handleDelete(service.id)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      <AlertTriangle className="mr-2 h-4 w-4" />
+                      Elimina
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {showPagination && totalPages > 1 && (
         <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+          {/* Desktop pagination */}
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-gray-700">
@@ -311,6 +408,39 @@ export default function ServiceList({
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
+          </div>
+          
+          {/* Mobile pagination */}
+          <div className="flex flex-col sm:hidden w-full">
+            <div className="mb-2 text-center">
+              <p className="text-sm text-gray-700">
+                <span className="font-medium">{services.length}</span> di{" "}
+                <span className="font-medium">{total}</span> servizi • Pagina <span className="font-medium">{currentPage}</span> di <span className="font-medium">{totalPages}</span>
+              </p>
+            </div>
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange && currentPage > 1 && onPageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="flex items-center"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Precedente
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange && currentPage < totalPages && onPageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className="flex items-center"
+              >
+                Successiva
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
           </div>
         </div>
       )}

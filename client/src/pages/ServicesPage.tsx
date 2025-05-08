@@ -113,52 +113,59 @@ export default function ServicesPage() {
       </div>
 
       {/* Filters Section */}
-      <form onSubmit={handleSearch} className="flex flex-col md:flex-row md:items-center mb-6 gap-3">
-        <div className="flex-1">
-          <div className="relative rounded-md shadow-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
+      <form onSubmit={handleSearch} className="mb-6">
+        <div className="flex flex-col space-y-3">
+          <div className="w-full">
+            <div className="relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-gray-400" />
+              </div>
+              <Input 
+                placeholder="Cerca per sigla, tipologia..."
+                className="pl-10"
+                value={filters.query}
+                onChange={(e) => setFilters(prev => ({ ...prev, query: e.target.value }))}
+              />
             </div>
-            <Input 
-              placeholder="Cerca per sigla, tipologia..."
-              className="pl-10"
-              value={filters.query}
-              onChange={(e) => setFilters(prev => ({ ...prev, query: e.target.value }))}
-            />
           </div>
-        </div>
-        <div className="flex space-x-3">
-          <Select 
-            value={filters.type}
-            onValueChange={(value) => setFilters(prev => ({ ...prev, type: value as any }))}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder={serviceTypeLabels[filters.type] || "Tutte le tipologie"} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutte le tipologie</SelectItem>
-              <SelectItem value="siglatura">Siglatura</SelectItem>
-              <SelectItem value="happy_hour">Happy Hour</SelectItem>
-              <SelectItem value="riparazione">Riparazione</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select 
-            value={filters.status}
-            onValueChange={(value) => setFilters(prev => ({ ...prev, status: value as any }))}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder={paymentStatusLabels[filters.status] || "Tutti i pagamenti"} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti i pagamenti</SelectItem>
-              <SelectItem value="paid">Pagato</SelectItem>
-              <SelectItem value="unpaid">Da pagare</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button type="submit" variant="outline">
-            <Filter className="mr-2 h-4 w-4 text-gray-500" />
-            Filtra
-          </Button>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <Select 
+              value={filters.type}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, type: value as any }))}
+            >
+              <SelectTrigger className="w-full h-10">
+                <SelectValue placeholder={serviceTypeLabels[filters.type] || "Tutte le tipologie"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutte le tipologie</SelectItem>
+                <SelectItem value="siglatura">Siglatura</SelectItem>
+                <SelectItem value="happy_hour">Happy Hour</SelectItem>
+                <SelectItem value="riparazione">Riparazione</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select 
+              value={filters.status}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, status: value as any }))}
+            >
+              <SelectTrigger className="w-full h-10">
+                <SelectValue placeholder={paymentStatusLabels[filters.status] || "Tutti i pagamenti"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutti i pagamenti</SelectItem>
+                <SelectItem value="paid">Pagato</SelectItem>
+                <SelectItem value="unpaid">Da pagare</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <div className="col-span-2 md:col-span-2">
+              <Button type="submit" variant="outline" className="w-full h-10">
+                <Filter className="mr-2 h-4 w-4 text-gray-500" />
+                Filtra
+              </Button>
+            </div>
+          </div>
         </div>
       </form>
 
