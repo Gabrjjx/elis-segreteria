@@ -69,13 +69,25 @@ const sheets = google.sheets({
  */
 export async function readGoogleSheet(range: string = 'Risposte del modulo 1!A:Z'): Promise<string[][]> {
   try {
-    log('Lettura del foglio Google Sheets...', 'google-sheets');
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: range,
-    });
-
-    const rows = response.data.values;
+    log('Lettura del foglio Google Sheets usando fetch diretto...', 'google-sheets');
+    
+    // Utilizziamo fetch direttamente per evitare problemi con il client Google Sheets
+    const apiKey = process.env.GOOGLE_API_KEY;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?key=${apiKey}`;
+    
+    console.log("Calling Google Sheets API with URL:", url.replace(apiKey || '', '[REDACTED]'));
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Google Sheets API error (${response.status}): ${errorText}`);
+      throw new Error(`Google Sheets API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    const rows = data.values;
+    
     if (!rows || rows.length === 0) {
       log('Nessun dato trovato nel foglio Google Sheets', 'google-sheets');
       return [];
