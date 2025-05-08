@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { PayPalButton } from "./PayPalButton";
+
 import { ReceiptViewer } from "./ReceiptViewer";
 import { Service } from "@shared/schema";
 
@@ -51,16 +51,6 @@ export function PaymentActions({ service, onUpdate }: PaymentActionsProps) {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handlePaypalComplete = (serviceId: number) => {
-    queryClient.invalidateQueries({ queryKey: ['/api/services'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/pending-payments'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
-    
-    if (onUpdate) {
-      onUpdate();
     }
   };
   
@@ -114,12 +104,7 @@ export function PaymentActions({ service, onUpdate }: PaymentActionsProps) {
         )}
         Segna come pagato
       </Button>
-      
-      <PayPalButton 
-        serviceId={service.id} 
-        amount={service.amount}
-        onPaymentComplete={handlePaypalComplete}
-      />
+
     </div>
   );
 }
