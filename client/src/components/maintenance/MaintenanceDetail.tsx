@@ -267,168 +267,197 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
     return dettagli || null;
   };
   
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
-        {isLoading ? (
-          <>
+  if (!isOpen) return null;
+  
+  if (isLoading) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
             <DialogTitle>Caricamento in corso...</DialogTitle>
             <DialogDescription>
               Attendere il caricamento dei dati della richiesta...
             </DialogDescription>
-            <div className="flex justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
-            </div>
-          </>
-        ) : isError ? (
-          <>
+          </DialogHeader>
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+  
+  if (isError) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
             <DialogTitle>Errore</DialogTitle>
             <DialogDescription>
               Si è verificato un problema durante il caricamento.
             </DialogDescription>
-            <div className="text-center py-8">
-              <p className="text-red-500">Si è verificato un errore durante il caricamento dei dettagli della richiesta.</p>
-              <Button 
-                onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/maintenance', requestId] })}
-                variant="outline"
-                className="mt-2"
+          </DialogHeader>
+          <div className="text-center py-8">
+            <p className="text-red-500">Si è verificato un errore durante il caricamento dei dettagli della richiesta.</p>
+            <Button 
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/maintenance', requestId] })}
+              variant="outline"
+              className="mt-2"
+            >
+              Riprova
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+  
+  if (!request) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Dati non disponibili</DialogTitle>
+            <DialogDescription>
+              La richiesta di manutenzione non è stata trovata.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl flex items-center justify-between">
+            <span>Richiesta di Manutenzione #{request.id}</span>
+            <div className="flex space-x-2">
+              <Badge className={`${getStatusColor(request.status)} text-white`}>
+                {getStatusLabel(request.status)}
+              </Badge>
+              <Badge className={`${getPriorityColor(request.priority)} text-white`}>
+                {getPriorityLabel(request.priority)}
+              </Badge>
+            </div>
+          </DialogTitle>
+          <DialogDescription>
+            Inviata il {safeDate(request.timestamp) ? formatDate(safeDate(request.timestamp)!) : 'Data non disponibile'}
+            {safeDate(request.completedAt) ? ` • Completata il ${formatDate(safeDate(request.completedAt)!)}` : ''}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+          <div>
+            <h3 className="font-medium text-gray-700">Richiedente</h3>
+            <p>{request.requesterName}</p>
+            <p className="text-sm text-gray-500">{request.requesterEmail}</p>
+          </div>
+          
+          <div>
+            <h3 className="font-medium text-gray-700">Ubicazione</h3>
+            <p>Stanza: {request.roomNumber}</p>
+            <p className="text-sm text-gray-500">{request.location}</p>
+          </div>
+          
+          <div className="md:col-span-2">
+            <h3 className="font-medium text-gray-700">Tipo di richiesta</h3>
+            <p>{request.requestType}</p>
+          </div>
+          
+          <div className="md:col-span-2">
+            <h3 className="font-medium text-gray-700">Descrizione</h3>
+            <p className="whitespace-pre-line">{request.description}</p>
+          </div>
+          
+          {/* Estrazione e visualizzazione dei dettagli */}
+          {extractOriginalDate(request) && (
+            <div className="md:col-span-2 mt-2">
+              <div className="bg-blue-50 p-3 rounded-md">
+                <h3 className="font-medium text-blue-700">Data originale dal Google Sheet</h3>
+                <p className="text-blue-800 font-semibold">{extractOriginalDate(request)}</p>
+              </div>
+            </div>
+          )}
+          
+          {extractUbicazione(request) && (
+            <div className="md:col-span-2 mt-2">
+              <div className="bg-yellow-50 p-3 rounded-md">
+                <h3 className="font-medium text-yellow-700">Ubicazione specifica</h3>
+                <p className="text-yellow-800">{extractUbicazione(request)}</p>
+              </div>
+            </div>
+          )}
+          
+          {extractDettagli(request) && (
+            <div className="md:col-span-2 mt-2">
+              <div className="bg-red-50 p-3 rounded-md">
+                <h3 className="font-medium text-red-700">Dettagli del difetto rilevato</h3>
+                <p className="text-red-800">{extractDettagli(request)}</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Note originali complete */}
+          {request.notes && (
+            <div className="md:col-span-2 mt-4">
+              <details>
+                <summary className="font-medium text-gray-700 cursor-pointer">Note complete</summary>
+                <p className="whitespace-pre-line text-sm mt-2 pl-2 border-l-2 border-gray-200">{request.notes}</p>
+              </details>
+            </div>
+          )}
+          
+          {request.attachmentUrl && (
+            <div className="md:col-span-2">
+              <h3 className="font-medium text-gray-700">Allegato</h3>
+              <a 
+                href={request.attachmentUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:underline"
               >
-                Riprova
-              </Button>
+                Visualizza allegato
+              </a>
             </div>
-          </>
-        ) : request ? (
-          <>
-            <DialogHeader>
-              <DialogTitle className="text-xl flex items-center justify-between">
-                <span>Richiesta di Manutenzione #{request.id}</span>
-                <div className="flex space-x-2">
-                  <Badge className={`${getStatusColor(request.status)} text-white`}>
-                    {getStatusLabel(request.status)}
-                  </Badge>
-                  <Badge className={`${getPriorityColor(request.priority)} text-white`}>
-                    {getPriorityLabel(request.priority)}
-                  </Badge>
-                </div>
-              </DialogTitle>
-              <DialogDescription id="maintenance-request-description" className="text-sm text-gray-500">
-                Inviata il {safeDate(request.timestamp) ? formatDate(safeDate(request.timestamp)!) : 'Data non disponibile'}
-                {safeDate(request.completedAt) ? ` • Completata il ${formatDate(safeDate(request.completedAt)!)}` : ''}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
-              <div>
-                <h3 className="font-medium text-gray-700">Richiedente</h3>
-                <p>{request.requesterName}</p>
-                <p className="text-sm text-gray-500">{request.requesterEmail}</p>
-              </div>
-              
-              <div>
-                <h3 className="font-medium text-gray-700">Ubicazione</h3>
-                <p>Stanza: {request.roomNumber}</p>
-                <p className="text-sm text-gray-500">{request.location}</p>
-              </div>
-              
-              <div className="md:col-span-2">
-                <h3 className="font-medium text-gray-700">Tipo di richiesta</h3>
-                <p>{request.requestType}</p>
-              </div>
-              
-              <div className="md:col-span-2">
-                <h3 className="font-medium text-gray-700">Descrizione</h3>
-                <p className="whitespace-pre-line">{request.description}</p>
-              </div>
-              
-              {/* Estrazione e visualizzazione dei dettagli */}
-              {extractOriginalDate(request) && (
-                <div className="md:col-span-2 mt-2">
-                  <div className="bg-blue-50 p-3 rounded-md">
-                    <h3 className="font-medium text-blue-700">Data originale dal Google Sheet</h3>
-                    <p className="text-blue-800 font-semibold">{extractOriginalDate(request)}</p>
-                  </div>
-                </div>
-              )}
-              
-              {extractUbicazione(request) && (
-                <div className="md:col-span-2 mt-2">
-                  <div className="bg-yellow-50 p-3 rounded-md">
-                    <h3 className="font-medium text-yellow-700">Ubicazione specifica</h3>
-                    <p className="text-yellow-800">{extractUbicazione(request)}</p>
-                  </div>
-                </div>
-              )}
-              
-              {extractDettagli(request) && (
-                <div className="md:col-span-2 mt-2">
-                  <div className="bg-red-50 p-3 rounded-md">
-                    <h3 className="font-medium text-red-700">Dettagli del difetto rilevato</h3>
-                    <p className="text-red-800">{extractDettagli(request)}</p>
-                  </div>
-                </div>
-              )}
-              
-              {/* Note originali complete */}
-              {request.notes && (
-                <div className="md:col-span-2 mt-4">
-                  <details>
-                    <summary className="font-medium text-gray-700 cursor-pointer">Note complete</summary>
-                    <p className="whitespace-pre-line text-sm mt-2 pl-2 border-l-2 border-gray-200">{request.notes}</p>
-                  </details>
-                </div>
-              )}
-              
-              {request.attachmentUrl && (
-                <div className="md:col-span-2">
-                  <h3 className="font-medium text-gray-700">Allegato</h3>
-                  <a 
-                    href={request.attachmentUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline"
-                  >
-                    Visualizza allegato
-                  </a>
-                </div>
-              )}
-              
-              <div className="md:col-span-2">
-                <h3 className="font-medium text-gray-700 mb-1">Assegnata a</h3>
-                <input
-                  type="text"
-                  value={assignee}
-                  onChange={(e) => setAssignee(e.target.value)}
-                  placeholder="Nome dell'incaricato"
-                  className="w-full p-2 border rounded-md"
-                />
-              </div>
-              
-              <div className="md:col-span-2">
-                <h3 className="font-medium text-gray-700 mb-1">Note</h3>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Aggiungi note sulla richiesta..."
-                  className="w-full min-h-[100px]"
-                />
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={onClose}>Annulla</Button>
-              <Button onClick={handleSave} disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Salvataggio...
-                  </>
-                ) : (
-                  "Salva modifiche"
-                )}
-              </Button>
-            </DialogFooter>
-          </>
-        ) : null}
+          )}
+          
+          <div className="md:col-span-2">
+            <h3 className="font-medium text-gray-700 mb-1">Assegnata a</h3>
+            <input
+              type="text"
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
+              placeholder="Nome dell'incaricato"
+              className="w-full p-2 border rounded-md"
+            />
+          </div>
+          
+          <div className="md:col-span-2">
+            <h3 className="font-medium text-gray-700 mb-1">Note</h3>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Aggiungi note sulla richiesta..."
+              className="w-full min-h-[100px]"
+            />
+          </div>
+        </div>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Annulla</Button>
+          <Button onClick={handleSave} disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Salvataggio...
+              </>
+            ) : (
+              "Salva modifiche"
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
