@@ -242,7 +242,9 @@ export default function PaymentsPage() {
           <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
               <h4 className="text-sm font-medium text-gray-500">Totale servizi da pagare</h4>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{data.total}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {data.services.filter((service: Service) => service.status === 'unpaid').length}
+              </p>
             </div>
             <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
               <h4 className="text-sm font-medium text-gray-500">Servizi visualizzati</h4>
@@ -283,12 +285,15 @@ export default function PaymentsPage() {
                 )}
               </p>
             </div>
-            {data?.total > 0 && (
-              <Badge variant="destructive" className="text-md px-3 py-1">
-                <AlertTriangle className="mr-1 h-4 w-4" />
-                {data.total} pagamenti da riscuotere
-              </Badge>
-            )}
+            {(() => {
+              const unpaidCount = data.services.filter((service: Service) => service.status === 'unpaid').length;
+              return unpaidCount > 0 ? (
+                <Badge variant="destructive" className="text-md px-3 py-1">
+                  <AlertTriangle className="mr-1 h-4 w-4" />
+                  {unpaidCount} pagamenti da riscuotere
+                </Badge>
+              ) : null;
+            })()}
           </div>
         </div>
         
