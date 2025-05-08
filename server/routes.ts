@@ -645,19 +645,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 console.log(`Riga ${i} saltata perché è un duplicato`);
                 failed++;
               } else {
-                // Determiniamo lo stato in base alla colonna A (intenso debugging)
-                console.log(`Riga ${i} - DEBUG STATO:`);
-                console.log(`  • Valore colonna A: "${row[0]}" (tipo: ${typeof row[0]})`);
-                console.log(`  • Confronto: "${String(row[0]).toLowerCase().trim()}" === "risolto"`);
-                console.log(`  • Risultato confronto: ${String(row[0]).toLowerCase().trim() === 'risolto'}`);
+                // Determiniamo lo stato in base alla colonna A
+                let maintenanceStatus = MaintenanceRequestStatus.PENDING; // Default è pending
                 
-                const status = (row[0] && String(row[0]).toLowerCase().trim() === 'risolto') 
-                  ? MaintenanceRequestStatus.COMPLETED
-                  : MaintenanceRequestStatus.PENDING;
+                // Se la colonna A è "risolto", lo stato diventa "completato"
+                if (row[0] && String(row[0]).toLowerCase().trim() === 'risolto') {
+                    maintenanceStatus = MaintenanceRequestStatus.COMPLETED;
+                    console.log(`Riga ${i}: Impostato stato COMPLETATO, colonna A contiene: "${row[0]}"`);
+                } else {
+                    console.log(`Riga ${i}: Impostato stato IN ATTESA, colonna A contiene: "${row[0] || '<vuoto>'}"`);
+                }
                 
-                console.log(`Riga ${i}: Impostazione stato a ${status} (valore colonna: "${row[0] || 'vuoto'}")`);
-                
-                // FORZIAMO TUTTE LE RICHIESTE COME COMPLETATE visto che provengono da un foglio "risolto"
+                // Creiamo la richiesta con lo stato determinato
                 await storage.createMaintenanceRequest({
                   requesterName: richiedente,
                   requesterEmail: "segreteria@elis.org",
@@ -665,12 +664,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   requestType: "Manutenzione",
                   description: descrizione,
                   location: stanza,
-                  status: "completed", // FORZIAMO LO STATO A COMPLETED
+                  status: maintenanceStatus as MaintenanceRequestStatusValue, // Cast per evitare errori LSP
                   priority: priorita,
-                  notes: `Importato dal foglio Google, stato originale: "risolto"
+                  notes: `Importato dal foglio Google
 Data: ${infoIdx >= 0 && infoIdx < row.length ? row[infoIdx] : "N/D"}
 Ubicazione specifica: ${ubicazione}
 Dettagli del difetto: ${dettagli}
+Stato originale: ${row[0] ? `"${row[0]}"` : "Non specificato"}
 RifID: ${hashId}`
                 });
                 success++;
