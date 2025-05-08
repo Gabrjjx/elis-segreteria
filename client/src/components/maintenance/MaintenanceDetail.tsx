@@ -224,36 +224,39 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
               {request.notes && (
                 <>
                   {/* Estrazione della data originale */}
-                  {request.notes.match(/Data:\s*([^\n]+)/) && (
+                  {request.notes.includes("data:") || request.notes.includes("Data:") ? (
                     <div className="md:col-span-2 mt-2">
                       <div className="bg-blue-50 p-3 rounded-md">
                         <h3 className="font-medium text-blue-700">Data originale dal Google Sheet</h3>
                         <p className="text-blue-800 font-semibold">
-                          {request.notes.match(/Data:\s*([^\n]+)/)?.[1]}
+                          {request.notes.includes("Data:") 
+                            ? request.notes.match(/Data:\s*([^\n]+)/)?.[1]
+                            : request.notes.match(/data:\s*([^\n]+)/)?.[1] || 
+                              request.description?.match(/Data originale:\s*([^)]+)/)?.[1]}
                         </p>
                       </div>
                     </div>
-                  )}
+                  ) : null}
                   
-                  {/* Ubicazione specifica */}
-                  {request.notes.match(/Ubicazione specifica:\s*([^\n]+)/) && (
+                  {/* Estrai ubicazione e dettagli dalla descrizione se disponibili */}
+                  {request.description && request.description.includes(":") && (
                     <div className="md:col-span-2 mt-2">
                       <div className="bg-yellow-50 p-3 rounded-md">
                         <h3 className="font-medium text-yellow-700">Ubicazione specifica</h3>
                         <p className="text-yellow-800">
-                          {request.notes.match(/Ubicazione specifica:\s*([^\n]+)/)?.[1]}
+                          {request.description.split(":")[0]}
                         </p>
                       </div>
                     </div>
                   )}
                   
                   {/* Dettagli del difetto */}
-                  {request.notes.match(/Dettagli del difetto:\s*([^\n]+)/) && (
+                  {request.description && request.description.includes(":") && (
                     <div className="md:col-span-2 mt-2">
                       <div className="bg-red-50 p-3 rounded-md">
                         <h3 className="font-medium text-red-700">Dettagli del difetto rilevato</h3>
                         <p className="text-red-800">
-                          {request.notes.match(/Dettagli del difetto:\s*([^\n]+)/)?.[1]}
+                          {request.description.split(":")[1]?.split("(Data originale")[0]?.trim()}
                         </p>
                       </div>
                     </div>
