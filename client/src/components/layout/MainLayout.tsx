@@ -383,12 +383,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
               </DropdownMenu>
               
               <a
-                href="/services?status=unpaid"
+                href="/payments"
                 className={cn(
                   "flex-1 flex flex-col items-center py-3",
-                  location.includes("status=unpaid") ? "text-primary" : "text-gray-600"
+                  location.includes("/payments") ? "text-primary" : "text-gray-600"
                 )}
-                onClick={(e) => handleNavigation("/services?status=unpaid", e)}
+                onClick={(e) => handleNavigation("/payments", e)}
               >
                 <Receipt className="h-5 w-5" />
                 <span className="text-xs mt-1">Pagamenti</span>
