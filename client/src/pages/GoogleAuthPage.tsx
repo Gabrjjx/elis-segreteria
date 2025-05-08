@@ -21,28 +21,25 @@ export default function GoogleAuthPage() {
   const [authCode, setAuthCode] = useState("");
   const [authUrl, setAuthUrl] = useState<string | null>(null);
 
-  // Utilizza useQuery per ottenere lo stato di autenticazione con caching disabilitato e refetch manuale
+  // Utilizza useQuery per ottenere lo stato di autenticazione (singola richiesta)
   const { 
     data: authStatus = { hasCredentials: false, hasValidToken: false }, 
     isLoading: isStatusLoading,
     refetch
   } = useQuery({
-    queryKey: ['googleAuthStatus', Date.now()], // Aggiungiamo un timestamp per prevenire il caching
+    queryKey: ['googleAuthStatus'], // Chiave fissa, evita aggiornamenti continui
     queryFn: async () => {
-      // Aggiungiamo un parametro cache buster
+      // Aggiungiamo un parametro cache buster per evitare risposte cachate
       const cacheBuster = `?t=${Date.now()}`;
       const res = await apiRequest(`/api/google/auth/status${cacheBuster}`);
       const data = await res.json();
       console.log("API Request:", "/api/google/auth/status");
       console.log("API Response data:", data);
-      // Logging per debug
-      console.log("Tipo di hasCredentials:", typeof data.hasCredentials);
-      console.log("Valore di hasCredentials:", data.hasCredentials);
       return data as AuthStatus;
     },
-    staleTime: 0, // Consideriamo i dati obsoleti immediatamente
-    cacheTime: 0, // Non memorizziamo mai i dati nella cache
-    refetchOnWindowFocus: true, // Rifetch quando l'utente torna sulla finestra
+    staleTime: 60 * 1000, // Consideriamo i dati validi per 60 secondi
+    refetchOnWindowFocus: false, // Disabilitiamo il rifetch automatico
+    refetchInterval: false, // Nessun intervallo di aggiornamento automatico
   });
 
   // Mutation per ottenere l'URL di autorizzazione
@@ -150,18 +147,20 @@ export default function GoogleAuthPage() {
                             importSheetsMutation.isPending ||
                             exportStatusMutation.isPending;
 
-  // Utilizziamo una variabile di stato statica per il loading invece di calcolarla direttamente
-  // Questo evita il loop di aggiornamenti infiniti
-  const isLoading = isStatusLoading || anyMutationPending;
+  // Utilizziamo una variabile di stato per lo status di caricamento
+  const [localLoading, setLocalLoading] = useState(false);
+  const isLoading = localLoading || anyMutationPending;
   
-  // Update global loading state - usando solo le mutazioni per evitare i loop con isStatusLoading
+  // Gestiamo lo stato solo quando cambia anyMutationPending
+  // Questo evita i loop di aggiornamento continui
   useEffect(() => {
     if (anyMutationPending) {
       startLoading();
-    } else if (!isStatusLoading) { // Importante: non cambiare lo stato mentre isStatusLoading è true
+      setLocalLoading(true);
+    } else {
       stopLoading();
+      setLocalLoading(false);
     }
-    // Non includere isStatusLoading nelle dipendenze per prevenire loop
   }, [anyMutationPending, startLoading, stopLoading]);
 
   // Handler functions
