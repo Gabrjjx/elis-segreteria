@@ -23,6 +23,12 @@ import {
   startDeviceFlow,
   checkDeviceFlowStatus
 } from "./services/googleAuth";
+import {
+  createPaypalOrder,
+  capturePaypalOrder,
+  cancelPaypalOrder,
+  checkPaypalOrderStatus
+} from "./services/paypalService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
