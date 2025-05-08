@@ -1305,6 +1305,113 @@ RifID: ${hashId}`
     }
   });
 
+  // ----- PAYPAL PAYMENT ROUTES -----
+  
+  // Crea un nuovo ordine PayPal
+  app.post("/api/paypal/create-order", async (req: Request, res: Response) => {
+    try {
+      await createPaypalOrder(req, res);
+    } catch (error) {
+      console.error("Errore durante la creazione dell'ordine PayPal:", error);
+      res.status(500).json({ 
+        message: "Errore durante la creazione dell'ordine PayPal", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  // Cattura un pagamento PayPal completato
+  app.post("/api/paypal/capture/:orderId", async (req: Request, res: Response) => {
+    try {
+      await capturePaypalOrder(req, res);
+    } catch (error) {
+      console.error("Errore durante la cattura dell'ordine PayPal:", error);
+      res.status(500).json({ 
+        message: "Errore durante la cattura dell'ordine PayPal", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  // Gestisce la cancellazione di un pagamento
+  app.post("/api/paypal/cancel/:orderId", async (req: Request, res: Response) => {
+    try {
+      await cancelPaypalOrder(req, res);
+    } catch (error) {
+      console.error("Errore durante la cancellazione dell'ordine PayPal:", error);
+      res.status(500).json({ 
+        message: "Errore durante la cancellazione dell'ordine PayPal", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
+  // Verifica lo stato di un ordine
+  app.get("/api/paypal/check-status/:orderId", async (req: Request, res: Response) => {
+    try {
+      await checkPaypalOrderStatus(req, res);
+    } catch (error) {
+      console.error("Errore durante la verifica dello stato dell'ordine PayPal:", error);
+      res.status(500).json({ 
+        message: "Errore durante la verifica dello stato dell'ordine PayPal", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
+  // Endpoint per le ricevute
+  app.get("/api/receipts", async (req: Request, res: Response) => {
+    try {
+      const result = await storage.getReceipts({
+        serviceId: req.query.serviceId ? parseInt(req.query.serviceId as string) : undefined,
+        paymentMethod: req.query.paymentMethod as string,
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
+        page: req.query.page ? parseInt(req.query.page as string) : 1,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 10
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Errore durante il recupero delle ricevute:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Endpoint per ottenere una ricevuta specifica
+  app.get("/api/receipts/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const receipt = await storage.getReceipt(id);
+      
+      if (!receipt) {
+        return res.status(404).json({ message: "Ricevuta non trovata" });
+      }
+      
+      res.json(receipt);
+    } catch (error) {
+      console.error("Errore durante il recupero della ricevuta:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Endpoint per ottenere la ricevuta di un servizio
+  app.get("/api/services/:id/receipt", async (req: Request, res: Response) => {
+    try {
+      const serviceId = parseInt(req.params.id);
+      const receipt = await storage.getReceiptByServiceId(serviceId);
+      
+      if (!receipt) {
+        return res.status(404).json({ message: "Ricevuta non trovata per questo servizio" });
+      }
+      
+      res.json(receipt);
+    } catch (error) {
+      console.error("Errore durante il recupero della ricevuta:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
