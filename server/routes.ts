@@ -1310,7 +1310,19 @@ RifID: ${hashId}`
   // Crea un nuovo ordine PayPal
   app.post("/api/paypal/create-order", async (req: Request, res: Response) => {
     try {
-      await createPaypalOrder(req, res);
+      const { serviceId, amount, currency } = req.body;
+      
+      if (!serviceId || !amount) {
+        return res.status(400).json({ message: "Service ID and amount are required" });
+      }
+      
+      const result = await createPaypalOrder(
+        parseInt(serviceId), 
+        amount.toString(), 
+        currency || 'EUR'
+      );
+      
+      res.json(result);
     } catch (error) {
       console.error("Errore durante la creazione dell'ordine PayPal:", error);
       res.status(500).json({ 
@@ -1323,7 +1335,14 @@ RifID: ${hashId}`
   // Cattura un pagamento PayPal completato
   app.post("/api/paypal/capture/:orderId", async (req: Request, res: Response) => {
     try {
-      await capturePaypalOrder(req, res);
+      const { orderId } = req.params;
+      
+      if (!orderId) {
+        return res.status(400).json({ message: "Order ID is required" });
+      }
+      
+      const result = await capturePaypalOrder(orderId);
+      res.json(result);
     } catch (error) {
       console.error("Errore durante la cattura dell'ordine PayPal:", error);
       res.status(500).json({ 
@@ -1336,7 +1355,14 @@ RifID: ${hashId}`
   // Gestisce la cancellazione di un pagamento
   app.post("/api/paypal/cancel/:orderId", async (req: Request, res: Response) => {
     try {
-      await cancelPaypalOrder(req, res);
+      const { orderId } = req.params;
+      
+      if (!orderId) {
+        return res.status(400).json({ message: "Order ID is required" });
+      }
+      
+      const result = await cancelPaypalOrder(orderId);
+      res.json(result);
     } catch (error) {
       console.error("Errore durante la cancellazione dell'ordine PayPal:", error);
       res.status(500).json({ 
@@ -1349,7 +1375,14 @@ RifID: ${hashId}`
   // Verifica lo stato di un ordine
   app.get("/api/paypal/check-status/:orderId", async (req: Request, res: Response) => {
     try {
-      await checkPaypalOrderStatus(req, res);
+      const { orderId } = req.params;
+      
+      if (!orderId) {
+        return res.status(400).json({ message: "Order ID is required" });
+      }
+      
+      const result = await checkPaypalOrderStatus(orderId);
+      res.json(result);
     } catch (error) {
       console.error("Errore durante la verifica dello stato dell'ordine PayPal:", error);
       res.status(500).json({ 
