@@ -44,7 +44,6 @@ export default function GoogleAuthPage() {
     try {
       // Imposta il caricamento
       setIsStatusLoading(true);
-      console.log("Inizio fetchAuthStatus");
       
       // Utilizzare fetch diretto con cache busting per evitare problemi di caching
       const cacheBuster = Date.now();
@@ -63,7 +62,6 @@ export default function GoogleAuthPage() {
       }
       
       const data = await response.json();
-      console.log("Risultato API fetchAuthStatus:", data);
       
       // Aggiorniamo lo stato solo se i dati sono diversi da quelli attuali
       // per evitare loop di ri-rendering inutili
@@ -94,7 +92,7 @@ export default function GoogleAuthPage() {
   useEffect(() => {
     // Eseguiamo solo al primo montaggio
     if (isInitialMount.current) {
-      console.log("useEffect eseguito - PRIMO MOUNT");
+
       isInitialMount.current = false;
       
       const loadAuthStatus = async () => {
@@ -119,7 +117,6 @@ export default function GoogleAuthPage() {
           }
           
           const data = await response.json();
-          console.log("Risultato API fetchAuthStatus:", data);
           
           // Aggiorniamo lo stato solo se il componente è ancora montato
           setAuthStatus(data);
@@ -239,7 +236,6 @@ export default function GoogleAuthPage() {
       }
       
       const data = await res.json();
-      console.log("Device Flow status check:", data);
       
       if (data.status === "complete") {
         setDeviceFlowStatus("complete");
