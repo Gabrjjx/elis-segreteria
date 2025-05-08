@@ -514,8 +514,33 @@ export class DatabaseStorage implements IStorage {
       query = query.where(lte(services.date, endDate));
     }
     
-    // Get the total count
+    // Get the total count with the same filters
+    // Clona la query per usare gli stessi filtri nella count query
     const countQuery = db.select({ count: count() }).from(services);
+    
+    // Applica gli stessi filtri alla query di conteggio
+    if (params.query) {
+      countQuery.where(like(services.sigla, `%${params.query}%`));
+    }
+    
+    if (params.type && params.type !== 'all') {
+      countQuery.where(eq(services.type, params.type));
+    }
+    
+    if (params.status && params.status !== 'all') {
+      countQuery.where(eq(services.status, params.status));
+    }
+    
+    if (params.startDate) {
+      const startDate = new Date(params.startDate);
+      countQuery.where(gte(services.date, startDate));
+    }
+    
+    if (params.endDate) {
+      const endDate = new Date(params.endDate);
+      countQuery.where(lte(services.date, endDate));
+    }
+    
     const [{ count: total }] = await countQuery;
     
     // Apply pagination and sorting
