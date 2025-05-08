@@ -207,7 +207,15 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   const extractOriginalDate = (request?: MaintenanceRequest) => {
     if (!request) return null;
     
-    // Prova a formattare la data del timestamp originale nel formato italiano
+    // Cerca la data nel campo notes
+    if (request.notes) {
+      const dataMatch = request.notes.match(/Data:\s*([^\n]+)/);
+      if (dataMatch && dataMatch[1]) {
+        return dataMatch[1].trim();
+      }
+    }
+    
+    // Fallback: formatta il timestamp
     if (request.timestamp) {
       try {
         const date = new Date(request.timestamp);
@@ -226,90 +234,57 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
       }
     }
     
-    // Cerca nei campi notes e description come fallback
-    if (request.notes?.includes("Data:")) 
-      return request.notes.match(/Data:\s*([^\n]+)/)?.[1];
-    
-    if (request.notes?.includes("data:"))
-      return request.notes.match(/data:\s*([^\n]+)/)?.[1];
-    
-    if (request.description?.includes("Data originale:"))
-      return request.description.match(/Data originale:\s*([^)]+)/)?.[1];
-    
     return null;
   };
   
   const extractUbicazione = (request?: MaintenanceRequest) => {
     if (!request) return null;
     
-    // Se abbiamo sia roomNumber che location, li combiniamo
+    // Cerca l'ubicazione nel campo notes
+    if (request.notes) {
+      const ubicazioneMatch = request.notes.match(/Ubicazione specifica:\s*([^\n]+)/);
+      if (ubicazioneMatch && ubicazioneMatch[1]) {
+        return ubicazioneMatch[1].trim();
+      }
+    }
+    
+    // Fallback: usa roomNumber e location
     if (request.roomNumber && request.location) {
       if (request.roomNumber !== request.location) {
         return `${request.roomNumber} - ${request.location}`;
+      } else {
+        return request.roomNumber;
       }
     }
     
-    // Se abbiamo solo uno dei due campi
-    if (request.roomNumber && !request.location) return request.roomNumber;
-    if (!request.roomNumber && request.location) return request.location;
+    if (request.roomNumber) return request.roomNumber;
+    if (request.location) return request.location;
     
-    // Fallback ai vecchi metodi
-    let ubicazione = "";
-    
-    // Cerca nei notes
-    if (request.notes?.includes("Ubicazione specifica")) {
-      const match = request.notes.match(/Ubicazione specifica[^:]*:\s*([^\n]+)/);
-      if (match && match[1]) ubicazione = match[1];
-    }
-    
-    // Cerca nella descrizione
-    if (!ubicazione && request.description) {
-      // Controlla se la descrizione ha il formato "ubicazione: dettagli"
-      if (request.description.includes(":") && !request.description.includes("Data originale:")) {
-        ubicazione = request.description.split(":")[0];
-      }
-    }
-    
-    return ubicazione || null;
+    return null;
   };
   
   const extractDettagli = (request?: MaintenanceRequest) => {
     if (!request) return null;
     
-    // Se abbiamo description, usiamo quella
+    // Cerca i dettagli nel campo notes
+    if (request.notes) {
+      const dettagliMatch = request.notes.match(/Dettagli del difetto:\s*([^\n]+)/);
+      if (dettagliMatch && dettagliMatch[1]) {
+        return dettagliMatch[1].trim();
+      }
+    }
+    
+    // Fallback: usa description se disponibile
     if (request.description && request.description.trim() !== '') {
       return request.description;
     }
     
-    // Altrimenti usiamo requestType se disponibile
+    // Usa requestType come ultima risorsa
     if (request.requestType && request.requestType.trim() !== '') {
       return request.requestType;
     }
     
-    // Fallback ai vecchi metodi
-    let dettagli = "";
-    
-    // Cerca nei notes
-    if (request.notes?.includes("Dettagli del difetto")) {
-      const match = request.notes.match(/Dettagli del difetto[^:]*:\s*([^\n]+)/);
-      if (match && match[1]) dettagli = match[1];
-    }
-    
-    // Cerca nella descrizione come ultima risorsa
-    if (!dettagli && request.description) {
-      // Controlla se la descrizione ha il formato "ubicazione: dettagli"
-      if (request.description.includes(":") && !request.description.includes("Data originale:")) {
-        const parts = request.description.split(":");
-        if (parts.length > 1) {
-          dettagli = parts[1].split("(Data originale")[0]?.trim();
-        }
-      } else if (!request.description.includes(":")) {
-        // Se non c'è separatore, usa tutta la descrizione come dettagli
-        dettagli = request.description;
-      }
-    }
-    
-    return dettagli || null;
+    return null;
   };
   
   if (!isOpen) return null;
