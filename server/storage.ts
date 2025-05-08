@@ -1087,6 +1087,131 @@ export class DatabaseStorage implements IStorage {
       }
     }
   }
+  // Student operations
+  async getStudents(params: StudentSearch): Promise<{ students: Student[], total: number }> {
+    // Start with a basic query
+    let query = db.select().from(students);
+    
+    // Apply filters
+    if (params.sigla) {
+      query = query.where(like(students.sigla, `%${params.sigla}%`));
+    }
+    
+    if (params.firstName) {
+      query = query.where(like(students.firstName, `%${params.firstName}%`));
+    }
+    
+    if (params.lastName) {
+      query = query.where(like(students.lastName, `%${params.lastName}%`));
+    }
+    
+    // Get the total count
+    const countQuery = db.select({ count: count() }).from(students);
+    const [{ count: total }] = await countQuery;
+    
+    // Apply pagination and sorting
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const offset = (page - 1) * limit;
+    
+    const resultStudents = await query
+      .orderBy(students.sigla)
+      .limit(limit)
+      .offset(offset);
+    
+    return {
+      students: resultStudents,
+      total: Number(total)
+    };
+  }
+
+  async getStudent(id: number): Promise<Student | undefined> {
+    const [student] = await db.select().from(students).where(eq(students.id, id));
+    return student || undefined;
+  }
+
+  async getStudentBySigla(sigla: string): Promise<Student | undefined> {
+    const [student] = await db.select().from(students).where(eq(students.sigla, sigla));
+    return student || undefined;
+  }
+
+  async createStudent(student: InsertStudent): Promise<Student> {
+    const [newStudent] = await db
+      .insert(students)
+      .values(student)
+      .returning();
+    return newStudent;
+  }
+
+  async updateStudent(id: number, updates: Partial<InsertStudent>): Promise<Student | undefined> {
+    const [updatedStudent] = await db
+      .update(students)
+      .set(updates)
+      .where(eq(students.id, id))
+      .returning();
+      
+    return updatedStudent;
+  }
+
+  async deleteStudent(id: number): Promise<boolean> {
+    const result = await db
+      .delete(students)
+      .where(eq(students.id, id));
+    return result.rowCount > 0;
+  }
+
+  async importStudentsFromCSV(csvData: string): Promise<{ success: number, failed: number }> {
+    let success = 0;
+    let failed = 0;
+    
+    const rows = csvData.split("\n");
+    // Saltiamo l'intestazione se presente
+    if (rows[0].toLowerCase().includes("nome") && rows[0].toLowerCase().includes("cognome")) {
+      rows.shift();
+    }
+    
+    for (const row of rows) {
+      try {
+        if (!row.trim()) continue;
+        
+        const columns = row.split(",").map(col => col.trim());
+        
+        if (columns.length < 3) {
+          console.error("Invalid CSV row:", row);
+          failed++;
+          continue;
+        }
+        
+        // Formato CSV: NOME,COGNOME,SIGLA
+        const [firstName, lastName, sigla] = columns;
+        
+        // Controlla se lo studente esiste già
+        const existingStudent = await this.getStudentBySigla(sigla);
+        if (existingStudent) {
+          // Aggiorna lo studente
+          await this.updateStudent(existingStudent.id, {
+            firstName,
+            lastName,
+            sigla
+          });
+        } else {
+          // Crea un nuovo studente
+          await this.createStudent({
+            firstName,
+            lastName,
+            sigla
+          });
+        }
+        
+        success++;
+      } catch (error) {
+        console.error("Error importing student:", error);
+        failed++;
+      }
+    }
+    
+    return { success, failed };
+  }
 }
 
 // Create and export a single instance of the storage implementation
