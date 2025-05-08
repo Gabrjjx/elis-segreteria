@@ -30,7 +30,8 @@ export default function GoogleAuthPage() {
     queryFn: async () => {
       const res = await apiRequest("/api/google/auth/status");
       const data = await res.json();
-      console.log("Auth status fetched:", data);
+      console.log("API Request:", "/api/google/auth/status");
+      console.log("API Response data:", data);
       return data as AuthStatus;
     }
   });
@@ -209,6 +210,14 @@ export default function GoogleAuthPage() {
                   <div className="flex justify-center py-4">Caricamento stato...</div>
                 ) : (
                   <div className="space-y-4">
+                    {/* DEBUG INFO */}
+                    <div className="bg-gray-100 p-2 text-xs font-mono mb-4 rounded">
+                      <p>Debug info:</p>
+                      <p>authStatus = {JSON.stringify(authStatus)}</p>
+                      <p>hasCredentials = {String(authStatus.hasCredentials)}</p>
+                      <p>hasValidToken = {String(authStatus.hasValidToken)}</p>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center p-4 border rounded-lg">
                         <div className={`h-8 w-8 rounded-full mr-3 flex items-center justify-center ${
