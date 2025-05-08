@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Service, ServiceType, PaymentStatus } from "@shared/schema";
 import { Pencil, Receipt, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { PaymentActions } from "@/components/payments/PaymentActions";
 
 interface ServicesListProps {
   services: Service[];
@@ -212,25 +213,17 @@ export default function ServiceList({
                       <Pencil className="h-4 w-4" />
                     </Button>
                     
-                    {service.status === PaymentStatus.UNPAID ? (
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleMarkAsPaid(service.id)}
-                        title="Segna come pagato"
-                      >
-                        <Receipt className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleReceiptGeneration(service.id)}
-                        title="Genera ricevuta"
-                      >
-                        <Receipt className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <div className="flex items-center">
+                      <PaymentActions 
+                        service={service} 
+                        onUpdate={() => {
+                          queryClient.invalidateQueries({ queryKey: ['/api/services'] });
+                          queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+                          queryClient.invalidateQueries({ queryKey: ['/api/dashboard/recent-services'] });
+                          queryClient.invalidateQueries({ queryKey: ['/api/dashboard/pending-payments'] });
+                        }} 
+                      />
+                    </div>
                     
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -308,27 +301,17 @@ export default function ServiceList({
                 Modifica
               </Button>
               
-              {service.status === PaymentStatus.UNPAID ? (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleMarkAsPaid(service.id)}
-                  className="flex items-center text-xs"
-                >
-                  <Receipt className="h-3 w-3 mr-1" />
-                  Segna pagato
-                </Button>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleReceiptGeneration(service.id)}
-                  className="flex items-center text-xs"
-                >
-                  <Receipt className="h-3 w-3 mr-1" />
-                  Ricevuta
-                </Button>
-              )}
+              <div className="flex flex-grow justify-center">
+                <PaymentActions 
+                  service={service}
+                  onUpdate={() => {
+                    queryClient.invalidateQueries({ queryKey: ['/api/services'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/recent-services'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/pending-payments'] });
+                  }}
+                />
+              </div>
               
               <AlertDialog>
                 <AlertDialogTrigger asChild>

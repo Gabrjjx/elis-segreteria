@@ -24,10 +24,10 @@ import {
   checkDeviceFlowStatus
 } from "./services/googleAuth";
 import {
-  createPaypalOrder,
-  capturePaypalOrder,
-  cancelPaypalOrder,
-  checkPaypalOrderStatus
+  createOrder as createPaypalOrder,
+  captureOrder as capturePaypalOrder,
+  cancelOrder as cancelPaypalOrder,
+  checkOrderStatus as checkPaypalOrderStatus
 } from "./services/paypalService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
