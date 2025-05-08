@@ -6,11 +6,17 @@ import {
   InsertUser,
   ServiceType,
   PaymentStatus,
+  MaintenanceRequestStatus,
+  MaintenanceRequestPriority,
+  MaintenanceRequest,
+  InsertMaintenanceRequest,
+  MaintenanceRequestSearch,
   services,
-  users
+  users,
+  maintenanceRequests
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, like, gte, lte, desc, count, sum } from "drizzle-orm";
+import { eq, like, gte, lte, desc, count, sum, or } from "drizzle-orm";
 
 // Storage interface for CRUD operations
 export interface IStorage {
