@@ -327,6 +327,17 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
     );
   }
   
+  // Debug temporaneo
+  console.log("DATI RICHIESTA:", {
+    id: request.id,
+    timestamp: request.timestamp,
+    notes: request.notes,
+    description: request.description,
+    ubicazione: extractUbicazione(request),
+    dettagli: extractDettagli(request),
+    dataOriginale: extractOriginalDate(request)
+  });
+  
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl">
