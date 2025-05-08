@@ -221,7 +221,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* Riepilogo pagamenti */}
-      {!isLoading && data?.services?.length > 0 && (
+      {!isLoading && data && data.services && data.services.length > 0 && (
         <div className="bg-white shadow-md rounded-lg mb-6 overflow-hidden">
           <div className="bg-blue-50 border-b border-blue-100 px-6 py-4">
             <div className="flex flex-col md:flex-row justify-between items-center">
@@ -256,7 +256,7 @@ export default function PaymentsPage() {
               <h4 className="text-sm font-medium text-gray-500">Importo medio</h4>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {(() => {
-                  const unpaidServices = data.services.filter((service: Service) => service.status === 'unpaid');
+                  const unpaidServices = data?.services ? data.services.filter((service: Service) => service.status === 'unpaid') : [];
                   const unpaidCount = unpaidServices.length;
                   return `€${unpaidCount > 0 ? (totalAmount / unpaidCount).toFixed(2) : '0.00'}`;
                 })()}
@@ -277,7 +277,7 @@ export default function PaymentsPage() {
                   "Caricamento pagamenti..."
                 ) : (
                   (() => {
-                    const unpaidCount = data.services.filter((service: Service) => service.status === 'unpaid').length;
+                    const unpaidCount = data?.services ? data.services.filter((service: Service) => service.status === 'unpaid').length : 0;
                     return unpaidCount ? 
                       `${unpaidCount} pagamenti in sospeso su ${data.total} totali` : 
                       "Nessun pagamento in sospeso";
@@ -286,7 +286,7 @@ export default function PaymentsPage() {
               </p>
             </div>
             {(() => {
-              const unpaidCount = data.services.filter((service: Service) => service.status === 'unpaid').length;
+              const unpaidCount = data?.services ? data.services.filter((service: Service) => service.status === 'unpaid').length : 0;
               return unpaidCount > 0 ? (
                 <Badge variant="destructive" className="text-md px-3 py-1">
                   <AlertTriangle className="mr-1 h-4 w-4" />
