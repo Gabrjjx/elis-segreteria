@@ -97,12 +97,16 @@ export default function ServiceForm({ id }: ServiceFormProps) {
     }
   }, [watchType, form]);
   
-  // Calcola automaticamente l'importo in base ai pezzi (solo per siglatura)
+  // Gestione automatica importo in base al tipo di servizio
   useEffect(() => {
     if (watchType === ServiceType.SIGLATURA) {
+      // Per siglatura, calcola in base ai pezzi
       const basePrice = defaultPrices[ServiceType.SIGLATURA];
       const totalAmount = basePrice * watchPieces;
       form.setValue("amount", totalAmount);
+    } else if (watchType === ServiceType.RIPARAZIONE) {
+      // Per riparazione, imposta a zero perché sarà determinato dopo
+      form.setValue("amount", 0);
     }
   }, [watchType, watchPieces, form]);
 
@@ -332,14 +336,16 @@ export default function ServiceForm({ id }: ServiceFormProps) {
                             step="0.10"
                             {...field}
                             onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            readOnly={form.getValues("type") === ServiceType.SIGLATURA}
-                            className={form.getValues("type") === ServiceType.SIGLATURA ? "bg-gray-100 cursor-not-allowed" : ""}
+                            readOnly={form.getValues("type") === ServiceType.SIGLATURA || form.getValues("type") === ServiceType.RIPARAZIONE}
+                            className={form.getValues("type") === ServiceType.SIGLATURA || form.getValues("type") === ServiceType.RIPARAZIONE ? "bg-gray-100 cursor-not-allowed" : ""}
                           />
                         </FormControl>
                         <FormDescription>
                           {form.getValues("type") === ServiceType.SIGLATURA 
                             ? `Calcolato automaticamente: ${watchPieces} pezzi × €${defaultPrices[ServiceType.SIGLATURA].toFixed(2)} = €${(watchPieces * defaultPrices[ServiceType.SIGLATURA]).toFixed(2)}`
-                            : `Prezzo standard per ${form.getValues("type")}: €${defaultPrices[form.getValues("type") as keyof typeof defaultPrices].toFixed(2)}`
+                            : form.getValues("type") === ServiceType.RIPARAZIONE
+                              ? "Il prezzo sarà stabilito dopo la valutazione della riparazione"
+                              : `Prezzo standard per ${form.getValues("type")}: €${defaultPrices[form.getValues("type") as keyof typeof defaultPrices].toFixed(2)}`
                           }
                         </FormDescription>
                         <FormMessage />
