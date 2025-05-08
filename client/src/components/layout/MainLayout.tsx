@@ -102,32 +102,33 @@ export default function MainLayout({ children }: MainLayoutProps) {
             {routes.map((route) => (
               <li key={route.path} className="py-1">
                 {route.dropdown ? (
-                  <div className="relative group">
-                    <div className={cn(
-                      "flex items-center px-4 py-2 hover:bg-gray-700 cursor-pointer",
-                      location.startsWith(route.path) && "bg-primary-dark"
-                    )}>
-                      {route.icon}
-                      <span className="ml-3">{route.name}</span>
-                      <ChevronDown className="ml-auto h-4 w-4" />
-                    </div>
-                    <div className="hidden group-hover:block absolute left-0 mt-1 w-full bg-gray-700 rounded-md shadow-lg z-20">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <div className={cn(
+                        "flex items-center px-4 py-2 hover:bg-gray-700 cursor-pointer",
+                        location.startsWith(route.path) && "bg-primary-dark"
+                      )}>
+                        {route.icon}
+                        <span className="ml-3">{route.name}</span>
+                        <ChevronDown className="ml-auto h-4 w-4" />
+                      </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="bg-gray-700 text-white border-gray-600 w-48">
                       {route.children?.map((child) => (
-                        <a
+                        <DropdownMenuItem
                           key={child.path}
-                          href={child.path}
                           className={cn(
-                            "flex items-center px-4 py-2 hover:bg-gray-600",
+                            "flex items-center hover:bg-gray-600 focus:bg-gray-600 cursor-pointer",
                             location === child.path && "bg-gray-600"
                           )}
                           onClick={(e) => handleNavigation(child.path, e)}
                         >
                           {child.icon}
                           <span className="ml-3">{child.name}</span>
-                        </a>
+                        </DropdownMenuItem>
                       ))}
-                    </div>
-                  </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 ) : (
                   <a
                     href={route.path}
@@ -278,24 +279,26 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     <span className="text-xs mt-1">Servizi</span>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
+                <DropdownMenuContent align="center" sideOffset={10} className="w-40">
                   <DropdownMenuItem 
                     onClick={(e) => handleNavigation("/services?type=siglatura", e)}
-                    className="flex items-center"
+                    className="flex items-center cursor-pointer"
                   >
                     <Tag className="h-4 w-4 mr-2" />
                     <span>Siglatura</span>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={(e) => handleNavigation("/services?type=happy_hour", e)}
-                    className="flex items-center"
+                    className="flex items-center cursor-pointer"
                   >
                     <Beer className="h-4 w-4 mr-2" />
                     <span>Happy Hour</span>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={(e) => handleNavigation("/services?type=riparazione", e)}
-                    className="flex items-center"
+                    className="flex items-center cursor-pointer"
                   >
                     <Drill className="h-4 w-4 mr-2" />
                     <span>Riparazioni</span>
