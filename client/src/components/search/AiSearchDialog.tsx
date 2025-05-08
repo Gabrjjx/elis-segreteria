@@ -101,7 +101,7 @@ function SearchResultItem({ result, onClose }: { result: SearchResult, onClose: 
             </>
           ) : (
             <>
-              <Tool className="h-5 w-5 text-primary" />
+              <Wrench className="h-5 w-5 text-primary" />
               <span className="font-medium text-gray-900">
                 Manutenzione - Stanza {result.item.roomNumber}
               </span>

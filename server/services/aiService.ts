@@ -59,122 +59,89 @@ function cosineSimilarity(vectorA: number[], vectorB: number[]): number {
  * Genera un contesto per un servizio che può essere utilizzato per la ricerca semantica
  */
 function generateServiceContext(service: Service): string {
-  const typeMap: Record<string, string> = {
-    "siglatura": "Servizio di siglatura capi",
-    "happy_hour": "Consumazione Happy Hour",
-    "riparazione": "Servizio di riparazione"
-  };
+  const serviceType = service.type === 'siglatura' ? 'siglatura' : 
+                      service.type === 'happy_hour' ? 'happy hour' : 
+                      'riparazione';
   
-  const statusMap: Record<string, string> = {
-    "paid": "Pagato",
-    "unpaid": "Non pagato"
-  };
+  const paymentStatus = service.status === 'paid' ? 'pagato' : 'in attesa di pagamento';
   
-  return `
-    Sigla: ${service.sigla}
-    Tipo: ${typeMap[service.type] || service.type}
-    Data: ${new Date(service.date).toLocaleDateString('it-IT')}
-    Numero pezzi: ${service.pieces}
-    Importo: €${service.amount.toFixed(2)}
-    Stato pagamento: ${statusMap[service.status] || service.status}
-    Note: ${service.notes || ""}
-  `.trim();
+  return `Servizio di ${serviceType} per ${service.sigla} del ${new Date(service.date).toLocaleDateString('it-IT')}. 
+          Importo: ${service.amount} euro, stato pagamento: ${paymentStatus}.
+          ${service.notes ? 'Note: ' + service.notes : ''}`;
 }
 
 /**
  * Genera un contesto per una richiesta di manutenzione che può essere utilizzato per la ricerca semantica
  */
 function generateMaintenanceContext(request: MaintenanceRequest): string {
-  const priorityMap: Record<string, string> = {
-    "low": "Bassa priorità",
-    "medium": "Media priorità",
-    "high": "Alta priorità",
-    "urgent": "Urgente"
-  };
-  
-  const statusMap: Record<string, string> = {
-    "pending": "In attesa",
-    "in_progress": "In corso",
-    "completed": "Completata",
-    "cancelled": "Annullata"
-  };
-  
-  return `
-    Richiedente: ${request.requesterName}
-    Stanza: ${request.roomNumber}
-    Tipo: ${request.requestType}
-    Descrizione: ${request.description}
-    Priorità: ${priorityMap[request.priority] || request.priority}
-    Stato: ${statusMap[request.status] || request.status}
-    Data richiesta: ${new Date(request.requestDate).toLocaleDateString('it-IT')}
-    ${request.notes ? `Note: ${request.notes}` : ""}
-  `.trim();
+  return `Richiesta di manutenzione per la stanza ${request.roomNumber} richiesta da ${request.requesterName} 
+          il ${new Date(request.requestDate).toLocaleDateString('it-IT')}. 
+          Priorità: ${request.priority}, stato: ${request.status}. 
+          Descrizione: ${request.description}`;
 }
 
 /**
  * Analizza la query naturale dell'utente tramite l'AI per estrarre parametri di ricerca
  */
 export async function analyzeSearchQuery(query: string): Promise<{
-  naturalLanguageResponse: string;
+  naturalLanguageResponse: string,
   searchParams: {
-    serviceType?: string;
-    dateFrom?: string;
-    dateTo?: string;
-    paymentStatus?: string;
-    sigla?: string;
-    minAmount?: number;
-    maxAmount?: number;
-    maintenanceStatus?: string;
-    roomNumber?: string;
-    priority?: string;
+    serviceType?: string,
+    dateFrom?: string,
+    dateTo?: string,
+    paymentStatus?: string,
+    sigla?: string,
+    minAmount?: number,
+    maxAmount?: number,
+    maintenanceStatus?: string,
+    roomNumber?: string,
+    priority?: string
   }
 }> {
   try {
+    // Prepara il sistema prompt per OpenAI
+    const systemPrompt = `
+      Sei un assistente specializzato nell'analizzare query di ricerca per un sistema di gestione dei servizi e manutenzione per la segreteria ELIS.
+      Il tuo compito è estrarre parametri di ricerca dalla richiesta in linguaggio naturale.
+      
+      Le informazioni sui servizi includono:
+      - Tipo di servizio: "siglatura", "happy_hour", "riparazione"
+      - Stato pagamento: "paid" (pagato), "unpaid" (in attesa)
+      - Date nel formato YYYY-MM-DD
+      - Sigla utente (identificativo dell'utente)
+      - Importo (in Euro)
+      
+      Le informazioni sulle richieste di manutenzione includono:
+      - Stato: "pending", "in_progress", "completed"
+      - Priorità: "low", "medium", "high", "urgent"
+      - Numero della stanza
+      
+      Rispondi con un oggetto JSON contenente:
+      1. "naturalLanguageResponse": una risposta concisa che riassume come hai interpretato la query
+      2. "searchParams": un oggetto con i parametri di ricerca estratti (solo quelli menzionati nella query)
+    `;
+
+    // La richiesta all'API di OpenAI
     const response = await openai.chat.completions.create({
-      model: "gpt-4o", // il modello OpenAI più recente è "gpt-4o", rilasciato a maggio 2024
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
-        {
-          role: "system",
-          content: `Sei un assistente di ricerca per un'applicazione che gestisce servizi di siglatura, happy hour, riparazioni e richieste di manutenzione. 
-          Estrai i parametri di ricerca dalle query in linguaggio naturale dell'utente. 
-          Tipi di servizio possibili: siglatura, happy_hour, riparazione.
-          Stati di pagamento possibili: paid, unpaid.
-          Stati di manutenzione possibili: pending, in_progress, completed, cancelled.
-          Priorità possibili: low, medium, high, urgent.
-          Rispondi solo con JSON nel formato richiesto.`
-        },
-        {
-          role: "user",
-          content: `Analizza questa query di ricerca: "${query}". 
-          Estrai i parametri di ricerca e fornisci anche una breve risposta in linguaggio naturale che spieghi cosa stai cercando.
-          Rispondi con un JSON in questo formato:
-          {
-            "naturalLanguageResponse": "Breve spiegazione di ciò che si sta cercando",
-            "searchParams": {
-              "serviceType": "tipo di servizio se menzionato",
-              "dateFrom": "data di inizio in formato ISO se menzionata",
-              "dateTo": "data di fine in formato ISO se menzionata",
-              "paymentStatus": "stato di pagamento se menzionato",
-              "sigla": "sigla se menzionata",
-              "minAmount": numero se menzionato,
-              "maxAmount": numero se menzionato,
-              "maintenanceStatus": "stato manutenzione se menzionato",
-              "roomNumber": "numero stanza se menzionato",
-              "priority": "priorità se menzionata"
-            }
-          }`
-        }
+        { role: "system", content: systemPrompt },
+        { role: "user", content: query }
       ],
       response_format: { type: "json_object" }
     });
 
-    return JSON.parse(response.choices[0].message.content);
-  } catch (error) {
-    console.error("Errore nell'analisi della query:", error);
+    // Estrai la risposta
+    const result = JSON.parse(response.choices[0].message.content);
+    
+    // Restituisci il risultato
     return {
-      naturalLanguageResponse: "Non sono riuscito a interpretare la tua richiesta. Prova a essere più specifico.",
-      searchParams: {}
+      naturalLanguageResponse: result.naturalLanguageResponse,
+      searchParams: result.searchParams || {}
     };
+  } catch (error) {
+    console.error("Errore durante l'analisi della query:", error);
+    throw error;
   }
 }
 
@@ -182,133 +149,96 @@ export async function analyzeSearchQuery(query: string): Promise<{
  * Esegue una ricerca intelligente tra servizi e richieste di manutenzione
  */
 export async function semanticSearch(query: string, limit: number = 10): Promise<{
-  results: SearchResult[];
-  explanation: string;
+  results: SearchResult[],
+  explanation: string
 }> {
   try {
-    // Analizza la query tramite l'AI
+    // Ottieni l'embedding della query
+    const queryEmbedding = await generateEmbedding(query);
+    
+    // Analizza la query per comprendere la richiesta
     const analysis = await analyzeSearchQuery(query);
     
-    // Ottieni i servizi e le richieste di manutenzione
-    const { services } = await storage.getServices({ limit: 500 });
-    const { requests } = await storage.getMaintenanceRequests({ limit: 500 });
+    // Ottieni servizi e richieste di manutenzione dal database
+    const servicesResponse = await storage.getServices({
+      page: 1,
+      pageSize: 100,
+      ...analysis.searchParams
+    });
     
-    // Filtra i risultati in base ai parametri estratti
-    let filteredServices = services;
-    let filteredRequests = requests;
-    const params = analysis.searchParams;
+    const maintenanceResponse = await storage.getMaintenanceRequests({
+      page: 1,
+      pageSize: 100,
+      ...analysis.searchParams
+    });
     
-    // Applica filtri ai servizi
-    if (params.serviceType) {
-      filteredServices = filteredServices.filter(s => s.type === params.serviceType);
-    }
-    if (params.paymentStatus) {
-      filteredServices = filteredServices.filter(s => s.status === params.paymentStatus);
-    }
-    if (params.sigla) {
-      filteredServices = filteredServices.filter(s => s.sigla.toLowerCase().includes(params.sigla.toLowerCase()));
-    }
-    if (params.dateFrom) {
-      const fromDate = new Date(params.dateFrom);
-      filteredServices = filteredServices.filter(s => new Date(s.date) >= fromDate);
-    }
-    if (params.dateTo) {
-      const toDate = new Date(params.dateTo);
-      filteredServices = filteredServices.filter(s => new Date(s.date) <= toDate);
-    }
-    if (params.minAmount !== undefined) {
-      filteredServices = filteredServices.filter(s => s.amount >= params.minAmount!);
-    }
-    if (params.maxAmount !== undefined) {
-      filteredServices = filteredServices.filter(s => s.amount <= params.maxAmount!);
-    }
+    // Combina i risultati per la ricerca semantica
+    const services = servicesResponse.services;
+    const maintenanceRequests = maintenanceResponse.requests;
     
-    // Applica filtri alle richieste di manutenzione
-    if (params.maintenanceStatus) {
-      filteredRequests = filteredRequests.filter(r => r.status === params.maintenanceStatus);
-    }
-    if (params.roomNumber) {
-      filteredRequests = filteredRequests.filter(r => r.roomNumber.toString() === params.roomNumber);
-    }
-    if (params.priority) {
-      filteredRequests = filteredRequests.filter(r => r.priority === params.priority);
-    }
-    if (params.dateFrom) {
-      const fromDate = new Date(params.dateFrom);
-      filteredRequests = filteredRequests.filter(r => new Date(r.requestDate) >= fromDate);
-    }
-    if (params.dateTo) {
-      const toDate = new Date(params.dateTo);
-      filteredRequests = filteredRequests.filter(r => new Date(r.requestDate) <= toDate);
-    }
-    
-    // Se dopo l'applicazione dei filtri non ci sono risultati,
-    // effettua una ricerca semantica su tutti i dati usando embeddings
-    if (filteredServices.length === 0 && filteredRequests.length === 0) {
-      const queryEmbedding = await generateEmbedding(query);
-      
-      const serviceResults = await Promise.all(services.map(async (service) => {
+    // Risultati di ricerca
+    const serviceResults: SearchResult[] = await Promise.all(
+      services.map(async (service) => {
         const context = generateServiceContext(service);
-        const contextEmbedding = await generateEmbedding(context);
-        const similarity = cosineSimilarity(queryEmbedding, contextEmbedding);
+        const embedding = await generateEmbedding(context);
+        const similarity = cosineSimilarity(queryEmbedding, embedding);
         
         return {
-          type: 'service' as const,
+          type: 'service',
           item: service,
           matchScore: similarity,
-          highlight: context
+          highlight: context.substring(0, 150) + '...'
         };
-      }));
-      
-      const maintenanceResults = await Promise.all(requests.map(async (request) => {
+      })
+    );
+    
+    const maintenanceResults: SearchResult[] = await Promise.all(
+      maintenanceRequests.map(async (request) => {
         const context = generateMaintenanceContext(request);
-        const contextEmbedding = await generateEmbedding(context);
-        const similarity = cosineSimilarity(queryEmbedding, contextEmbedding);
+        const embedding = await generateEmbedding(context);
+        const similarity = cosineSimilarity(queryEmbedding, embedding);
         
         return {
-          type: 'maintenance' as const,
+          type: 'maintenance',
           item: request,
           matchScore: similarity,
-          highlight: context
+          highlight: context.substring(0, 150) + '...'
         };
-      }));
+      })
+    );
+    
+    // Combina e ordina i risultati per rilevanza
+    const allResults = [...serviceResults, ...maintenanceResults]
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, limit);
+    
+    // Genera una spiegazione dei risultati
+    let explanation = "";
+    if (allResults.length === 0) {
+      explanation = "Nessun risultato trovato per la tua ricerca. Prova con termini più generali o controlla eventuali errori di battitura.";
+    } else {
+      explanation = `Ho trovato ${allResults.length} risultati corrispondenti alla tua ricerca.`;
       
-      // Combina i risultati e ordina per punteggio di similarità
-      const allResults = [...serviceResults, ...maintenanceResults]
-        .sort((a, b) => b.matchScore - a.matchScore)
-        .slice(0, limit);
-        
-      return {
-        results: allResults,
-        explanation: analysis.naturalLanguageResponse
-      };
+      if (analysis.searchParams.serviceType) {
+        explanation += ` Filtrati per tipo di servizio "${analysis.searchParams.serviceType}".`;
+      }
+      
+      if (analysis.searchParams.paymentStatus) {
+        explanation += ` Filtrati per stato di pagamento "${analysis.searchParams.paymentStatus === 'paid' ? 'pagato' : 'non pagato'}".`;
+      }
+      
+      if (analysis.searchParams.dateFrom || analysis.searchParams.dateTo) {
+        explanation += " Filtrati per date specifiche.";
+      }
     }
     
-    // Altrimenti, restituisci i risultati filtrati
-    const results: SearchResult[] = [
-      ...filteredServices.map(service => ({
-        type: 'service' as const,
-        item: service,
-        matchScore: 1,
-        highlight: generateServiceContext(service)
-      })),
-      ...filteredRequests.map(request => ({
-        type: 'maintenance' as const,
-        item: request,
-        matchScore: 1,
-        highlight: generateMaintenanceContext(request)
-      }))
-    ].slice(0, limit);
-    
+    // Restituisci i risultati al client
     return {
-      results,
-      explanation: analysis.naturalLanguageResponse
+      results: allResults,
+      explanation
     };
   } catch (error) {
-    console.error("Errore nella ricerca semantica:", error);
-    return { 
-      results: [],
-      explanation: "Si è verificato un errore durante la ricerca. Riprova più tardi."
-    };
+    console.error("Errore durante la ricerca semantica:", error);
+    throw error;
   }
 }
