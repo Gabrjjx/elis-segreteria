@@ -75,14 +75,60 @@ export default function GoogleAuthPage() {
     }
   };
   
-  // Carica lo stato solo all'avvio del componente
-  // Nota: inclusione esplicita delle dipendenze per evitare warning di ESLint
+  // Carica lo stato solo all'avvio del componente, usando unmounted flag
   useEffect(() => {
     console.log("useEffect per fetchAuthStatus eseguito");
-    fetchAuthStatus();
-    // Non includere fetchAuthStatus nelle dipendenze per evitare loop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    let isMounted = true;
+    
+    const loadAuthStatus = async () => {
+      try {
+        if (!isMounted) return;
+        // Imposta il caricamento
+        setIsStatusLoading(true);
+        
+        // Utilizzare fetch diretto con cache busting per evitare problemi di caching
+        const cacheBuster = Date.now();
+        const response = await fetch(`/api/google/auth/status?t=${cacheBuster}`, {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
+          credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Errore nella richiesta: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("Risultato API fetchAuthStatus:", data);
+        
+        if (isMounted) {
+          // Aggiorniamo lo stato solo se i dati sono diversi da quelli attuali
+          setAuthStatus(data);
+          setIsStatusLoading(false);
+        }
+      } catch (error) {
+        console.error("Errore nel caricamento dello stato:", error);
+        if (isMounted) {
+          toast({
+            variant: "destructive",
+            title: "Errore di connessione",
+            description: "Impossibile verificare lo stato dell'autenticazione Google.",
+          });
+          setIsStatusLoading(false);
+        }
+      }
+    };
+    
+    loadAuthStatus();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [toast]);
 
   // Mutation per ottenere l'URL di autorizzazione
   const getAuthUrlMutation = useMutation({
@@ -105,7 +151,12 @@ export default function GoogleAuthPage() {
     },
     onSuccess: (url) => {
       setAuthUrl(url);
-      window.open(url, "_blank");
+      // Invece di aprire automaticamente, mostriamo il link per copiare e incollare
+      toast({
+        title: "URL di autorizzazione generato",
+        description: "Copia e incolla l'URL nel browser per autorizzare l'applicazione.",
+        duration: 8000
+      });
     },
     onError: (error) => {
       console.error("Failed to fetch auth URL:", error);
@@ -395,8 +446,14 @@ export default function GoogleAuthPage() {
                           {authUrl && (
                             <div className="mt-4 space-y-2">
                               <p className="text-sm">
-                                Si aprirà una nuova finestra per l'autorizzazione Google.
-                                Dopo l'approvazione, copia il codice fornito e incollalo qui sotto:
+                                URL di autorizzazione Google:
+                              </p>
+                              <div className="p-2 bg-gray-50 border rounded-md text-xs font-mono break-all mb-3">
+                                {authUrl}
+                              </div>
+                              <p className="text-sm mb-2">
+                                Copia e incolla l'URL qui sopra in una nuova finestra del browser. 
+                                Dopo l'approvazione, copia il codice fornito da Google e incollalo qui sotto:
                               </p>
                               <div className="flex space-x-2">
                                 <input
