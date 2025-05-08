@@ -21,7 +21,9 @@ import {
   Menu, 
   Bell,
   PackageOpen,
-  ChevronDown
+  ChevronDown,
+  Hammer,
+  AlertCircle
 } from "lucide-react";
 
 interface MainLayoutProps {
@@ -76,6 +78,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
       name: "Pagamenti",
       path: "/services?status=unpaid",
       icon: <Receipt className="h-5 w-5" />,
+    },
+    {
+      name: "Manutenzione",
+      path: "/maintenance",
+      icon: <Hammer className="h-5 w-5" />,
     },
     {
       name: "Report",
@@ -254,7 +261,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
           {/* Mobile Navigation */}
           <nav className="md:hidden bg-white border-t border-gray-200">
-            <div className="flex justify-between">
+            <div className="flex">
               <a 
                 href="/"
                 className={cn(
@@ -316,6 +323,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
               >
                 <Receipt className="h-5 w-5" />
                 <span className="text-xs mt-1">Pagamenti</span>
+              </a>
+              
+              <a
+                href="/maintenance"
+                className={cn(
+                  "flex-1 flex flex-col items-center py-2",
+                  location === "/maintenance" ? "text-primary" : "text-gray-600"
+                )}
+                onClick={(e) => handleNavigation("/maintenance", e)}
+              >
+                <Hammer className="h-5 w-5" />
+                <span className="text-xs mt-1">Manutenzione</span>
               </a>
               
               <a
