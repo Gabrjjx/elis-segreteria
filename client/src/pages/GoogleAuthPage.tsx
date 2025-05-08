@@ -21,7 +21,7 @@ export default function GoogleAuthPage() {
   const [authCode, setAuthCode] = useState("");
   const [authUrl, setAuthUrl] = useState<string | null>(null);
 
-  // Utilizziamo useState invece di useQuery per lo stato di autenticazione
+  // Utilizziamo useState per lo stato di autenticazione con dati iniziali predefiniti
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ 
     hasCredentials: false, 
     hasValidToken: false
@@ -31,16 +31,20 @@ export default function GoogleAuthPage() {
   // Funzione per caricare manualmente lo stato di autenticazione
   const fetchAuthStatus = async () => {
     try {
+      // Imposta il caricamento
       setIsStatusLoading(true);
-      // Utilizziamo direttamente fetch con headers per prevenire caching
-      const cacheBuster = `?nocache=${Date.now()}`;
-      const response = await fetch(`/api/google/auth/status${cacheBuster}`, {
+      console.log("Inizio fetchAuthStatus");
+      
+      // Utilizzare fetch diretto con cache busting per evitare problemi di caching
+      const cacheBuster = Date.now();
+      const response = await fetch(`/api/google/auth/status?t=${cacheBuster}`, {
         method: 'GET',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'
-        }
+        },
+        credentials: 'same-origin'
       });
       
       if (!response.ok) {
@@ -48,10 +52,17 @@ export default function GoogleAuthPage() {
       }
       
       const data = await response.json();
-      console.log("Fetch diretta API: /api/google/auth/status", data);
+      console.log("Risultato API fetchAuthStatus:", data);
       
-      // Aggiorniamo lo stato manualmente
-      setAuthStatus(data);
+      // Aggiorniamo lo stato solo se i dati sono diversi da quelli attuali
+      // per evitare loop di ri-rendering inutili
+      setAuthStatus(prevStatus => {
+        if (prevStatus.hasCredentials !== data.hasCredentials || 
+            prevStatus.hasValidToken !== data.hasValidToken) {
+          return data;
+        }
+        return prevStatus;
+      });
     } catch (error) {
       console.error("Errore nel caricamento dello stato:", error);
       toast({
@@ -64,15 +75,31 @@ export default function GoogleAuthPage() {
     }
   };
   
-  // Carica lo stato all'avvio del componente
+  // Carica lo stato solo all'avvio del componente
+  // Nota: inclusione esplicita delle dipendenze per evitare warning di ESLint
   useEffect(() => {
+    console.log("useEffect per fetchAuthStatus eseguito");
     fetchAuthStatus();
+    // Non includere fetchAuthStatus nelle dipendenze per evitare loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Mutation per ottenere l'URL di autorizzazione
   const getAuthUrlMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("/api/google/auth/url");
+      const res = await fetch("/api/google/auth/url", {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Errore nella richiesta: ${res.status}`);
+      }
+      
       const data = await res.json();
       return data.url as string;
     },
@@ -93,13 +120,21 @@ export default function GoogleAuthPage() {
   // Mutation per inviare il codice di autorizzazione
   const submitCodeMutation = useMutation({
     mutationFn: async (code: string) => {
-      const res = await apiRequest("/api/google/auth/token", {
+      const res = await fetch("/api/google/auth/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
         body: JSON.stringify({ code }),
       });
+      
+      if (!res.ok) {
+        throw new Error(`Errore nella richiesta: ${res.status}`);
+      }
+      
       return res.json();
     },
     onSuccess: () => {
@@ -108,7 +143,10 @@ export default function GoogleAuthPage() {
         description: "Token di accesso Google ottenuto con successo.",
       });
       setAuthCode("");
-      queryClient.invalidateQueries({ queryKey: ['googleAuthStatus'] });
+      // Aggiorniamo manualmente lo stato dopo l'autorizzazione
+      setTimeout(() => {
+        fetchAuthStatus();
+      }, 500);
     },
     onError: (error) => {
       console.error("Auth error:", error);
@@ -123,9 +161,19 @@ export default function GoogleAuthPage() {
   // Mutation per importare dati da Google Sheets
   const importSheetsMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("/api/maintenance/sync-google-sheets", {
+      const res = await fetch("/api/maintenance/sync-google-sheets", {
         method: "POST",
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
       });
+      
+      if (!res.ok) {
+        throw new Error(`Errore nella richiesta: ${res.status}`);
+      }
+      
       return res.json();
     },
     onSuccess: (data) => {
@@ -133,6 +181,9 @@ export default function GoogleAuthPage() {
         title: "Importazione completata",
         description: `Importate ${data.success || 0} richieste di manutenzione da Google Sheets (${data.failed || 0} errori).`,
       });
+      setTimeout(() => {
+        fetchAuthStatus();
+      }, 500);
     },
     onError: (error) => {
       console.error("Import error:", error);
@@ -147,9 +198,19 @@ export default function GoogleAuthPage() {
   // Mutation per esportare stati a Google Sheets
   const exportStatusMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("/api/google/sheets/sync-status", {
+      const res = await fetch("/api/google/sheets/sync-status", {
         method: "POST",
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
       });
+      
+      if (!res.ok) {
+        throw new Error(`Errore nella richiesta: ${res.status}`);
+      }
+      
       return res.json();
     },
     onSuccess: (data) => {
@@ -157,6 +218,9 @@ export default function GoogleAuthPage() {
         title: "Esportazione completata",
         description: `Aggiornate ${data.updated || 0} richieste di manutenzione in Google Sheets (${data.failed || 0} errori).`,
       });
+      setTimeout(() => {
+        fetchAuthStatus();
+      }, 500);
     },
     onError: (error) => {
       console.error("Export error:", error);
@@ -285,6 +349,19 @@ export default function GoogleAuthPage() {
                           </p>
                         </div>
                       </div>
+                    </div>
+                    
+                    {/* Pulsante per ricaricare manualmente lo stato */}
+                    <div className="flex justify-end mb-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => fetchAuthStatus()}
+                        disabled={isLoading}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Aggiorna stato
+                      </Button>
                     </div>
 
                     {!authStatus.hasCredentials && (
