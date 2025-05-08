@@ -220,24 +220,54 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
                 <p className="whitespace-pre-line">{request.description}</p>
               </div>
               
+              {/* Estrazione e visualizzazione dei dettagli dalle note */}
               {request.notes && (
-                <div className="md:col-span-2">
-                  <h3 className="font-medium text-gray-700">Note</h3>
-                  <p className="whitespace-pre-line text-sm">{request.notes}</p>
-                </div>
-              )}
-              
-              {/* Estrazione della data originale dalle note se la descrizione o le note contengono una data in formato DD/MM/YYYY */}
-              {(request.notes && request.notes.match(/data:\s*(\d{2}\/\d{2}\/\d{4}\s*\d{1,2}\.\d{2}\.\d{2})/)) ? (
-                <div className="md:col-span-2 mt-2">
-                  <div className="bg-blue-50 p-3 rounded-md">
-                    <h3 className="font-medium text-blue-700">Data originale dal Google Sheet</h3>
-                    <p className="text-blue-800 font-semibold">
-                      {request.notes.match(/data:\s*(\d{2}\/\d{2}\/\d{4}\s*\d{1,2}\.\d{2}\.\d{2})/)?.[1]}
-                    </p>
+                <>
+                  {/* Estrazione della data originale */}
+                  {request.notes.match(/Data:\s*([^\n]+)/) && (
+                    <div className="md:col-span-2 mt-2">
+                      <div className="bg-blue-50 p-3 rounded-md">
+                        <h3 className="font-medium text-blue-700">Data originale dal Google Sheet</h3>
+                        <p className="text-blue-800 font-semibold">
+                          {request.notes.match(/Data:\s*([^\n]+)/)?.[1]}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Ubicazione specifica */}
+                  {request.notes.match(/Ubicazione specifica:\s*([^\n]+)/) && (
+                    <div className="md:col-span-2 mt-2">
+                      <div className="bg-yellow-50 p-3 rounded-md">
+                        <h3 className="font-medium text-yellow-700">Ubicazione specifica</h3>
+                        <p className="text-yellow-800">
+                          {request.notes.match(/Ubicazione specifica:\s*([^\n]+)/)?.[1]}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Dettagli del difetto */}
+                  {request.notes.match(/Dettagli del difetto:\s*([^\n]+)/) && (
+                    <div className="md:col-span-2 mt-2">
+                      <div className="bg-red-50 p-3 rounded-md">
+                        <h3 className="font-medium text-red-700">Dettagli del difetto rilevato</h3>
+                        <p className="text-red-800">
+                          {request.notes.match(/Dettagli del difetto:\s*([^\n]+)/)?.[1]}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Note originali complete */}
+                  <div className="md:col-span-2 mt-4">
+                    <details>
+                      <summary className="font-medium text-gray-700 cursor-pointer">Note complete</summary>
+                      <p className="whitespace-pre-line text-sm mt-2 pl-2 border-l-2 border-gray-200">{request.notes}</p>
+                    </details>
                   </div>
-                </div>
-              ) : null}
+                </>
+              )}
               
               {request.attachmentUrl && (
                 <div className="md:col-span-2">

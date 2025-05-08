@@ -543,7 +543,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Dettagli per la descrizione
             const ubicazione = ubicazioneIdx >= 0 && ubicazioneIdx < row.length ? row[ubicazioneIdx] || "" : "";
             const dettagli = dettagliIdx >= 0 && dettagliIdx < row.length ? row[dettagliIdx] || "" : "";
-            const descrizione = ubicazione ? `${ubicazione}: ${dettagli}` : dettagli || "Manutenzione richiesta";
+            
+            // Combiniamo la descrizione ma manteniamo le informazioni originali separate
+            const descrizioneBase = dettagli || "Manutenzione richiesta";
+            const descrizione = descrizioneBase;
             
             // Priorità 
             let priorita = MaintenanceRequestPriority.MEDIUM; // Default
@@ -578,11 +581,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 requesterEmail: "segreteria@elis.org",
                 roomNumber: stanza,
                 requestType: "Manutenzione",
-                description: `${descrizione} (Data originale: ${infoIdx >= 0 && infoIdx < row.length ? row[infoIdx] || "" : ""})`,
+                description: descrizione,
                 location: stanza,
                 status: MaintenanceRequestStatus.PENDING,
                 priority: priorita,
-                notes: `Importato dal foglio Google, data: ${infoIdx >= 0 && infoIdx < row.length ? row[infoIdx] : "N/D"}`
+                notes: `Importato dal foglio Google
+Data: ${infoIdx >= 0 && infoIdx < row.length ? row[infoIdx] : "N/D"}
+Ubicazione specifica: ${ubicazione}
+Dettagli del difetto: ${dettagli}`
               });
               success++;
             } else {
