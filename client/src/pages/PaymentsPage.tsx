@@ -76,9 +76,13 @@ export default function PaymentsPage() {
       return response.json();
     },
     onSuccess: (data) => {
-      // Calcola il totale degli importi da pagare
+      // Calcola il totale degli importi da pagare (solo servizi non pagati)
       if (data?.services) {
-        const total = data.services.reduce((sum: number, service: Service) => sum + service.amount, 0);
+        // Filtra solo i servizi con status="unpaid"
+        const unpaidServices = data.services.filter((service: Service) => service.status === 'unpaid');
+        console.log('Servizi non pagati:', unpaidServices);
+        const total = unpaidServices.reduce((sum: number, service: Service) => sum + service.amount, 0);
+        console.log('Totale calcolato:', total);
         setTotalAmount(total);
       }
     }
@@ -242,12 +246,18 @@ export default function PaymentsPage() {
             </div>
             <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
               <h4 className="text-sm font-medium text-gray-500">Servizi visualizzati</h4>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{data.services.length}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {data.services.filter((service: Service) => service.status === 'unpaid').length}
+              </p>
             </div>
             <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
               <h4 className="text-sm font-medium text-gray-500">Importo medio</h4>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                €{data.services.length > 0 ? (totalAmount / data.services.length).toFixed(2) : '0.00'}
+                {(() => {
+                  const unpaidServices = data.services.filter((service: Service) => service.status === 'unpaid');
+                  const unpaidCount = unpaidServices.length;
+                  return `€${unpaidCount > 0 ? (totalAmount / unpaidCount).toFixed(2) : '0.00'}`;
+                })()}
               </p>
             </div>
           </div>
@@ -264,9 +274,12 @@ export default function PaymentsPage() {
                 {isLoading ? (
                   "Caricamento pagamenti..."
                 ) : (
-                  data?.services?.length ? 
-                    `${data.services.length} pagamenti in sospeso su ${data.total} totali` : 
-                    "Nessun pagamento in sospeso"
+                  (() => {
+                    const unpaidCount = data.services.filter((service: Service) => service.status === 'unpaid').length;
+                    return unpaidCount ? 
+                      `${unpaidCount} pagamenti in sospeso su ${data.total} totali` : 
+                      "Nessun pagamento in sospeso";
+                  })()
                 )}
               </p>
             </div>
@@ -296,7 +309,7 @@ export default function PaymentsPage() {
                 </p>
               </div>
             ) : (
-              data?.services?.map((service: Service) => (
+              data?.services?.filter((service: Service) => service.status === 'unpaid').map((service: Service) => (
                 <div key={service.id} className="p-6 hover:bg-gray-50 transition-colors">
                   <div className="flex flex-col md:flex-row justify-between">
                     <div className="flex flex-col mb-4 md:mb-0 md:pr-4 md:border-r md:border-gray-100 md:w-2/3">
