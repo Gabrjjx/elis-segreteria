@@ -24,7 +24,7 @@ import {
   ChevronDown,
   Hammer,
   AlertCircle,
-  CloudSync,
+  Cloud,
   KeySquare
 } from "lucide-react";
 
@@ -105,7 +105,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         {
           name: "Google Auth",
           path: "/google-auth",
-          icon: <CloudSync className="h-5 w-5" />,
+          icon: <Cloud className="h-5 w-5" />,
         },
       ]
     },
