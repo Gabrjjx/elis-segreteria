@@ -1,0 +1,151 @@
+import { useState } from "react";
+import { format } from "date-fns";
+import { useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, CheckCircle, Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { Service, ServiceType } from "@shared/schema";
+
+interface PendingPaymentsProps {
+  pendingPayments: Service[];
+}
+
+export default function PendingPayments({ pendingPayments }: PendingPaymentsProps) {
+  const { toast } = useToast();
+  const [processingId, setProcessingId] = useState<number | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: async (id: number) => {
+      setProcessingId(id);
+      const response = await apiRequest("PATCH", `/api/services/${id}/mark-paid`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/services'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/pending-payments'] });
+      
+      toast({
+        title: "Pagamento registrato",
+        description: "Il servizio è stato contrassegnato come pagato.",
+        variant: "default",
+      });
+      
+      setProcessingId(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore",
+        description: `Si è verificato un errore: ${error.message}`,
+        variant: "destructive",
+      });
+      setProcessingId(null);
+    },
+  });
+
+  const handleMarkAsPaid = (id: number) => {
+    mutation.mutate(id);
+  };
+
+  const handleSendReminder = (id: number) => {
+    toast({
+      title: "Promemoria inviato",
+      description: "Il promemoria di pagamento è stato inviato con successo.",
+    });
+  };
+
+  if (!pendingPayments || pendingPayments.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Pagamenti Pendenti</CardTitle>
+          <CardDescription>Servizi che necessitano di pagamento</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert>
+            <CheckCircle className="h-4 w-4" />
+            <AlertDescription>
+              Non ci sono pagamenti pendenti al momento.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const serviceTypeLabels = {
+    [ServiceType.SIGLATURA]: "Siglatura",
+    [ServiceType.HAPPY_HOUR]: "Happy Hour",
+    [ServiceType.RIPARAZIONE]: "Riparazione",
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Pagamenti Pendenti</CardTitle>
+        <CardDescription>Servizi che necessitano di pagamento</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {pendingPayments.map((payment) => (
+          <div key={payment.id} className="border rounded-lg overflow-hidden mb-4 last:mb-0">
+            <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
+              <div className="flex items-center">
+                <AlertTriangle className="text-destructive mr-2 h-4 w-4" />
+                <span className="font-medium text-gray-900">Servizio non pagato</span>
+              </div>
+              <div>
+                <span className="text-gray-500 text-sm">
+                  {format(new Date(payment.date), "dd/MM/yyyy")}
+                </span>
+              </div>
+            </div>
+            <div className="px-4 py-4 sm:px-6">
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                <div className="sm:col-span-1">
+                  <dt className="text-sm font-medium text-gray-500">Sigla</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{payment.sigla}</dd>
+                </div>
+                <div className="sm:col-span-1">
+                  <dt className="text-sm font-medium text-gray-500">Tipologia</dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {serviceTypeLabels[payment.type as keyof typeof serviceTypeLabels] || payment.type}
+                  </dd>
+                </div>
+                <div className="sm:col-span-1">
+                  <dt className="text-sm font-medium text-gray-500">N. Pezzi</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{payment.pieces}</dd>
+                </div>
+                <div className="sm:col-span-1">
+                  <dt className="text-sm font-medium text-gray-500">Importo</dt>
+                  <dd className="mt-1 text-sm font-semibold text-gray-900">€{payment.amount.toFixed(2)}</dd>
+                </div>
+              </dl>
+              <div className="mt-4 flex justify-end">
+                <Button
+                  onClick={() => handleMarkAsPaid(payment.id)}
+                  disabled={processingId === payment.id}
+                  className="mr-3"
+                >
+                  {processingId === payment.id ? (
+                    <span className="animate-spin mr-2">⟳</span>
+                  ) : (
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                  )}
+                  Segna come pagato
+                </Button>
+                <Button variant="outline" onClick={() => handleSendReminder(payment.id)}>
+                  <Send className="mr-2 h-4 w-4" />
+                  Invia promemoria
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
