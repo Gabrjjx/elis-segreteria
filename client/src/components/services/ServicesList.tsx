@@ -10,11 +10,19 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Service, ServiceType, PaymentStatus } from "@shared/schema";
+
+// Tipo esteso per includere le informazioni dello studente
+type ServiceWithStudent = Service & { 
+  student?: { 
+    firstName: string; 
+    lastName: string; 
+  } 
+};
 import { Pencil, Receipt, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { PaymentActions } from "@/components/payments/PaymentActions";
 
 interface ServicesListProps {
-  services: Service[];
+  services: ServiceWithStudent[];
   total?: number;
   currentPage?: number;
   limit?: number;
@@ -111,7 +119,7 @@ export default function ServiceList({
       case ServiceType.SIGLATURA:
         return <Badge variant="secondary">Siglatura</Badge>;
       case ServiceType.HAPPY_HOUR:
-        return <Badge variant="warning">Happy Hour</Badge>;
+        return <Badge variant="default" className="bg-amber-500 hover:bg-amber-600">Happy Hour</Badge>;
       case ServiceType.RIPARAZIONE:
         return <Badge variant="outline">Riparazione</Badge>;
       default:
@@ -197,7 +205,14 @@ export default function ServiceList({
                 <TableCell className="whitespace-nowrap">
                   {format(new Date(service.date), "dd/MM/yyyy")}
                 </TableCell>
-                <TableCell className="font-medium">{service.sigla}</TableCell>
+                <TableCell className="font-medium">
+                  {service.sigla}
+                  {service.student && (
+                    <div className="text-xs text-gray-500">
+                      {service.student.firstName} {service.student.lastName}
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell>{service.pieces}</TableCell>
                 <TableCell>{getServiceTypeBadge(service.type)}</TableCell>
                 <TableCell>€{service.amount.toFixed(2)}</TableCell>
@@ -271,6 +286,11 @@ export default function ServiceList({
             <div className="flex justify-between items-start mb-2">
               <div>
                 <div className="text-lg font-semibold">{service.sigla}</div>
+                {service.student && (
+                  <div className="text-xs text-gray-600">
+                    {service.student.firstName} {service.student.lastName}
+                  </div>
+                )}
                 <div className="text-sm text-gray-500">{format(new Date(service.date), "dd/MM/yyyy")}</div>
               </div>
               <div className="flex flex-col items-end">
