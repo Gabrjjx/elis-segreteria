@@ -25,8 +25,10 @@ import {
   Hammer,
   AlertCircle,
   Cloud,
-  KeySquare
+  KeySquare,
+  Search
 } from "lucide-react";
+import AiSearchDialog from "@/components/search/AiSearchDialog";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -217,6 +219,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   <LayoutDashboard className="mr-2 h-6 w-6 text-primary" />
                   <h1 className="text-xl font-medium">ELIS Segreteria</h1>
                 </div>
+                <div className="p-3 border-b border-gray-100">
+                  <AiSearchDialog />
+                </div>
                 <nav className="flex-1 py-4">
                   <div className="space-y-1">
                     {routes.map((route) => (
@@ -299,10 +304,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
               </SheetContent>
             </Sheet>
 
-            <div className="flex-1 md:ml-4">
-              <h2 className="text-xl font-medium">
+            <div className="flex items-center flex-1 md:ml-4">
+              <h2 className="text-xl font-medium mr-4">
                 {routes.find((route) => route.path === location)?.name || "Dashboard"}
               </h2>
+              <div className="hidden md:block flex-1 max-w-xl">
+                <AiSearchDialog />
+              </div>
             </div>
 
             <div className="flex items-center">

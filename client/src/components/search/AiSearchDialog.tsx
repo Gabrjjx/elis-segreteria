@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { 
   Dialog, 
   DialogContent, 
@@ -17,7 +17,7 @@ import {
   Tag, 
   FileCheck,
   FileX,
-  Tool,
+  Wrench,
   InfoIcon, 
   Clock, 
   Loader2, 
@@ -68,19 +68,19 @@ const PRESET_SEARCHES = [
   { query: "servizi di siglatura dell'ultimo mese", icon: <Tag className="h-4 w-4" /> },
   { query: "pagamenti in attesa", icon: <FileCheck className="h-4 w-4" /> },
   { query: "happy hour non pagati", icon: <CreditCard className="h-4 w-4" /> },
-  { query: "servizi di riparazione", icon: <Tool className="h-4 w-4" /> },
+  { query: "servizi di riparazione", icon: <Wrench className="h-4 w-4" /> },
   { query: "servizi dal 15 maggio", icon: <Calendar className="h-4 w-4" /> },
 ];
 
 // Componente per il risultato della ricerca
 function SearchResultItem({ result, onClose }: { result: SearchResult, onClose: () => void }) {
-  const navigate = useNavigate();
+  const [_, setLocation] = useLocation();
   
   const handleClick = () => {
     if (result.type === 'service') {
-      navigate(`/services/${result.item.id}`);
+      setLocation(`/services/${result.item.id}`);
     } else if (result.type === 'maintenance') {
-      navigate(`/maintenance/${result.item.id}`);
+      setLocation(`/maintenance/${result.item.id}`);
     }
     onClose();
   };
