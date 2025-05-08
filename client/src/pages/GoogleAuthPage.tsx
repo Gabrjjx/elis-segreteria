@@ -572,9 +572,18 @@ export default function GoogleAuthPage() {
                                   <CardTitle>Autorizzazione con Device Flow</CardTitle>
                                   <CardDescription>
                                     Metodo di autorizzazione semplificato senza necessità di URL di redirect.
+                                    Richiede configurazione speciale nella console Google Cloud.
                                   </CardDescription>
                                 </CardHeader>
                                 <CardContent>
+                                  <Alert className="mb-4">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>Importante: Configurazione OAuth2 richiesta</AlertTitle>
+                                    <AlertDescription>
+                                      <p className="mb-2">Questo metodo funziona solo se hai configurato un client OAuth2 di tipo <strong>"TV e dispositivi a input limitato"</strong> nella Console Google Cloud.</p>
+                                      <p>Se ricevi errori 401 o 400, significa che stai utilizzando credenziali di tipo "Web application" che non supportano questo flusso.</p>
+                                    </AlertDescription>
+                                  </Alert>
                                   {deviceFlowStatus === "idle" && !deviceCodeInfo && (
                                     <div className="flex flex-col items-center space-y-4">
                                       <div className="text-center mb-4">
@@ -656,7 +665,20 @@ export default function GoogleAuthPage() {
                                       <AlertCircle className="h-4 w-4" />
                                       <AlertTitle>Errore di autenticazione</AlertTitle>
                                       <AlertDescription>
-                                        {deviceFlowError || "Si è verificato un errore durante l'autenticazione. Riprova."}
+                                        <p className="mb-2">{deviceFlowError || "Si è verificato un errore durante l'autenticazione."}</p>
+                                        
+                                        {deviceFlowError && deviceFlowError.includes("invalid_client") && (
+                                          <div className="mt-2 border-t pt-2">
+                                            <p className="font-semibold mb-1">Soluzione al problema:</p>
+                                            <ol className="list-decimal list-inside text-sm space-y-1">
+                                              <li>Vai alla <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline">Console Google Cloud</a></li>
+                                              <li>Crea un nuovo client OAuth di tipo "TV e dispositivi a input limitato"</li>
+                                              <li>Aggiorna le variabili d'ambiente GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET</li>
+                                              <li>Riavvia l'applicazione</li>
+                                            </ol>
+                                            <p className="mt-2 text-sm">Oppure utilizza il metodo di autenticazione con URL nel tab "Autorizzazione con URL".</p>
+                                          </div>
+                                        )}
                                       </AlertDescription>
                                     </Alert>
                                   )}
@@ -670,9 +692,18 @@ export default function GoogleAuthPage() {
                                   <CardTitle>Autorizzazione con URL</CardTitle>
                                   <CardDescription>
                                     Metodo di autorizzazione alternativo con URL e codice manuale.
+                                    Compatibile con credenziali OAuth2 di tipo "Web application".
                                   </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
+                                  <Alert className="mb-4">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>Importante</AlertTitle>
+                                    <AlertDescription>
+                                      <p className="mb-1">Questo metodo è compatibile con credenziali OAuth2 di tipo "Web application".</p>
+                                      <p className="text-sm">Se utilizzi un client OAuth2 di tipo "Web application", dovrai configurare un URI di redirect valido nella Console Google Cloud, ad esempio <code>https://your-domain.com/oauth2callback</code> o <code>http://localhost:3000/oauth2callback</code> per sviluppo locale.</p>
+                                    </AlertDescription>
+                                  </Alert>
                                   <Button onClick={handleGetAuthUrl} disabled={isLoading} className="w-full">
                                     <ExternalLink className="h-4 w-4 mr-2" />
                                     Ottieni URL di autorizzazione
