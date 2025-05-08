@@ -130,6 +130,9 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
   try {
     const data = await readGoogleSheet();
     
+    console.log("Dati del foglio - prima riga:", data[0]);
+    console.log("Dati del foglio - seconda riga:", data[1]);
+    
     // Verifica il formato del foglio (controlla le intestazioni)
     let isElisFormat = false;
     let isNewElisFormat = false;
@@ -146,14 +149,14 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
     }
     
     if (isNewElisFormat) {
-      console.log('Rilevato nuovo formato ELIS');
+      console.log('Rilevato nuovo formato ELIS - Excel');
       
       // Per il nuovo formato ELIS, adatta le colonne al formato che ci aspettiamo
-      // Le colonne sono:
+      // Le colonne probabilmente sono:
       // Informazioni cronologiche | Sigla | Luogo | Ubicazione specifica | Dettagli del difetto | Priorità | Risolvibile con manutentori | Suggerimento risoluzione
       
       let formattedData = [
-        ['Informazioni', 'Sigla', 'Luogo', 'Ubicazione', 'Dettagli', 'Priorità', 'Risolvibile', 'Suggerimento']
+        ['Timestamp', 'Richiedente', 'Stanza', 'Tipo', 'Descrizione', 'Priorità', 'Note', 'Suggerimento']
       ];
     
       // Aggiungi le righe dei dati, saltando l'intestazione
@@ -161,14 +164,19 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
         const row = data[i];
         if (!row || row.length < 5) continue; // Salta righe incomplete
         
+        // Usiamo la data attuale per il timestamp della richiesta
+        const timestamp = new Date().toISOString();
+        
+        // Correttamente mappiamo i campi
         formattedData.push([
-          row[0] || '', // Informazioni cronologiche
-          row[1] || '', // Sigla
-          row[2] || '', // Luogo
-          row[3] || '', // Ubicazione specifica
-          row[4] || '', // Dettagli del difetto
-          row.length > 5 ? row[5] || '' : '', // Priorità
-          row.length > 6 ? row[6] || '' : '', // Risolvibile
+          timestamp, // Timestamp della richiesta (data attuale)
+          row[1] || '', // Richiedente (Sigla)
+          row[2] || '', // Stanza (Luogo)
+          'Manutenzione', // Tipo fisso
+          row[4] || '', // Descrizione (Dettagli del difetto)
+          row.length > 5 && row[5] ? row[5] : 'Bassa', // Priorità o default 'Bassa'
+          // Aggiungiamo le note con i dettagli aggiuntivi
+          `Data compilazione: ${row[0] || ''}, Ubicazione: ${row[3] || ''}`, // Note
           row.length > 7 ? row[7] || '' : ''  // Suggerimento
         ]);
       }
@@ -177,33 +185,134 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
     } else if (isElisFormat) {
       console.log('Rilevato vecchio formato ELIS');
       
-      // Per il vecchio formato ELIS, adatta le colonne al formato che ci aspettiamo
-      // Il formato è:
-      // A: Stato, B: Data, C: Stanza, D: Luogo, E: Descrizione, F: Dettagli
+      // Il formato potrebbe essere:
+      // Marca temporale | Email | Nome | Sigla | Ubicazione | Definizione del problema | Proposta di soluzione | Altro...
       
       let formattedData = [
-        ['Stato', 'Data', 'Stanza', 'Luogo', 'Descrizione', 'Dettagli']
+        ['Timestamp', 'Richiedente', 'Stanza', 'Tipo', 'Descrizione', 'Priorità', 'Note']
       ];
+      
+      // Analizziamo le prime righe per identificare le colonne
+      let headerRow = data[0];
+      console.log("Header row:", headerRow);
+      
+      // Indici delle colonne importanti
+      let timestampIdx = -1;
+      let siglaIdx = -1;
+      let ubicazioneIdx = -1;
+      let problemaIdx = -1;
+      
+      // Cerchiamo di identificare le colonne in base ai nomi
+      for (let i = 0; i < headerRow.length; i++) {
+        const header = headerRow[i]?.toLowerCase() || '';
+        if (header.includes('temporale') || header.includes('orario') || header.includes('data') || header.includes('time')) {
+          timestampIdx = i;
+        }
+        else if (header.includes('sigla') || header.includes('segnalazione')) {
+          siglaIdx = i;
+        }
+        else if (header.includes('luogo') || header.includes('ubicazione') || header.includes('dove')) {
+          ubicazioneIdx = i;
+        }
+        else if (header.includes('problema') || header.includes('difetto') || header.includes('dettagli')) {
+          problemaIdx = i;
+        }
+      }
+      
+      console.log(`Indici: Timestamp=${timestampIdx}, Sigla=${siglaIdx}, Ubicazione=${ubicazioneIdx}, Problema=${problemaIdx}`);
       
       // Aggiungi le righe dei dati, saltando l'intestazione
       for (let i = 1; i < data.length; i++) {
         const row = data[i];
-        if (row.length < 6) continue; // Salta righe incomplete
+        if (!row || row.length < 3) continue; // Salta righe incomplete
+        
+        // Prendiamo i valori usando gli indici identificati o utilizziamo valori di default
+        const timestamp = timestampIdx >= 0 && row[timestampIdx] ? row[timestampIdx] : new Date().toISOString();
+        const sigla = siglaIdx >= 0 && row[siglaIdx] ? row[siglaIdx] : 'Segnalazione Excel';
+        const ubicazione = ubicazioneIdx >= 0 && row[ubicazioneIdx] ? row[ubicazioneIdx] : 'N/D';
+        const problema = problemaIdx >= 0 && row[problemaIdx] ? row[problemaIdx] : 'Richiesta manutenzione';
         
         formattedData.push([
-          row[0] || '', // Stato
-          row[1] || '', // Data
-          row[2] || '', // Stanza
-          row[3] || '', // Luogo
-          row[4] || '', // Descrizione
-          row[5] || ''  // Dettagli
+          timestamp, // Timestamp (data segnalazione se disponibile)
+          sigla, // Richiedente (Sigla)
+          ubicazione, // Stanza (Ubicazione)
+          'Manutenzione', // Tipo fisso
+          problema, // Descrizione problema
+          'Bassa', // Priorità default
+          `Importato da Excel ELIS` // Note
         ]);
       }
       
       return convertToCSV(formattedData);
     } else {
-      // Formato standard (Google Forms o altro)
-      return convertToCSV(data);
+      console.log('Nessun formato specifico rilevato, analizziamo il contenuto...');
+      
+      // Se non abbiamo riconosciuto nessun formato noto, cerchiamo di adattarci al formato del foglio
+      let formattedData = [
+        ['Timestamp', 'Richiedente', 'Stanza', 'Tipo', 'Descrizione', 'Priorità', 'Note']
+      ];
+      
+      // Prendi la prima riga come intestazione
+      let headers = data[0];
+      
+      // Analizza la struttura e crea un mapping adatto
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        if (!row || row.length < 2) continue; // Salta righe vuote o quasi vuote
+        
+        // Cerchiamo di identificare le informazioni chiave
+        let timestamp = '';
+        let richiedente = '';
+        let stanza = '';
+        let descrizione = '';
+        let note = '';
+        
+        // Per un foglio generico, cerchiamo di fare del nostro meglio
+        for (let j = 0; j < row.length; j++) {
+          if (!row[j]) continue;
+          
+          if (j === 0) {
+            // Prima colonna spesso contiene timestamp o ID
+            timestamp = row[j];
+          } else if (j === 1) {
+            // Seconda colonna spesso contiene informazioni sul richiedente
+            richiedente = row[j];
+          } else if (j === 2) {
+            // Terza colonna potrebbe contenere informazioni sulla posizione
+            stanza = row[j];
+          } else if (j === 3 || j === 4) {
+            // La quarta o quinta colonna spesso contiene la descrizione del problema
+            if (row[j] && row[j].length > 0) {
+              if (descrizione) {
+                descrizione += " - " + row[j];
+              } else {
+                descrizione = row[j];
+              }
+            }
+          } else {
+            // Altre colonne le mettiamo nelle note
+            if (row[j] && row[j].length > 0) {
+              if (note) {
+                note += ", " + headers[j] + ": " + row[j];
+              } else {
+                note = headers[j] + ": " + row[j];
+              }
+            }
+          }
+        }
+        
+        formattedData.push([
+          timestamp || new Date().toISOString(),
+          richiedente || 'Segnalazione Excel',
+          stanza || 'N/D',
+          'Manutenzione',
+          descrizione || 'Richiesta manutenzione',
+          'Bassa',
+          note || 'Importato da Excel'
+        ]);
+      }
+      
+      return convertToCSV(formattedData);
     }
   } catch (error) {
     console.error('Errore durante l\'elaborazione del foglio Google:', error);
