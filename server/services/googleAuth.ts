@@ -30,11 +30,14 @@ export function createOAuth2Client(): OAuth2Client {
     throw new Error('Credenziali OAuth2 mancanti. Configurare GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET');
   }
 
-  const client = new OAuth2Client(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    'urn:ietf:wg:oauth:2.0:oob' // Per applicazioni desktop o CLI
-  );
+  // Utilizziamo un flusso "installed application" senza redirect URI (OOB)
+  // Questo è perfetto per applicazioni che non possono ricevere callback URL
+  // Vedere: https://developers.google.com/identity/protocols/oauth2/native-app
+  const client = new OAuth2Client({
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    redirectUri: 'urn:ietf:wg:oauth:2.0:oob' // Specifico per flusso out-of-band (OOB)
+  });
 
   oAuth2Client = client;
   return client;
