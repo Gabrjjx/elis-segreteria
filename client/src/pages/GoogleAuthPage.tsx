@@ -26,7 +26,8 @@ export default function GoogleAuthPage() {
       queryFn: async () => {
         const res = await apiRequest("/api/google/auth/status");
         return res.json();
-      }
+      },
+      staleTime: 30000 // Cache per 30 secondi per evitare loop
     });
 
   // Fetch auth URL when needed
@@ -161,9 +162,14 @@ export default function GoogleAuthPage() {
     } else {
       stopLoading();
     }
+    
+    // Verificare lo stato delle credenziali all'avvio
+    if (authStatus && !authStatus.hasCredentials) {
+      console.log("Avviso: credenziali OAuth2 mancanti");
+    }
   }, [isLoadingStatus, isLoadingUrl, submitTokenMutation.isPending, 
       importSheetsMutation.isPending, exportStatusMutation.isPending, 
-      startLoading, stopLoading]);
+      startLoading, stopLoading, authStatus]);
 
   return (
     <div className="container mx-auto max-w-4xl py-8">
