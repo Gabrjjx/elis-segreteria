@@ -126,11 +126,15 @@ export default function ServiceForm({ id }: ServiceFormProps) {
   // Update service mutation
   const updateMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      // Prepare the data for the API by ensuring the date is an ISO string
+      // Prepare the data for the API - convert date to YYYY-MM-DD format string
+      const dateObj = data.date instanceof Date ? data.date : new Date(data.date as string);
+      const formattedDate = `${dateObj.getFullYear()}-${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${dateObj.getDate().toString().padStart(2, '0')}`;
+      
       const apiData = {
         ...data,
-        date: data.date instanceof Date ? data.date.toISOString() : data.date
+        date: formattedDate
       };
+      console.log("Inviando dati formattati:", apiData);
       const response = await apiRequest("PUT", `/api/services/${id}`, apiData);
       return response.json();
     },
@@ -159,16 +163,19 @@ export default function ServiceForm({ id }: ServiceFormProps) {
 
   const onSubmit = (data: FormValues) => {
     try {
-      // Prepare the data for the API by ensuring the date is an ISO string
+      // Prepare the data for the API - convert date to YYYY-MM-DD format string
+      const dateObj = data.date instanceof Date ? data.date : new Date(data.date as string);
+      const formattedDate = `${dateObj.getFullYear()}-${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${dateObj.getDate().toString().padStart(2, '0')}`;
+      
       const apiData = {
         ...data,
-        date: data.date instanceof Date ? data.date.toISOString() : data.date
+        date: formattedDate
       };
       
       console.log("Submitting data:", apiData);
       
       if (isEditing) {
-        updateMutation.mutate(apiData);
+        updateMutation.mutate(data); // Usa data originale, updateMutation farà già la formattazione
       } else {
         createMutation.mutate(apiData);
       }
