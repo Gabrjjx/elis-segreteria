@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, ExternalLink, Check, KeyRound, Cloud, Download, Upload, RefreshCw } from "lucide-react";
+import { AlertCircle, ExternalLink, Check, KeyRound, Cloud, Download, Upload } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLoading } from "@/contexts/loading-context";
 
@@ -16,71 +16,49 @@ interface AuthStatus {
 
 export default function GoogleAuthPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { startLoading, stopLoading } = useLoading();
   const [authCode, setAuthCode] = useState("");
-  const [localAuthStatus, setLocalAuthStatus] = useState<AuthStatus>({
-    hasCredentials: false,
-    hasValidToken: false
-  });
-  const [isLoading, setIsLoading] = useState(true);
   const [authUrl, setAuthUrl] = useState<string | null>(null);
 
-  // Effettua il fetch dello stato di autenticazione all'avvio senza useCallback
-  const fetchAuthStatus = async () => {
-    try {
-      setIsLoading(true);
+  // Utilizza useQuery per ottenere lo stato di autenticazione
+  const { 
+    data: authStatus = { hasCredentials: false, hasValidToken: false }, 
+    isLoading: isStatusLoading
+  } = useQuery({
+    queryKey: ['googleAuthStatus'],
+    queryFn: async () => {
       const res = await apiRequest("/api/google/auth/status");
       const data = await res.json();
       console.log("Auth status fetched:", data);
-      setLocalAuthStatus(data);
-    } catch (error) {
-      console.error("Failed to fetch auth status:", error);
-    } finally {
-      setIsLoading(false);
+      return data as AuthStatus;
     }
-  };
+  });
 
-  // Fetch auth status on mount - solo una volta
-  useEffect(() => {
-    fetchAuthStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Ottieni l'URL di autorizzazione
-  const fetchAuthUrl = useCallback(async () => {
-    try {
-      setIsLoading(true);
+  // Mutation per ottenere l'URL di autorizzazione
+  const getAuthUrlMutation = useMutation({
+    mutationFn: async () => {
       const res = await apiRequest("/api/google/auth/url");
       const data = await res.json();
-      if (data.url) {
-        setAuthUrl(data.url);
-        window.open(data.url, "_blank");
-      }
-    } catch (error) {
+      return data.url as string;
+    },
+    onSuccess: (url) => {
+      setAuthUrl(url);
+      window.open(url, "_blank");
+    },
+    onError: (error) => {
       console.error("Failed to fetch auth URL:", error);
       toast({
         variant: "destructive",
         title: "Errore",
         description: "Impossibile ottenere l'URL di autorizzazione.",
       });
-    } finally {
-      setIsLoading(false);
     }
-  }, [toast]);
+  });
 
-  // Invia il codice di autorizzazione
-  const submitAuthCode = useCallback(async (code: string) => {
-    if (!code.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Codice mancante",
-        description: "Inserisci il codice di autorizzazione ricevuto da Google.",
-      });
-      return;
-    }
-
-    try {
-      setIsLoading(true);
+  // Mutation per inviare il codice di autorizzazione
+  const submitCodeMutation = useMutation({
+    mutationFn: async (code: string) => {
       const res = await apiRequest("/api/google/auth/token", {
         method: "POST",
         headers: {
@@ -88,79 +66,82 @@ export default function GoogleAuthPage() {
         },
         body: JSON.stringify({ code }),
       });
-      await res.json();
-      
+      return res.json();
+    },
+    onSuccess: () => {
       toast({
         title: "Autenticazione completata",
         description: "Token di accesso Google ottenuto con successo.",
       });
-      
       setAuthCode("");
-      // Aggiorna lo stato dopo aver ottenuto il token
-      fetchAuthStatus();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['googleAuthStatus'] });
+    },
+    onError: (error) => {
       console.error("Auth error:", error);
       toast({
         variant: "destructive",
         title: "Errore di autenticazione",
         description: "Impossibile ottenere il token. Codice non valido o scaduto.",
       });
-    } finally {
-      setIsLoading(false);
     }
-  }, [toast]);
+  });
 
-  // Importa dati da Google Sheets
-  const importFromSheets = useCallback(async () => {
-    try {
-      setIsLoading(true);
+  // Mutation per importare dati da Google Sheets
+  const importSheetsMutation = useMutation({
+    mutationFn: async () => {
       const res = await apiRequest("/api/maintenance/sync-google-sheets", {
         method: "POST",
       });
-      const data = await res.json();
-      
+      return res.json();
+    },
+    onSuccess: (data) => {
       toast({
         title: "Importazione completata",
         description: `Importate ${data.success || 0} richieste di manutenzione da Google Sheets (${data.failed || 0} errori).`,
       });
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Import error:", error);
       toast({
         variant: "destructive",
         title: "Errore di importazione",
         description: "Impossibile importare le richieste da Google Sheets.",
       });
-    } finally {
-      setIsLoading(false);
     }
-  }, [toast]);
+  });
 
-  // Esporta stati a Google Sheets
-  const exportToSheets = useCallback(async () => {
-    try {
-      setIsLoading(true);
+  // Mutation per esportare stati a Google Sheets
+  const exportStatusMutation = useMutation({
+    mutationFn: async () => {
       const res = await apiRequest("/api/google/sheets/sync-status", {
         method: "POST",
       });
-      const data = await res.json();
-      
+      return res.json();
+    },
+    onSuccess: (data) => {
       toast({
         title: "Esportazione completata",
         description: `Aggiornate ${data.updated || 0} richieste di manutenzione in Google Sheets (${data.failed || 0} errori).`,
       });
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Export error:", error);
       toast({
         variant: "destructive",
         title: "Errore di esportazione",
         description: "Impossibile aggiornare gli stati in Google Sheets.",
       });
-    } finally {
-      setIsLoading(false);
     }
-  }, [toast]);
+  });
 
-  // Gestisci lo stato di loading
+  // Gestisci lo stato di loading globale
+  const isLoading = isStatusLoading || 
+                    getAuthUrlMutation.isPending || 
+                    submitCodeMutation.isPending ||
+                    importSheetsMutation.isPending ||
+                    exportStatusMutation.isPending;
+
+  // Update global loading state
   useEffect(() => {
     if (isLoading) {
       startLoading();
@@ -170,10 +151,29 @@ export default function GoogleAuthPage() {
   }, [isLoading, startLoading, stopLoading]);
 
   // Handler functions
-  const handleGetAuthUrl = () => fetchAuthUrl();
-  const handleSubmitCode = () => submitAuthCode(authCode);
-  const handleImportSheets = () => importFromSheets();
-  const handleExportStatus = () => exportToSheets();
+  function handleGetAuthUrl() {
+    getAuthUrlMutation.mutate();
+  }
+
+  function handleSubmitCode() {
+    if (!authCode.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Codice mancante",
+        description: "Inserisci il codice di autorizzazione ricevuto da Google.",
+      });
+      return;
+    }
+    submitCodeMutation.mutate(authCode);
+  }
+
+  function handleImportSheets() {
+    importSheetsMutation.mutate();
+  }
+
+  function handleExportStatus() {
+    exportStatusMutation.mutate();
+  }
 
   return (
     <div className="container mx-auto max-w-4xl py-8">
@@ -185,7 +185,7 @@ export default function GoogleAuthPage() {
             <KeyRound className="h-4 w-4 mr-2" />
             Autenticazione
           </TabsTrigger>
-          <TabsTrigger value="sync" disabled={!localAuthStatus.hasValidToken}>
+          <TabsTrigger value="sync" disabled={!authStatus.hasValidToken}>
             <Cloud className="h-4 w-4 mr-2" />
             Sincronizzazione
           </TabsTrigger>
@@ -208,14 +208,14 @@ export default function GoogleAuthPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center p-4 border rounded-lg">
                         <div className={`h-8 w-8 rounded-full mr-3 flex items-center justify-center ${
-                          localAuthStatus.hasCredentials ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"
+                          authStatus.hasCredentials ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"
                         }`}>
-                          {localAuthStatus.hasCredentials ? <Check /> : <AlertCircle />}
+                          {authStatus.hasCredentials ? <Check /> : <AlertCircle />}
                         </div>
                         <div>
                           <p className="font-medium">Credenziali OAuth2</p>
                           <p className="text-sm text-gray-500">
-                            {localAuthStatus.hasCredentials 
+                            {authStatus.hasCredentials 
                               ? "Presenti e configurate" 
                               : "Non configurate"}
                           </p>
@@ -224,14 +224,14 @@ export default function GoogleAuthPage() {
 
                       <div className="flex items-center p-4 border rounded-lg">
                         <div className={`h-8 w-8 rounded-full mr-3 flex items-center justify-center ${
-                          localAuthStatus.hasValidToken ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"
+                          authStatus.hasValidToken ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"
                         }`}>
-                          {localAuthStatus.hasValidToken ? <Check /> : <AlertCircle />}
+                          {authStatus.hasValidToken ? <Check /> : <AlertCircle />}
                         </div>
                         <div>
                           <p className="font-medium">Token di accesso</p>
                           <p className="text-sm text-gray-500">
-                            {localAuthStatus.hasValidToken 
+                            {authStatus.hasValidToken 
                               ? "Valido e attivo" 
                               : "Non presente o scaduto"}
                           </p>
@@ -239,7 +239,7 @@ export default function GoogleAuthPage() {
                       </div>
                     </div>
 
-                    {!localAuthStatus.hasCredentials && (
+                    {!authStatus.hasCredentials && (
                       <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Credenziali mancanti</AlertTitle>
@@ -250,7 +250,7 @@ export default function GoogleAuthPage() {
                       </Alert>
                     )}
 
-                    {localAuthStatus.hasCredentials && !localAuthStatus.hasValidToken && (
+                    {authStatus.hasCredentials && !authStatus.hasValidToken && (
                       <div className="space-y-4">
                         <Alert>
                           <AlertCircle className="h-4 w-4" />
@@ -291,7 +291,7 @@ export default function GoogleAuthPage() {
                       </div>
                     )}
 
-                    {localAuthStatus.hasCredentials && localAuthStatus.hasValidToken && (
+                    {authStatus.hasCredentials && authStatus.hasValidToken && (
                       <Alert className="bg-green-50 border-green-200">
                         <Check className="h-4 w-4 text-green-600" />
                         <AlertTitle className="text-green-800">Tutto pronto!</AlertTitle>
@@ -330,7 +330,7 @@ export default function GoogleAuthPage() {
               <CardFooter className="flex justify-end">
                 <Button 
                   onClick={handleImportSheets} 
-                  disabled={isLoading || !localAuthStatus.hasValidToken}
+                  disabled={isLoading || !authStatus.hasValidToken}
                   variant="outline"
                 >
                   <Download className="h-4 w-4 mr-2" />
@@ -359,7 +359,7 @@ export default function GoogleAuthPage() {
               <CardFooter className="flex justify-end">
                 <Button 
                   onClick={handleExportStatus} 
-                  disabled={isLoading || !localAuthStatus.hasValidToken}
+                  disabled={isLoading || !authStatus.hasValidToken}
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   Esporta stati su Google Sheets
