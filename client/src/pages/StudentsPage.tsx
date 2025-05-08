@@ -1,13 +1,11 @@
-import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { toast } from "@/hooks/use-toast";
 import { Search, Upload, UserPlus, Trash2 } from "lucide-react";
 
@@ -20,17 +18,35 @@ interface Student {
   updatedAt: string;
 }
 
+interface StudentsResponse {
+  students: Student[];
+  total: number;
+}
+
 export default function StudentsPage() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [csvData, setCsvData] = useState("");
-  const queryClient = useQueryClient();
+  const [isAddingStudent, setIsAddingStudent] = useState(false);
+  const [isImportingCsv, setIsImportingCsv] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch students
-  const { data, isLoading } = useQuery({
-    queryKey: ['/api/students', page, limit, searchQuery],
-    queryFn: async () => {
+  useEffect(() => {
+    fetchStudents();
+  }, [page, limit, searchQuery]);
+
+  const fetchStudents = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
       const params = new URLSearchParams();
       params.append('page', String(page));
       params.append('limit', String(limit));
@@ -51,89 +67,85 @@ export default function StudentsPage() {
         }
       }
       
-      const endpoint = `/api/students?${params.toString()}`;
-      console.log("Fetching students from:", endpoint);
-      const response = await apiRequest("GET", endpoint);
-      const jsonData = await response.json();
-      console.log("Received students data:", jsonData);
+      const response = await fetch(`/api/students?${params.toString()}`);
       
-      if (!jsonData.students || !Array.isArray(jsonData.students)) {
-        console.error("Invalid response structure:", jsonData);
-        return { students: [], total: 0 };
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      return jsonData;
+      const data = await response.json();
+      console.log('Fetched students data:', data);
+      
+      if (data && Array.isArray(data.students)) {
+        setStudents(data.students);
+        setTotalStudents(data.total || 0);
+      } else {
+        console.error('Invalid response structure:', data);
+        setError('Formato di risposta non valido');
+        setStudents([]);
+        setTotalStudents(0);
+      }
+    } catch (err) {
+      console.error('Error fetching students:', err);
+      setError('Errore durante il recupero degli studenti');
+      setStudents([]);
+      setTotalStudents(0);
+    } finally {
+      setIsLoading(false);
     }
-  });
+  };
   
-  // Delete student mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (studentId: number) => {
-      return apiRequest("DELETE", `/api/students/${studentId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
-      toast({
-        title: "Studente eliminato",
-        description: "Lo studente è stato eliminato con successo",
+  const handleAddStudent = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsAddingStudent(true);
+    
+    try {
+      const formData = new FormData(e.currentTarget);
+      const firstName = formData.get("firstName") as string;
+      const lastName = formData.get("lastName") as string;
+      const sigla = formData.get("sigla") as string;
+      
+      if (!firstName || !lastName || !sigla) {
+        toast({
+          title: "Errore",
+          description: "Tutti i campi sono obbligatori",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const response = await fetch('/api/students', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ firstName, lastName, sigla }),
       });
-    },
-    onError: (error) => {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'eliminazione dello studente",
-        variant: "destructive",
-      });
-      console.error("Error deleting student:", error);
-    }
-  });
-  
-  // Import CSV mutation
-  const importMutation = useMutation({
-    mutationFn: async (csvData: string) => {
-      return apiRequest("POST", "/api/students/import", { csvData }).then(res => res.json());
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
-      toast({
-        title: "Importazione completata",
-        description: `Importati ${data.success} studenti con successo. Falliti: ${data.failed}`,
-      });
-      setCsvData("");
-    },
-    onError: (error) => {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'importazione degli studenti",
-        variant: "destructive",
-      });
-      console.error("Error importing students:", error);
-    }
-  });
-  
-  // Add student mutation
-  const addMutation = useMutation({
-    mutationFn: async (student: { firstName: string, lastName: string, sigla: string }) => {
-      return apiRequest("POST", "/api/students", student).then(res => res.json());
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       toast({
         title: "Studente aggiunto",
         description: "Lo studente è stato aggiunto con successo",
       });
-    },
-    onError: (error) => {
+      
+      e.currentTarget.reset();
+      fetchStudents();
+    } catch (err) {
+      console.error('Error adding student:', err);
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante l'aggiunta dello studente",
         variant: "destructive",
       });
-      console.error("Error adding student:", error);
+    } finally {
+      setIsAddingStudent(false);
     }
-  });
+  };
   
-  const handleImportCsv = () => {
+  const handleImportCsv = async () => {
     if (!csvData.trim()) {
       toast({
         title: "Errore",
@@ -143,32 +155,73 @@ export default function StudentsPage() {
       return;
     }
     
-    importMutation.mutate(csvData);
-  };
-  
-  const handleAddStudent = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const firstName = formData.get("firstName") as string;
-    const lastName = formData.get("lastName") as string;
-    const sigla = formData.get("sigla") as string;
+    setIsImportingCsv(true);
     
-    if (!firstName || !lastName || !sigla) {
+    try {
+      const response = await fetch('/api/students/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ csvData }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      toast({
+        title: "Importazione completata",
+        description: `Importati ${result.success} studenti con successo. Falliti: ${result.failed}`,
+      });
+      
+      setCsvData("");
+      fetchStudents();
+    } catch (err) {
+      console.error('Error importing CSV:', err);
       toast({
         title: "Errore",
-        description: "Tutti i campi sono obbligatori",
+        description: "Si è verificato un errore durante l'importazione degli studenti",
         variant: "destructive",
       });
+    } finally {
+      setIsImportingCsv(false);
+    }
+  };
+  
+  const handleDeleteStudent = async (studentId: number) => {
+    if (!window.confirm("Sei sicuro di voler eliminare questo studente?")) {
       return;
     }
     
-    addMutation.mutate({ firstName, lastName, sigla });
-    e.currentTarget.reset();
-  };
-  
-  const handleDeleteStudent = (studentId: number) => {
-    if (window.confirm("Sei sicuro di voler eliminare questo studente?")) {
-      deleteMutation.mutate(studentId);
+    setIsDeleting(true);
+    
+    try {
+      const response = await fetch(`/api/students/${studentId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      toast({
+        title: "Studente eliminato",
+        description: "Lo studente è stato eliminato con successo",
+      });
+      
+      fetchStudents();
+    } catch (err) {
+      console.error('Error deleting student:', err);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'eliminazione dello studente",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -202,9 +255,9 @@ export default function StudentsPage() {
             </form>
           </CardContent>
           <CardFooter>
-            <Button type="submit" form="addStudentForm" disabled={addMutation.isPending}>
+            <Button type="submit" form="addStudentForm" disabled={isAddingStudent}>
               <UserPlus className="h-4 w-4 mr-2" />
-              {addMutation.isPending ? "Aggiunta in corso..." : "Aggiungi Studente"}
+              {isAddingStudent ? "Aggiunta in corso..." : "Aggiungi Studente"}
             </Button>
           </CardFooter>
         </Card>
@@ -228,9 +281,9 @@ export default function StudentsPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button onClick={handleImportCsv} disabled={importMutation.isPending || !csvData.trim()}>
+            <Button onClick={handleImportCsv} disabled={isImportingCsv || !csvData.trim()}>
               <Upload className="h-4 w-4 mr-2" />
-              {importMutation.isPending ? "Importazione in corso..." : "Importa CSV"}
+              {isImportingCsv ? "Importazione in corso..." : "Importa CSV"}
             </Button>
           </CardFooter>
         </Card>
@@ -271,14 +324,20 @@ export default function StudentsPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : !data?.students || data.students.length === 0 ? (
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-10 text-red-500">
+                      {error}
+                    </TableCell>
+                  </TableRow>
+                ) : students.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-10">
-                      Nessuno studente trovato. {data ? `Debug: ${JSON.stringify(data)}` : 'Nessun dato ricevuto'}
+                      Nessuno studente trovato.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data.students.map((student: Student) => (
+                  students.map((student) => (
                     <TableRow key={student.id}>
                       <TableCell className="font-medium">{student.sigla}</TableCell>
                       <TableCell>{student.firstName}</TableCell>
@@ -288,6 +347,7 @@ export default function StudentsPage() {
                           variant="ghost" 
                           size="icon"
                           onClick={() => handleDeleteStudent(student.id)}
+                          disabled={isDeleting}
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
@@ -301,54 +361,64 @@ export default function StudentsPage() {
         </CardContent>
         <CardFooter className="flex justify-between">
           <div className="text-sm text-muted-foreground">
-            {data?.total || 0} studenti totali
+            {totalStudents} studenti totali
           </div>
           
-          {data?.total > limit && (
+          {totalStudents > limit && (
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
-                  <PaginationPrevious 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                  />
+                  >
+                    Precedente
+                  </Button>
                 </PaginationItem>
                 
-                {Array.from({ length: Math.min(5, Math.ceil((data?.total || 0) / limit)) }, (_, i) => {
+                {Array.from({ length: Math.min(5, Math.ceil(totalStudents / limit)) }, (_, i) => {
                   const pageNumber = i + 1;
                   return (
                     <PaginationItem key={pageNumber}>
-                      <PaginationLink
+                      <Button
+                        variant={page === pageNumber ? "default" : "outline"}
+                        size="sm"
                         onClick={() => setPage(pageNumber)}
-                        isActive={page === pageNumber}
                       >
                         {pageNumber}
-                      </PaginationLink>
+                      </Button>
                     </PaginationItem>
                   );
                 })}
                 
-                {Math.ceil((data?.total || 0) / limit) > 5 && (
+                {Math.ceil(totalStudents / limit) > 5 && (
                   <>
                     <PaginationItem>
-                      <PaginationEllipsis />
+                      <span className="mx-2">...</span>
                     </PaginationItem>
                     <PaginationItem>
-                      <PaginationLink
-                        onClick={() => setPage(Math.ceil((data?.total || 0) / limit))}
-                        isActive={page === Math.ceil((data?.total || 0) / limit)}
+                      <Button
+                        variant={page === Math.ceil(totalStudents / limit) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPage(Math.ceil(totalStudents / limit))}
                       >
-                        {Math.ceil((data?.total || 0) / limit)}
-                      </PaginationLink>
+                        {Math.ceil(totalStudents / limit)}
+                      </Button>
                     </PaginationItem>
                   </>
                 )}
                 
                 <PaginationItem>
-                  <PaginationNext 
-                    onClick={() => setPage(p => Math.min(Math.ceil((data?.total || 0) / limit), p + 1))}
-                    disabled={page >= Math.ceil((data?.total || 0) / limit)}
-                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(Math.ceil(totalStudents / limit), p + 1))}
+                    disabled={page >= Math.ceil(totalStudents / limit)}
+                  >
+                    Successivo
+                  </Button>
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
