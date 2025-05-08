@@ -361,7 +361,7 @@ export default function StudentsPage() {
           </div>
           
           {/* Mobile Card View */}
-          <div className="md:hidden space-y-8 py-2">
+          <div className="md:hidden space-y-12 py-4">
             {isLoading ? (
               <div className="flex justify-center py-10">
                 <div className="animate-spin w-8 h-8 border-3 border-primary border-t-transparent rounded-full"></div>
@@ -378,7 +378,7 @@ export default function StudentsPage() {
               students.map((student) => (
                 <div 
                   key={student.id} 
-                  className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"
+                  className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm"
                 >
                   <div className="flex justify-between items-center">
                     <div>
