@@ -29,6 +29,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all services with filtering and pagination
   app.get("/api/services", async (req: Request, res: Response) => {
     try {
+      // Log dei parametri ricevuti
+      console.log("API /api/services - Parametri ricevuti:", req.query);
+      
       const params = serviceSearchSchema.parse({
         query: req.query.query as string,
         type: req.query.type as string,
@@ -38,6 +41,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         page: req.query.page ? parseInt(req.query.page as string) : 1,
         limit: req.query.limit ? parseInt(req.query.limit as string) : 10
       });
+      
+      // Log dei parametri dopo validazione
+      console.log("API /api/services - Parametri validati:", params);
       
       const result = await storage.getServices(params);
       res.json(result);

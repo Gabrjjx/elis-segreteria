@@ -518,16 +518,22 @@ export class DatabaseStorage implements IStorage {
     // Clona la query per usare gli stessi filtri nella count query
     const countQuery = db.select({ count: count() }).from(services);
     
+    // Log dei parametri filtro ricevuti
+    console.log("getServices - Parametri ricevuti:", params);
+    console.log(`Tipo servizio: ${params.type}, Stato: ${params.status}`);
+    
     // Applica gli stessi filtri alla query di conteggio
     if (params.query) {
       countQuery.where(like(services.sigla, `%${params.query}%`));
     }
     
     if (params.type && params.type !== 'all') {
+      console.log(`Applicando filtro per tipo: ${params.type}`);
       countQuery.where(eq(services.type, params.type));
     }
     
     if (params.status && params.status !== 'all') {
+      console.log(`Applicando filtro per stato: ${params.status}`);
       countQuery.where(eq(services.status, params.status));
     }
     

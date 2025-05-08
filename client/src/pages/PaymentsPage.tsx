@@ -67,9 +67,12 @@ export default function PaymentsPage() {
       
       // Verifica e stampa il valore di filters.type
       console.log("Filtro per tipo:", filters.type);
-      if (filters.type !== "all") {
-        params.append("type", filters.type);
-        console.log(`Filtrando servizi per tipo: ${filters.type}`);
+      
+      // Forza il filtro type per test
+      const typeToFilter = filters.type; // Usa il valore dai filtri
+      if (typeToFilter !== "all") {
+        params.append("type", typeToFilter);
+        console.log(`Filtrando servizi per tipo: ${typeToFilter}`);
       }
       
       params.append("status", "unpaid");
@@ -81,10 +84,21 @@ export default function PaymentsPage() {
       const url = `/api/services?${params.toString()}`;
       console.log("Chiamata API:", url);
       
+      // Log dettagliato dell'URL della richiesta
+      console.log(`Eseguendo richiesta a ${url}`);
+      console.log(`Filtri status=${params.get('status')}, type=${params.get('type')}`);
+      
       const response = await fetch(url);
       if (!response.ok) throw new Error("Errore nel caricamento dei pagamenti in sospeso");
       
       const data = await response.json();
+      
+      // Filtra i risultati lato client se necessario (dovrebbe essere già filtrato dal server)
+      if (typeToFilter !== "all") {
+        console.log(`Verifica risultati per tipo ${typeToFilter}:`, 
+          data.services.filter(s => s.type === typeToFilter).map(s => s.id));
+      }
+      
       console.log("Risposta ricevuta:", data);
       
       return data;
@@ -228,7 +242,14 @@ export default function PaymentsPage() {
               <Select 
                 id="type"
                 value={filters.type}
-                onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
+                onValueChange={(value) => {
+                  console.log("Selezionato tipo:", value);
+                  setFilters(prev => {
+                    const newFilters = { ...prev, type: value };
+                    console.log("Nuovi filtri impostati:", newFilters);
+                    return newFilters;
+                  });
+                }}
               >
                 <SelectTrigger className="w-full md:w-[180px] mt-1">
                   <SelectValue placeholder="Tipologia servizio" />
