@@ -21,19 +21,28 @@ export default function GoogleAuthPage() {
   const [authCode, setAuthCode] = useState("");
   const [authUrl, setAuthUrl] = useState<string | null>(null);
 
-  // Utilizza useQuery per ottenere lo stato di autenticazione
+  // Utilizza useQuery per ottenere lo stato di autenticazione con caching disabilitato e refetch manuale
   const { 
     data: authStatus = { hasCredentials: false, hasValidToken: false }, 
-    isLoading: isStatusLoading
+    isLoading: isStatusLoading,
+    refetch
   } = useQuery({
-    queryKey: ['googleAuthStatus'],
+    queryKey: ['googleAuthStatus', Date.now()], // Aggiungiamo un timestamp per prevenire il caching
     queryFn: async () => {
-      const res = await apiRequest("/api/google/auth/status");
+      // Aggiungiamo un parametro cache buster
+      const cacheBuster = `?t=${Date.now()}`;
+      const res = await apiRequest(`/api/google/auth/status${cacheBuster}`);
       const data = await res.json();
       console.log("API Request:", "/api/google/auth/status");
       console.log("API Response data:", data);
+      // Logging per debug
+      console.log("Tipo di hasCredentials:", typeof data.hasCredentials);
+      console.log("Valore di hasCredentials:", data.hasCredentials);
       return data as AuthStatus;
-    }
+    },
+    staleTime: 0, // Consideriamo i dati obsoleti immediatamente
+    cacheTime: 0, // Non memorizziamo mai i dati nella cache
+    refetchOnWindowFocus: true, // Rifetch quando l'utente torna sulla finestra
   });
 
   // Mutation per ottenere l'URL di autorizzazione
