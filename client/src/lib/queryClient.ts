@@ -11,22 +11,26 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest(
-  method: string,
   url: string,
-  data?: unknown | undefined,
   options?: RequestInit,
 ): Promise<Response> {
   // Aggiunta di un timeout per evitare richieste che rimangono bloccate
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), 15000); // 15 secondi di timeout
   
+  // Assicuriamoci che le headers siano impostate correttamente
+  const headers = {
+    ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(options?.headers || {})
+  };
+  
   const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    method: options?.method || 'GET',
+    headers,
+    body: options?.body,
     credentials: "include",
     signal: controller.signal,
-    ...options,
+    ...options
   });
   
   clearTimeout(id);

@@ -250,14 +250,24 @@ export default function MaintenancePage() {
   
   const syncGoogleSheetsMutation = useMutation({
     mutationFn: async () => {
-      // Aggiunge Content-Type JSON per evitare errori con il metodo
-      return apiRequest('/api/maintenance/sync-google-sheets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({})
-      });
+      try {
+        const response = await fetch('/api/maintenance/sync-google-sheets', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: '{}'
+        });
+      
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      
+        return await response.json();
+      } catch (error) {
+        console.error("Errore richiesta sync:", error);
+        throw error;
+      }
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });

@@ -48,12 +48,18 @@ function extractSheetId(sheetIdOrUrl: string): string {
 }
 
 // Configurazione dell'API Google Sheets
+console.log("API KEY:", process.env.GOOGLE_API_KEY ? "Present" : "Missing");
+console.log("SHEET ID:", process.env.GOOGLE_SHEET_ID ? "Present" : "Missing");
+
+// Estrai l'ID del foglio
+const SHEET_ID = extractSheetId(process.env.GOOGLE_SHEET_ID || '');
+console.log("Sheet ID estratto:", SHEET_ID);
+
+// Inizializza il client Google Sheets
 const sheets = google.sheets({
   version: 'v4',
   auth: process.env.GOOGLE_API_KEY
 });
-
-const SHEET_ID = extractSheetId(process.env.GOOGLE_SHEET_ID || '');
 
 /**
  * Legge i dati di un foglio Google Sheets
