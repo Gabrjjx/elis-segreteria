@@ -31,7 +31,8 @@ export function createOAuth2Client(): OAuth2Client {
   }
 
   // Configuriamo il client con un redirect URI specifico
-  const redirectUri = 'https://segreteria-manager.replit.app/oauth2callback';
+  // Su Replit l'URL è dinamico, usiamo un URL relativo che viene risolto automaticamente
+  const redirectUri = '/oauth2callback';
   
   const client = new OAuth2Client({
     clientId: process.env.GOOGLE_CLIENT_ID,
