@@ -1394,26 +1394,6 @@ RifID: ${hashId}`
     }
   });
 
-  // Gestisce la cancellazione di un pagamento
-  app.post("/api/paypal/cancel/:orderId", async (req: Request, res: Response) => {
-    try {
-      const { orderId } = req.params;
-      
-      if (!orderId) {
-        return res.status(400).json({ message: "Order ID is required" });
-      }
-      
-      const result = await cancelPaypalOrder(orderId);
-      res.json(result);
-    } catch (error) {
-      console.error("Errore durante la cancellazione dell'ordine PayPal:", error);
-      res.status(500).json({ 
-        message: "Errore durante la cancellazione dell'ordine PayPal", 
-        details: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
   // Verifica lo stato di un ordine
   app.get("/api/paypal/check-status/:orderId", async (req: Request, res: Response) => {
     try {
