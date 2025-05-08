@@ -112,16 +112,55 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
   try {
     const data = await readGoogleSheet();
     
-    // Verifica se il foglio è nel formato ELIS (controlla le intestazioni)
-    const isElisFormat = data.length > 0 && 
-      (data[0][0]?.toLowerCase()?.includes('segnalato') || 
-       data[0][0]?.toLowerCase()?.includes('risolto'));
+    // Verifica il formato del foglio (controlla le intestazioni)
+    let isElisFormat = false;
+    let isNewElisFormat = false;
     
-    if (isElisFormat) {
-      console.log('Rilevato formato ELIS');
+    if (data.length > 0) {
+      // Controlla se è il vecchio formato ELIS con segnalato/risolto
+      isElisFormat = (data[0][0]?.toLowerCase()?.includes('segnalato') || 
+       data[0][0]?.toLowerCase()?.includes('risolto'));
       
-      // Per il formato ELIS, adatta le colonne al formato che ci aspettiamo
-      // Il formato ELIS è:
+      // Controlla se è il nuovo formato ELIS con le colonne specificate
+      isNewElisFormat = data[0][0]?.includes('Informazioni cronologiche') &&
+                       data[0][1]?.includes('Sigla') &&
+                       data[0][2]?.includes('Luogo');
+    }
+    
+    if (isNewElisFormat) {
+      console.log('Rilevato nuovo formato ELIS');
+      
+      // Per il nuovo formato ELIS, adatta le colonne al formato che ci aspettiamo
+      // Le colonne sono:
+      // Informazioni cronologiche | Sigla | Luogo | Ubicazione specifica | Dettagli del difetto | Priorità | Risolvibile con manutentori | Suggerimento risoluzione
+      
+      let formattedData = [
+        ['Informazioni', 'Sigla', 'Luogo', 'Ubicazione', 'Dettagli', 'Priorità', 'Risolvibile', 'Suggerimento']
+      ];
+    
+      // Aggiungi le righe dei dati, saltando l'intestazione
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        if (!row || row.length < 5) continue; // Salta righe incomplete
+        
+        formattedData.push([
+          row[0] || '', // Informazioni cronologiche
+          row[1] || '', // Sigla
+          row[2] || '', // Luogo
+          row[3] || '', // Ubicazione specifica
+          row[4] || '', // Dettagli del difetto
+          row.length > 5 ? row[5] || '' : '', // Priorità
+          row.length > 6 ? row[6] || '' : '', // Risolvibile
+          row.length > 7 ? row[7] || '' : ''  // Suggerimento
+        ]);
+      }
+      
+      return convertToCSV(formattedData);
+    } else if (isElisFormat) {
+      console.log('Rilevato vecchio formato ELIS');
+      
+      // Per il vecchio formato ELIS, adatta le colonne al formato che ci aspettiamo
+      // Il formato è:
       // A: Stato, B: Data, C: Stanza, D: Luogo, E: Descrizione, F: Dettagli
       
       let formattedData = [

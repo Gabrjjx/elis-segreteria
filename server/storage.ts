@@ -240,60 +240,189 @@ export class DatabaseStorage implements IStorage {
       // Parse CSV data (simple implementation)
       const lines = csvData.split('\n').filter(line => line.trim());
       
-      // Verifica se è il formato del vecchio foglio Excel dell'ELIS
-      const isElisFormat = lines[0].includes('segnalato') || lines[0].includes('risolto');
+      // Verifica se è uno dei formati conosciuti ELIS
+      const isOldElisFormat = lines[0].includes('segnalato') || lines[0].includes('risolto');
+      const isNewElisFormat = lines[0].includes('Informazioni cronologiche') && 
+                             lines[0].includes('Sigla') && 
+                             lines[0].includes('Luogo');
       
-      if (isElisFormat) {
-        // Formato ELIS Excel:
-        // Colonna A: Stato (segnalato/risolto)
-        // Colonna B: Data e ora
-        // Colonna C: Numero di stanza/spazio
-        // Colonna D: Luogo/Area
-        // Colonna E: Descrizione dell'ubicazione
-        // Colonna F: Dettagli del difetto
+      if (isNewElisFormat) {
+        // Formato ELIS Excel aggiornato:
+        // Le colonne sono:
+        // Informazioni cronologiche | Sigla | Luogo | Ubicazione specifica | Dettagli del difetto | Priorità | Risolvibile | Suggerimento
         
         // Salta l'intestazione
         for (let i = 1; i < lines.length; i++) {
           try {
             const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
             
-            if (values.length < 6) continue; // Skip incomplete lines
+            if (values.length < 5) continue; // Skip incomplete lines
             
-            const status = values[0].toLowerCase();
-            const timestamp = values[1];
-            const roomNumber = values[2];
-            const location = values[3];
-            const description = values[4];
-            const issue = values[5];
+            // Verifica che non sia una riga vuota
+            const hasData = values.some(v => v.trim().length > 0);
+            if (!hasData) continue;
             
-            // Determina lo stato in base al valore 'segnalato' o 'risolto'
-            let requestStatus = MaintenanceRequestStatus.PENDING;
-            if (status.includes('risolto')) {
-              requestStatus = MaintenanceRequestStatus.COMPLETED;
+            const timestamp = values[0] || new Date().toISOString(); // Informazioni cronologiche
+            const sigla = values[1] || 'N/D'; // Sigla
+            const location = values[2] || 'N/D'; // Luogo
+            const specificLocation = values[3] || ''; // Ubicazione specifica
+            const issueDetails = values[4] || ''; // Dettagli del difetto
+            
+            // Priorità, se specificata
+            let priorityText = '';
+            if (values.length > 5) {
+              priorityText = values[5] || '';
             }
             
-            // Determina priorità in base al contenuto della descrizione o della segnalazione
-            let priority = MaintenanceRequestPriority.MEDIUM;
-            const combinedText = (description + ' ' + issue).toLowerCase();
-            if (combinedText.includes('urgente') || combinedText.includes('urgent')) {
-              priority = MaintenanceRequestPriority.URGENT;
-            } else if (combinedText.includes('alta') || combinedText.includes('high')) {
-              priority = MaintenanceRequestPriority.HIGH;
-            } else if (combinedText.includes('bassa') || combinedText.includes('low')) {
-              priority = MaintenanceRequestPriority.LOW;
+            // Risolvibile con manutentori?
+            let resolvableBy = '';
+            if (values.length > 6) {
+              resolvableBy = values[6] || '';
             }
             
-            const request: InsertMaintenanceRequest = {
-              timestamp: timestamp,
+            // Suggerimento risoluzione
+            let resolutionSuggestion = '';
+            if (values.length > 7) {
+              resolutionSuggestion = values[7] || '';
+            }
+            
+            // Determina lo stato (di default è pendente)
+            const requestStatus = MaintenanceRequestStatus.PENDING;
+            
+            // Determina priorità basata sul valore di priorità o dal testo dell'issue
+            let priority = MaintenanceRequestStatus.PENDING;
+            
+            // Prima controlliamo il campo priorità esplicito
+            if (priorityText) {
+              const lowerPriority = priorityText.toLowerCase();
+              if (lowerPriority.includes('urgente') || lowerPriority.includes('urgent') || lowerPriority.includes('alta')) {
+                priority = MaintenanceRequestPriority.URGENT;
+              } else if (lowerPriority.includes('alta') || lowerPriority.includes('high')) {
+                priority = MaintenanceRequestPriority.HIGH;
+              } else if (lowerPriority.includes('bassa') || lowerPriority.includes('low')) {
+                priority = MaintenanceRequestPriority.LOW;
+              } else {
+                priority = MaintenanceRequestPriority.MEDIUM;
+              }
+            } else {
+              // Altrimenti controlliamo nei dettagli del difetto
+              const combinedText = (specificLocation + ' ' + issueDetails).toLowerCase();
+              if (combinedText.includes('urgente') || combinedText.includes('urgent')) {
+                priority = MaintenanceRequestPriority.URGENT;
+              } else if (combinedText.includes('alta') || combinedText.includes('high')) {
+                priority = MaintenanceRequestPriority.HIGH;
+              } else if (combinedText.includes('bassa') || combinedText.includes('low')) {
+                priority = MaintenanceRequestPriority.LOW;
+              } else {
+                priority = MaintenanceRequestPriority.MEDIUM;
+              }
+            }
+            
+            // Componi note aggiuntive
+            let notes = '';
+            if (resolvableBy || resolutionSuggestion) {
+              notes = `Risolvibile con manutentori autarchici: ${resolvableBy}\n\nSuggerimento per la risoluzione: ${resolutionSuggestion}`;
+            }
+            
+            const request = {
               requesterName: 'Segnalazione Excel ELIS',
               requesterEmail: 'segreteria@elis.org',
-              roomNumber: roomNumber,
+              roomNumber: sigla,
               requestType: 'Manutenzione',
-              description: `${description} - ${issue}`,
+              description: `${specificLocation}: ${issueDetails}`,
               location: location,
               status: requestStatus,
               priority: priority,
-              notes: `Importato dal foglio Excel ELIS. Stato originale: ${status}`,
+              notes: notes,
+            };
+            
+            await this.createMaintenanceRequest(request);
+            success++;
+          } catch (error) {
+            console.error(`Error importing row ${i}:`, error);
+            failed++;
+          }
+        }
+      } else if (isOldElisFormat) {
+        // Formato ELIS Excel aggiornato:
+        // Le colonne sono:
+        // Informazioni cronologiche | Sigla | Luogo | Ubicazione specifica | Dettagli del difetto | Priorità | Risolvibile con manutentori autarchici? | Come risolvere
+        
+        // Salta l'intestazione
+        for (let i = 1; i < lines.length; i++) {
+          try {
+            const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+            
+            if (values.length < 5) continue; // Skip incomplete lines
+            
+            const timestamp = values[0] || new Date().toISOString(); // Informazioni cronologiche
+            const sigla = values[1] || 'N/D'; // Sigla
+            const location = values[2] || 'N/D'; // Luogo
+            const specificLocation = values[3] || ''; // Ubicazione specifica
+            const issueDetails = values[4] || ''; // Dettagli del difetto
+            
+            // Priorità, se specificata
+            let priorityText = '';
+            if (values.length > 5) {
+              priorityText = values[5] || '';
+            }
+            
+            // Risolvibile con manutentori?
+            let resolvableBy = '';
+            if (values.length > 6) {
+              resolvableBy = values[6] || '';
+            }
+            
+            // Suggerimento risoluzione
+            let resolutionSuggestion = '';
+            if (values.length > 7) {
+              resolutionSuggestion = values[7] || '';
+            }
+            
+            // Determina lo stato (di default è pendente)
+            let requestStatus = MaintenanceRequestStatus.PENDING;
+            
+            // Determina priorità basata sul valore di priorità o dal testo dell'issue
+            let priority = MaintenanceRequestPriority.MEDIUM;
+            
+            // Prima controlliamo il campo priorità esplicito
+            if (priorityText) {
+              const lowerPriority = priorityText.toLowerCase();
+              if (lowerPriority.includes('urgente') || lowerPriority.includes('urgent') || lowerPriority.includes('alta')) {
+                priority = MaintenanceRequestPriority.URGENT;
+              } else if (lowerPriority.includes('alta') || lowerPriority.includes('high')) {
+                priority = MaintenanceRequestPriority.HIGH;
+              } else if (lowerPriority.includes('bassa') || lowerPriority.includes('low')) {
+                priority = MaintenanceRequestPriority.LOW;
+              }
+            } else {
+              // Altrimenti controlliamo nei dettagli del difetto
+              const combinedText = (specificLocation + ' ' + issueDetails).toLowerCase();
+              if (combinedText.includes('urgente') || combinedText.includes('urgent')) {
+                priority = MaintenanceRequestPriority.URGENT;
+              } else if (combinedText.includes('alta') || combinedText.includes('high')) {
+                priority = MaintenanceRequestPriority.HIGH;
+              } else if (combinedText.includes('bassa') || combinedText.includes('low')) {
+                priority = MaintenanceRequestPriority.LOW;
+              }
+            }
+            
+            // Componi note aggiuntive
+            let notes = '';
+            if (resolvableBy || resolutionSuggestion) {
+              notes = `Risolvibile con manutentori autarchici: ${resolvableBy}\n\nSuggerimento per la risoluzione: ${resolutionSuggestion}`;
+            }
+            
+            const request: InsertMaintenanceRequest = {
+              requesterName: 'Segnalazione Excel ELIS',
+              requesterEmail: 'segreteria@elis.org',
+              roomNumber: sigla,
+              requestType: 'Manutenzione',
+              description: `${specificLocation}: ${issueDetails}`,
+              location: location,
+              status: requestStatus,
+              priority: priority,
+              notes: notes,
             };
             
             await this.createMaintenanceRequest(request);
