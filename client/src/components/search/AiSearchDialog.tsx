@@ -287,6 +287,10 @@ export default function AiSearchDialog() {
       {/* Search Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[600px] p-0">
+          <DialogTitle className="sr-only">Ricerca avanzata</DialogTitle>
+          <DialogDescription className="sr-only">
+            Cerca servizi e richieste di manutenzione utilizzando linguaggio naturale
+          </DialogDescription>
           <div className="p-4">
             <div className="flex gap-2 items-center">
               <Search className="h-5 w-5 text-gray-500" />

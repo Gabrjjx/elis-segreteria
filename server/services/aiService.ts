@@ -82,6 +82,7 @@ function generateMaintenanceContext(request: MaintenanceRequest): string {
 
 /**
  * Analizza la query naturale dell'utente tramite l'AI per estrarre parametri di ricerca
+ * Implementazione semplificata che non utilizza OpenAI in caso di errori di quota
  */
 export async function analyzeSearchQuery(query: string): Promise<{
   naturalLanguageResponse: string,
@@ -99,49 +100,72 @@ export async function analyzeSearchQuery(query: string): Promise<{
   }
 }> {
   try {
-    // Prepara il sistema prompt per OpenAI
-    const systemPrompt = `
-      Sei un assistente specializzato nell'analizzare query di ricerca per un sistema di gestione dei servizi e manutenzione per la segreteria ELIS.
-      Il tuo compito è estrarre parametri di ricerca dalla richiesta in linguaggio naturale.
-      
-      Le informazioni sui servizi includono:
-      - Tipo di servizio: "siglatura", "happy_hour", "riparazione"
-      - Stato pagamento: "paid" (pagato), "unpaid" (in attesa)
-      - Date nel formato YYYY-MM-DD
-      - Sigla utente (identificativo dell'utente)
-      - Importo (in Euro)
-      
-      Le informazioni sulle richieste di manutenzione includono:
-      - Stato: "pending", "in_progress", "completed"
-      - Priorità: "low", "medium", "high", "urgent"
-      - Numero della stanza
-      
-      Rispondi con un oggetto JSON contenente:
-      1. "naturalLanguageResponse": una risposta concisa che riassume come hai interpretato la query
-      2. "searchParams": un oggetto con i parametri di ricerca estratti (solo quelli menzionati nella query)
-    `;
-
-    // La richiesta all'API di OpenAI
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: query }
-      ],
-      response_format: { type: "json_object" }
-    });
-
-    // Estrai la risposta
-    const result = JSON.parse(response.choices[0].message.content);
+    // Implementazione semplificata che non usa OpenAI
+    let searchParams: any = {};
     
-    // Restituisci il risultato
+    // Analisi basica basata su parole chiave
+    const lowerQuery = query.toLowerCase();
+    
+    // Ricerca per tipo di servizio
+    if (lowerQuery.includes('siglatura')) {
+      searchParams.serviceType = 'siglatura';
+    } else if (lowerQuery.includes('happy hour') || lowerQuery.includes('happy_hour')) {
+      searchParams.serviceType = 'happy_hour';
+    } else if (lowerQuery.includes('riparazione') || lowerQuery.includes('riparazioni')) {
+      searchParams.serviceType = 'riparazione';
+    }
+    
+    // Ricerca per stato pagamento
+    if (lowerQuery.includes('non pagat') || lowerQuery.includes('in attesa') || lowerQuery.includes('unpaid')) {
+      searchParams.paymentStatus = 'unpaid';
+    } else if (lowerQuery.includes('pagat') || lowerQuery.includes('paid')) {
+      searchParams.paymentStatus = 'paid';
+    }
+    
+    // Estrazione date (implementazione semplificata)
+    if (lowerQuery.includes('maggio')) {
+      const today = new Date();
+      searchParams.dateFrom = new Date(today.getFullYear(), 4, 1).toISOString(); // Maggio è mese 4 (zero-based)
+      searchParams.dateTo = new Date(today.getFullYear(), 4, 31).toISOString();
+    }
+    
+    // Costruisci una risposta naturale in base ai parametri rilevati
+    let naturalLanguageResponse = "Sto cercando ";
+    
+    if (searchParams.serviceType) {
+      const tipoServizio = searchParams.serviceType === 'siglatura' ? 'servizi di siglatura' : 
+                         searchParams.serviceType === 'happy_hour' ? 'consumazioni happy hour' : 
+                         'servizi di riparazione';
+      naturalLanguageResponse += tipoServizio;
+    } else {
+      naturalLanguageResponse += "tutti i servizi";
+    }
+    
+    if (searchParams.paymentStatus) {
+      naturalLanguageResponse += searchParams.paymentStatus === 'paid' ? ' pagati' : ' non pagati';
+    }
+    
+    if (searchParams.dateFrom && searchParams.dateTo) {
+      naturalLanguageResponse += " nel mese di maggio";
+    }
+    
+    naturalLanguageResponse += ".";
+    
+    if (Object.keys(searchParams).length === 0) {
+      naturalLanguageResponse = "Non sono riuscito a capire esattamente cosa stai cercando. Mostro risultati generici.";
+    }
+    
     return {
-      naturalLanguageResponse: result.naturalLanguageResponse,
-      searchParams: result.searchParams || {}
+      naturalLanguageResponse,
+      searchParams
     };
   } catch (error) {
     console.error("Errore durante l'analisi della query:", error);
-    throw error;
+    // Restituisci una risposta generica in caso di errore
+    return {
+      naturalLanguageResponse: "Non sono riuscito a interpretare la tua richiesta. Prova a essere più specifico.",
+      searchParams: {}
+    };
   }
 }
 
@@ -153,59 +177,106 @@ export async function semanticSearch(query: string, limit: number = 10): Promise
   explanation: string
 }> {
   try {
-    // Ottieni l'embedding della query
-    const queryEmbedding = await generateEmbedding(query);
+    // Gestione senza API OpenAI (fallback mode)
+    let searchParams: any = {};
     
-    // Analizza la query per comprendere la richiesta
-    const analysis = await analyzeSearchQuery(query);
+    // Ricerca basica basata su parole chiave senza usare OpenAI
+    const lowerQuery = query.toLowerCase();
+    
+    // Ricerca per tipo di servizio
+    if (lowerQuery.includes('siglatura')) {
+      searchParams.serviceType = 'siglatura';
+    } else if (lowerQuery.includes('happy hour') || lowerQuery.includes('happy_hour')) {
+      searchParams.serviceType = 'happy_hour';
+    } else if (lowerQuery.includes('riparazione') || lowerQuery.includes('riparazioni')) {
+      searchParams.serviceType = 'riparazione';
+    }
+    
+    // Ricerca per stato pagamento
+    if (lowerQuery.includes('non pagat') || lowerQuery.includes('in attesa') || lowerQuery.includes('unpaid')) {
+      searchParams.paymentStatus = 'unpaid';
+    } else if (lowerQuery.includes('pagat') || lowerQuery.includes('paid')) {
+      searchParams.paymentStatus = 'paid';
+    }
+    
+    // Estrazione date (implementazione semplificata)
+    if (lowerQuery.includes('maggio')) {
+      const today = new Date();
+      searchParams.dateFrom = new Date(today.getFullYear(), 4, 1).toISOString(); // Maggio è mese 4 (zero-based)
+      searchParams.dateTo = new Date(today.getFullYear(), 4, 31).toISOString();
+    }
     
     // Ottieni servizi e richieste di manutenzione dal database
     const servicesResponse = await storage.getServices({
       page: 1,
       pageSize: 100,
-      ...analysis.searchParams
+      ...searchParams
     });
     
     const maintenanceResponse = await storage.getMaintenanceRequests({
       page: 1,
       pageSize: 100,
-      ...analysis.searchParams
+      ...searchParams
     });
     
-    // Combina i risultati per la ricerca semantica
+    // Combina i risultati per la ricerca
     const services = servicesResponse.services;
     const maintenanceRequests = maintenanceResponse.requests;
     
-    // Risultati di ricerca
-    const serviceResults: SearchResult[] = await Promise.all(
-      services.map(async (service) => {
-        const context = generateServiceContext(service);
-        const embedding = await generateEmbedding(context);
-        const similarity = cosineSimilarity(queryEmbedding, embedding);
-        
-        return {
-          type: 'service',
-          item: service,
-          matchScore: similarity,
-          highlight: context.substring(0, 150) + '...'
-        };
-      })
-    );
+    // Risultati di ricerca (senza embedding che causano il problema di quota)
+    const serviceResults: SearchResult[] = services.map(service => {
+      const context = generateServiceContext(service);
+      
+      // Calcolo di un punteggio di rilevanza semplificato basato sulla corrispondenza di parole chiave
+      let matchScore = 0.5; // Punteggio base
+      const contextLower = context.toLowerCase();
+      
+      // Aumenta il punteggio se contiene parole chiave della query
+      query.toLowerCase().split(' ').forEach(keyword => {
+        if (keyword.length > 3 && contextLower.includes(keyword)) {
+          matchScore += 0.1;
+        }
+      });
+      
+      // Aggiustamenti per tipo
+      if (searchParams.serviceType && service.type === searchParams.serviceType) {
+        matchScore += 0.3;
+      }
+      
+      // Aggiustamenti per stato pagamento
+      if (searchParams.paymentStatus && service.status === searchParams.paymentStatus) {
+        matchScore += 0.3;
+      }
+      
+      return {
+        type: 'service',
+        item: service,
+        matchScore: Math.min(matchScore, 1), // Limitato a 1
+        highlight: context.substring(0, 150) + '...'
+      };
+    });
     
-    const maintenanceResults: SearchResult[] = await Promise.all(
-      maintenanceRequests.map(async (request) => {
-        const context = generateMaintenanceContext(request);
-        const embedding = await generateEmbedding(context);
-        const similarity = cosineSimilarity(queryEmbedding, embedding);
-        
-        return {
-          type: 'maintenance',
-          item: request,
-          matchScore: similarity,
-          highlight: context.substring(0, 150) + '...'
-        };
-      })
-    );
+    const maintenanceResults: SearchResult[] = maintenanceRequests.map(request => {
+      const context = generateMaintenanceContext(request);
+      
+      // Calcolo di un punteggio di rilevanza semplificato
+      let matchScore = 0.5; // Punteggio base
+      const contextLower = context.toLowerCase();
+      
+      // Aumenta il punteggio se contiene parole chiave della query
+      query.toLowerCase().split(' ').forEach(keyword => {
+        if (keyword.length > 3 && contextLower.includes(keyword)) {
+          matchScore += 0.1;
+        }
+      });
+      
+      return {
+        type: 'maintenance',
+        item: request,
+        matchScore: Math.min(matchScore, 1), // Limitato a 1
+        highlight: context.substring(0, 150) + '...'
+      };
+    });
     
     // Combina e ordina i risultati per rilevanza
     const allResults = [...serviceResults, ...maintenanceResults]
@@ -217,17 +288,17 @@ export async function semanticSearch(query: string, limit: number = 10): Promise
     if (allResults.length === 0) {
       explanation = "Nessun risultato trovato per la tua ricerca. Prova con termini più generali o controlla eventuali errori di battitura.";
     } else {
-      explanation = `Ho trovato ${allResults.length} risultati corrispondenti alla tua ricerca.`;
+      explanation = `Trovati ${allResults.length} risultati corrispondenti alla tua ricerca.`;
       
-      if (analysis.searchParams.serviceType) {
-        explanation += ` Filtrati per tipo di servizio "${analysis.searchParams.serviceType}".`;
+      if (searchParams.serviceType) {
+        explanation += ` Filtrati per tipo di servizio "${searchParams.serviceType}".`;
       }
       
-      if (analysis.searchParams.paymentStatus) {
-        explanation += ` Filtrati per stato di pagamento "${analysis.searchParams.paymentStatus === 'paid' ? 'pagato' : 'non pagato'}".`;
+      if (searchParams.paymentStatus) {
+        explanation += ` Filtrati per stato di pagamento "${searchParams.paymentStatus === 'paid' ? 'pagato' : 'non pagato'}".`;
       }
       
-      if (analysis.searchParams.dateFrom || analysis.searchParams.dateTo) {
+      if (searchParams.dateFrom || searchParams.dateTo) {
         explanation += " Filtrati per date specifiche.";
       }
     }
@@ -239,6 +310,38 @@ export async function semanticSearch(query: string, limit: number = 10): Promise
     };
   } catch (error) {
     console.error("Errore durante la ricerca semantica:", error);
-    throw error;
+    
+    // In caso di errore, restituisci una ricerca di base
+    try {
+      // Ottieni una lista di servizi di base
+      const servicesResponse = await storage.getServices({
+        page: 1,
+        pageSize: limit
+      });
+      
+      const services = servicesResponse.services;
+      
+      // Crea risultati semplificati
+      const simpleResults: SearchResult[] = services.map(service => {
+        const context = generateServiceContext(service);
+        return {
+          type: 'service',
+          item: service,
+          matchScore: 0.5,
+          highlight: context.substring(0, 150) + '...'
+        };
+      });
+      
+      return {
+        results: simpleResults,
+        explanation: "Ricerca semplificata attivata a causa di un errore. Mostrando i servizi più recenti."
+      };
+    } catch (fallbackError) {
+      console.error("Errore anche nella ricerca fallback:", fallbackError);
+      return {
+        results: [],
+        explanation: "Si è verificato un errore durante la ricerca. Riprova più tardi."
+      };
+    }
   }
 }
