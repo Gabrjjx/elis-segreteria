@@ -325,9 +325,9 @@ export class DatabaseStorage implements IStorage {
             }
             
             const request = {
-              requesterName: 'Segnalazione Excel ELIS',
+              requesterName: sigla, // La sigla diventa il richiedente
               requesterEmail: 'segreteria@elis.org',
-              roomNumber: sigla,
+              roomNumber: luogo, // Il luogo diventa la stanza/numero stanza
               requestType: 'Manutenzione',
               description: `${specificLocation}: ${issueDetails}`,
               location: location,
@@ -414,9 +414,9 @@ export class DatabaseStorage implements IStorage {
             }
             
             const request: InsertMaintenanceRequest = {
-              requesterName: 'Segnalazione Excel ELIS',
+              requesterName: sigla, // Sigla come richiedente
               requesterEmail: 'segreteria@elis.org',
-              roomNumber: sigla,
+              roomNumber: location, // Luogo come stanza
               requestType: 'Manutenzione',
               description: `${specificLocation}: ${issueDetails}`,
               location: location,
