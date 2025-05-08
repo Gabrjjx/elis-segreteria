@@ -275,12 +275,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </div>
 
           {/* Mobile Navigation */}
-          <nav className="md:hidden bg-white border-t border-gray-200">
+          <nav className="md:hidden bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50 shadow-lg">
             <div className="flex">
               <a 
                 href="/"
                 className={cn(
-                  "flex-1 flex flex-col items-center py-2",
+                  "flex-1 flex flex-col items-center py-3",
                   location === "/" ? "text-primary" : "text-gray-600"
                 )}
                 onClick={(e) => handleNavigation("/", e)}
@@ -293,15 +293,23 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 <DropdownMenuTrigger asChild>
                   <button
                     className={cn(
-                      "flex-1 flex flex-col items-center py-2",
-                      location === "/services" ? "text-primary" : "text-gray-600"
+                      "flex-1 flex flex-col items-center py-3",
+                      location.includes("/services") && !location.includes("status=unpaid") ? "text-primary" : "text-gray-600"
                     )}
                   >
                     <PackageOpen className="h-5 w-5" />
                     <span className="text-xs mt-1">Servizi</span>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" sideOffset={10} className="w-40">
+                <DropdownMenuContent align="center" side="top" sideOffset={8} className="w-44 rounded-xl mb-2">
+                  <DropdownMenuItem 
+                    onClick={(e) => handleNavigation("/services", e)}
+                    className="flex items-center cursor-pointer"
+                  >
+                    <PackageOpen className="h-4 w-4 mr-2" />
+                    <span>Tutti i servizi</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={(e) => handleNavigation("/services?type=siglatura", e)}
                     className="flex items-center cursor-pointer"
@@ -331,8 +339,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
               <a
                 href="/services?status=unpaid"
                 className={cn(
-                  "flex-1 flex flex-col items-center py-2",
-                  location === "/services?status=unpaid" ? "text-primary" : "text-gray-600"
+                  "flex-1 flex flex-col items-center py-3",
+                  location.includes("status=unpaid") ? "text-primary" : "text-gray-600"
                 )}
                 onClick={(e) => handleNavigation("/services?status=unpaid", e)}
               >
@@ -343,7 +351,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               <a
                 href="/maintenance"
                 className={cn(
-                  "flex-1 flex flex-col items-center py-2",
+                  "flex-1 flex flex-col items-center py-3",
                   location === "/maintenance" ? "text-primary" : "text-gray-600"
                 )}
                 onClick={(e) => handleNavigation("/maintenance", e)}
@@ -352,23 +360,50 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 <span className="text-xs mt-1">Manutenzione</span>
               </a>
               
-              <a
-                href="/reports"
-                className={cn(
-                  "flex-1 flex flex-col items-center py-2",
-                  location === "/reports" ? "text-primary" : "text-gray-600"
-                )}
-                onClick={(e) => handleNavigation("/reports", e)}
-              >
-                <FileBarChart className="h-5 w-5" />
-                <span className="text-xs mt-1">Report</span>
-              </a>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      "flex-1 flex flex-col items-center py-3",
+                      (location === "/reports" || location === "/settings" || location === "/google-auth") ? "text-primary" : "text-gray-600"
+                    )}
+                  >
+                    <Settings className="h-5 w-5" />
+                    <span className="text-xs mt-1">Altro</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" side="top" sideOffset={8} className="w-44 rounded-xl mb-2">
+                  <DropdownMenuItem 
+                    onClick={(e) => handleNavigation("/reports", e)}
+                    className="flex items-center cursor-pointer"
+                  >
+                    <FileBarChart className="h-4 w-4 mr-2" />
+                    <span>Report</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={(e) => handleNavigation("/settings", e)}
+                    className="flex items-center cursor-pointer"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    <span>Impostazioni</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={(e) => handleNavigation("/google-auth", e)}
+                    className="flex items-center cursor-pointer"
+                  >
+                    <Cloud className="h-4 w-4 mr-2" />
+                    <span>Google Auth</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </nav>
         </header>
 
         {/* Page Content */}
-        <div className="p-4 md:p-6 flex-1 bg-gray-50">{children}</div>
+        <div className="p-4 pb-24 md:p-6 md:pb-6 flex-1 bg-gray-50">{children}</div>
       </main>
     </div>
   );
