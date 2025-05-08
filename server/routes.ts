@@ -456,12 +456,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`Indici finali: Sigla=${siglaIdx}, Luogo=${luogoIdx}, Info=${infoIdx}, Ubicazione=${ubicazioneIdx}, Dettagli=${dettagliIdx}, Priorità=${prioritaIdx}`);
         
-        // Verifica colonna stato (risolto/segnalato)
-        const hasStatusColumn = data[1] && data[1][0] && typeof data[1][0] === 'string' && 
-            (data[1][0].toLowerCase().includes('risolto') || data[1][0].toLowerCase().includes('segnalato'));
+        // Verifica intestazione colonna stato (colonna A)
+        const statusHeader = data[0] && data[0][0] ? String(data[0][0]).toLowerCase() : '';
+        const isStatusColumn = statusHeader === 'risolto' || statusHeader.includes('stato');
         
-        if (hasStatusColumn) {
-          console.log("Rilevata colonna di stato risolta/segnalata nel primo campo, la ignoreremo");
+        if (isStatusColumn) {
+          console.log(`✓ Rilevata colonna di stato "${data[0][0]}" nella prima colonna (A)`);
+          
+          // Verifichiamo le prime 5 righe per debug
+          let risolteCount = 0;
+          let pendingCount = 0;
+          for (let i = 1; i < Math.min(data.length, 6); i++) {
+            if (data[i] && data[i][0]) {
+              const statusValue = String(data[i][0]).toLowerCase().trim();
+              if (statusValue === 'risolto') {
+                risolteCount++;
+                console.log(`  • Riga ${i} ha stato "risolto" (valore: "${data[i][0]}")`);
+              } else {
+                pendingCount++;
+                console.log(`  • Riga ${i} NON ha stato "risolto" (valore: "${data[i][0] || '<vuoto>'}")`);
+              }
+            }
+          }
+          console.log(`Analisi prime 5 righe: ${risolteCount} risolte, ${pendingCount} non risolte o in corso`);
+        } else {
+          console.log(`! Nessuna colonna di stato rilevata. Prima colonna ha intestazione: "${data[0][0] || '<vuota>'}"`);
         }
         
         let success = 0;
