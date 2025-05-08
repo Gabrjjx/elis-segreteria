@@ -25,12 +25,13 @@ export default function PaymentsPage() {
   
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
+  const [totalAmount, setTotalAmount] = useState<number>(0);
   
   const [filters, setFilters] = useState({
     query: searchParams.get("query") || "",
     type: (searchParams.get("type") as string) || "all",
     page: parseInt(searchParams.get("page") || "1"),
-    limit: parseInt(searchParams.get("limit") || "20")
+    limit: parseInt(searchParams.get("limit") || "50") // Aumentato per vedere più pagamenti
   });
   
   // Update filters when URL search params change
@@ -40,7 +41,7 @@ export default function PaymentsPage() {
       query: params.get("query") || "",
       type: (params.get("type") as string) || "all",
       page: parseInt(params.get("page") || "1"),
-      limit: parseInt(params.get("limit") || "20")
+      limit: parseInt(params.get("limit") || "50")
     });
   }, [search]);
 
@@ -73,6 +74,13 @@ export default function PaymentsPage() {
       const response = await fetch(`/api/services?${params.toString()}`);
       if (!response.ok) throw new Error("Errore nel caricamento dei pagamenti in sospeso");
       return response.json();
+    },
+    onSuccess: (data) => {
+      // Calcola il totale degli importi da pagare
+      if (data?.services) {
+        const total = data.services.reduce((sum: number, service: Service) => sum + service.amount, 0);
+        setTotalAmount(total);
+      }
     }
   });
 
@@ -208,6 +216,44 @@ export default function PaymentsPage() {
         </div>
       </div>
 
+      {/* Riepilogo pagamenti */}
+      {!isLoading && data?.services?.length > 0 && (
+        <div className="bg-white shadow-md rounded-lg mb-6 overflow-hidden">
+          <div className="bg-blue-50 border-b border-blue-100 px-6 py-4">
+            <div className="flex flex-col md:flex-row justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold text-blue-900">Riepilogo pagamenti da riscuotere</h3>
+                <p className="text-sm text-blue-700 mt-1">
+                  Periodo: <span className="font-medium">{formattedMonth}</span>
+                </p>
+              </div>
+              <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-md px-6 py-3 border border-blue-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700 mr-4">Totale da incassare:</span>
+                  <span className="text-xl font-bold text-destructive">€{totalAmount.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
+              <h4 className="text-sm font-medium text-gray-500">Totale servizi da pagare</h4>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{data.total}</p>
+            </div>
+            <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
+              <h4 className="text-sm font-medium text-gray-500">Servizi visualizzati</h4>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{data.services.length}</p>
+            </div>
+            <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
+              <h4 className="text-sm font-medium text-gray-500">Importo medio</h4>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                €{data.services.length > 0 ? (totalAmount / data.services.length).toFixed(2) : '0.00'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Results section */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="px-4 py-5 border-b border-gray-200">
@@ -251,51 +297,72 @@ export default function PaymentsPage() {
               </div>
             ) : (
               data?.services?.map((service: Service) => (
-                <div key={service.id} className="p-6">
+                <div key={service.id} className="p-6 hover:bg-gray-50 transition-colors">
                   <div className="flex flex-col md:flex-row justify-between">
-                    <div className="flex flex-col mb-4 md:mb-0">
-                      <div className="flex items-center mb-2">
-                        <AlertTriangle className="text-destructive mr-2 h-5 w-5" />
-                        <h4 className="text-lg font-medium">
-                          Pagamento in sospeso: {service.sigla}
-                        </h4>
+                    <div className="flex flex-col mb-4 md:mb-0 md:pr-4 md:border-r md:border-gray-100 md:w-2/3">
+                      <div className="flex items-center mb-3">
+                        <div className="bg-red-50 text-destructive p-2 rounded-full mr-3">
+                          <AlertTriangle className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-900">
+                            Sigla: {service.sigla}
+                          </h4>
+                          <span className="text-sm text-gray-500">
+                            {format(new Date(service.date), "dd MMMM yyyy", { locale: it })}
+                          </span>
+                        </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                        <div>
-                          <p className="text-sm text-gray-500">Data</p>
-                          <p className="font-medium">{format(new Date(service.date), "dd/MM/yyyy")}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Tipologia</p>
-                          <p className="font-medium">{getServiceTypeName(service.type)}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">N. Pezzi</p>
-                          <p className="font-medium">{service.pieces}</p>
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 mb-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <div className="flex items-center">
+                              <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                              <p className="text-sm font-medium text-gray-700">Tipologia</p>
+                            </div>
+                            <p className="mt-1 font-semibold pl-5">{getServiceTypeName(service.type)}</p>
+                          </div>
+                          <div>
+                            <div className="flex items-center">
+                              <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                              <p className="text-sm font-medium text-gray-700">N. Pezzi</p>
+                            </div>
+                            <p className="mt-1 font-semibold pl-5">{service.pieces}</p>
+                          </div>
+                          <div>
+                            <div className="flex items-center">
+                              <span className="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                              <p className="text-sm font-medium text-gray-700">Stato</p>
+                            </div>
+                            <p className="mt-1 font-semibold text-destructive pl-5">Non pagato</p>
+                          </div>
                         </div>
                       </div>
                       
                       {service.notes && (
-                        <div className="mt-3">
-                          <p className="text-sm text-gray-500">Note</p>
-                          <p className="text-sm">{service.notes}</p>
+                        <div className="mt-2">
+                          <p className="text-sm font-medium text-gray-700 mb-1">Note:</p>
+                          <p className="text-sm text-gray-600 bg-yellow-50 p-2 rounded border border-yellow-100">
+                            {service.notes}
+                          </p>
                         </div>
                       )}
                     </div>
                     
-                    <div className="flex flex-col items-end justify-between">
-                      <div className="text-right mb-4">
-                        <p className="text-sm text-gray-500">Importo da pagare</p>
-                        <p className="text-xl font-bold text-destructive">€{service.amount.toFixed(2)}</p>
+                    <div className="flex flex-col items-center md:items-end justify-center md:w-1/3 md:pl-4">
+                      <div className="bg-white shadow-sm rounded-lg p-5 border border-gray-100 mb-4 w-full md:w-auto text-center md:text-right">
+                        <p className="text-sm font-medium text-gray-500 mb-1">Importo da pagare</p>
+                        <p className="text-3xl font-bold text-destructive">€{service.amount.toFixed(2)}</p>
                       </div>
                       
                       <Button 
                         onClick={() => handleMarkAsPaid(service.id)}
                         variant="default"
-                        className="w-full md:w-auto"
+                        size="lg"
+                        className="w-full md:w-auto font-semibold bg-green-600 hover:bg-green-700 text-white"
                       >
-                        <Receipt className="mr-2 h-4 w-4" />
+                        <Receipt className="mr-2 h-5 w-5" />
                         Segna come pagato
                       </Button>
                     </div>
