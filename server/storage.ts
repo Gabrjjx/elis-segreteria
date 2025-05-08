@@ -750,15 +750,53 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset);
     
+    // Arricchisci i risultati con i dati degli studenti
+    const enrichedServices = await Promise.all(
+      resultServices.map(async (service) => {
+        if (service.sigla) {
+          const student = await this.getStudentBySigla(service.sigla);
+          if (student) {
+            return {
+              ...service,
+              student: {
+                firstName: student.firstName,
+                lastName: student.lastName
+              }
+            };
+          }
+        }
+        return service;
+      })
+    );
+    
     return {
-      services: resultServices,
+      services: enrichedServices,
       total: Number(total)
     };
   }
 
-  async getService(id: number): Promise<Service | undefined> {
+  async getService(id: number): Promise<(Service & { student?: { firstName: string, lastName: string } }) | undefined> {
     const [service] = await db.select().from(services).where(eq(services.id, id));
-    return service || undefined;
+    
+    if (!service) {
+      return undefined;
+    }
+    
+    // Ottieni informazioni sullo studente se presente
+    if (service.sigla) {
+      const student = await this.getStudentBySigla(service.sigla);
+      if (student) {
+        return {
+          ...service,
+          student: {
+            firstName: student.firstName,
+            lastName: student.lastName
+          }
+        };
+      }
+    }
+    
+    return service;
   }
 
   async createService(insertService: InsertService): Promise<Service> {
@@ -929,7 +967,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getPendingPayments(dateFilter?: { startDate?: Date, endDate?: Date }): Promise<Service[]> {
+  async getPendingPayments(dateFilter?: { startDate?: Date, endDate?: Date }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]> {
     let query = db
       .select()
       .from(services)
@@ -943,10 +981,31 @@ export class DatabaseStorage implements IStorage {
       query = query.where(lte(services.date, dateFilter.endDate));
     }
     
-    return query.orderBy(desc(services.date));
+    const resultServices = await query.orderBy(desc(services.date));
+    
+    // Arricchisci i risultati con i dati degli studenti
+    const enrichedServices = await Promise.all(
+      resultServices.map(async (service) => {
+        if (service.sigla) {
+          const student = await this.getStudentBySigla(service.sigla);
+          if (student) {
+            return {
+              ...service,
+              student: {
+                firstName: student.firstName,
+                lastName: student.lastName
+              }
+            };
+          }
+        }
+        return service;
+      })
+    );
+    
+    return enrichedServices;
   }
 
-  async getRecentServices(limit: number, dateFilter?: { startDate?: Date, endDate?: Date }): Promise<Service[]> {
+  async getRecentServices(limit: number, dateFilter?: { startDate?: Date, endDate?: Date }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]> {
     let query = db
       .select()
       .from(services);
@@ -959,9 +1018,30 @@ export class DatabaseStorage implements IStorage {
       query = query.where(lte(services.date, dateFilter.endDate));
     }
     
-    return query
+    const resultServices = await query
       .orderBy(desc(services.date))
       .limit(limit);
+      
+    // Arricchisci i risultati con i dati degli studenti
+    const enrichedServices = await Promise.all(
+      resultServices.map(async (service) => {
+        if (service.sigla) {
+          const student = await this.getStudentBySigla(service.sigla);
+          if (student) {
+            return {
+              ...service,
+              student: {
+                firstName: student.firstName,
+                lastName: student.lastName
+              }
+            };
+          }
+        }
+        return service;
+      })
+    );
+    
+    return enrichedServices;
   }
 
   // Initialize sample data - only used for first setup
