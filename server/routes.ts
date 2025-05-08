@@ -593,23 +593,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`Riga ${i} - Richiedente: "${richiedente}", Stanza: "${stanza}", Data: "${timestamp}", Priorità: "${priorita}"`);
             }
             
-            // Crea la richiesta di manutenzione se la stanza non è vuota
+            // Verifica se la richiesta è stata risolta (colonna A)
+            let isRisolto = false;
+            if (isStatusColumn && row[0] && typeof row[0] === 'string' && String(row[0]).toLowerCase().trim() === 'risolto') {
+              isRisolto = true;
+              console.log(`Riga ${i} è marcata come RISOLTA nel foglio, stato: "${row[0]}"`);
+            }
+            
+            // Crea la richiesta di manutenzione se la stanza non è vuota e non è risolta
             if (stanza && stanza !== "N/D") {
-              await storage.createMaintenanceRequest({
-                requesterName: richiedente,
-                requesterEmail: "segreteria@elis.org",
-                roomNumber: stanza,
-                requestType: "Manutenzione",
-                description: descrizione,
-                location: stanza,
-                status: MaintenanceRequestStatus.PENDING,
-                priority: priorita,
-                notes: `Importato dal foglio Google
+              // Creiamo un identificatore univoco per questa richiesta combinando alcuni campi
+              const uniqueId = `${richiedente}_${stanza}_${timestamp.toISOString()}`;
+              const hashId = Buffer.from(uniqueId).toString('base64').substring(0, 15);
+              
+              // Prima cerchiamo se esiste già una richiesta simile per evitare duplicati
+              const existingRequests = await storage.getMaintenanceRequests({
+                query: stanza,
+                status: "all",
+                priority: "all",
+                page: 1,
+                limit: 10
+              });
+              
+              // Verifichiamo se c'è una richiesta simile controllando data, stanza e richiedente
+              let isExisting = false;
+              if (existingRequests && existingRequests.requests) {
+                for (const existing of existingRequests.requests) {
+                  // Confronta i campi principali
+                  const sameRoom = existing.roomNumber === stanza;
+                  const sameRequester = existing.requesterName === richiedente;
+                  
+                  // Confronta le date con un margine di 1 giorno
+                  const existingDate = new Date(existing.timestamp);
+                  const timeDiff = Math.abs(timestamp.getTime() - existingDate.getTime());
+                  const daysDiff = timeDiff / (1000 * 3600 * 24);
+                  const closeDate = daysDiff < 1; // Meno di un giorno di differenza
+                  
+                  if (sameRoom && sameRequester && closeDate) {
+                    console.log(`Riga ${i} è un duplicato (richiesta già esistente con ID ${existing.id})`);
+                    isExisting = true;
+                    break;
+                  }
+                }
+              }
+              
+              // Se è risolta o è un duplicato, saltiamo
+              if (isRisolto) {
+                console.log(`Riga ${i} saltata perché è già risolta`);
+                failed++;
+              } else if (isExisting) {
+                console.log(`Riga ${i} saltata perché è un duplicato`);
+                failed++;
+              } else {
+                // Determiniamo lo stato in base alla colonna A
+                const status = (row[0] && String(row[0]).toLowerCase().trim() === 'risolto') 
+                  ? MaintenanceRequestStatus.COMPLETED
+                  : MaintenanceRequestStatus.PENDING;
+                
+                console.log(`Riga ${i}: Impostazione stato a ${status} (valore colonna: "${row[0] || 'vuoto'}")`);
+                
+                // Creiamo una nuova richiesta
+                await storage.createMaintenanceRequest({
+                  requesterName: richiedente,
+                  requesterEmail: "segreteria@elis.org",
+                  roomNumber: stanza,
+                  requestType: "Manutenzione",
+                  description: descrizione,
+                  location: stanza,
+                  status: status,
+                  priority: priorita,
+                  notes: `Importato dal foglio Google
 Data: ${infoIdx >= 0 && infoIdx < row.length ? row[infoIdx] : "N/D"}
 Ubicazione specifica: ${ubicazione}
-Dettagli del difetto: ${dettagli}`
-              });
-              success++;
+Dettagli del difetto: ${dettagli}
+RifID: ${hashId}`
+                });
+                success++;
+                console.log(`Riga ${i} importata con successo [ID: ${hashId}]`);
+              }
             } else {
               console.log(`Riga ${i} saltata perché la stanza/luogo è vuoto`);
               failed++;
