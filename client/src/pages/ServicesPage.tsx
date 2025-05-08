@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,19 @@ export default function ServicesPage() {
     page: parseInt(searchParams.get("page") || "1"),
     limit: parseInt(searchParams.get("limit") || "10")
   });
+  
+  // Update filters when URL search params change
+  useEffect(() => {
+    console.log("URL search params changed:", search);
+    const params = new URLSearchParams(search);
+    setFilters({
+      query: params.get("query") || "",
+      type: (params.get("type") as ServiceTypeValue) || "all",
+      status: (params.get("status") as PaymentStatusValue) || "all",
+      page: parseInt(params.get("page") || "1"),
+      limit: parseInt(params.get("limit") || "10")
+    });
+  }, [search]);
 
   // Fetch services with filters
   const { data, isLoading } = useQuery({
