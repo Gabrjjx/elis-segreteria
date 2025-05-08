@@ -331,8 +331,13 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   console.log("DATI RICHIESTA:", {
     id: request.id,
     timestamp: request.timestamp,
-    notes: request.notes,
-    description: request.description,
+    notes: request.notes || "NOTES MISSING",
+    description: request.description || "DESCRIPTION MISSING",
+    requesterName: request.requesterName || "NAME MISSING",
+    requesterEmail: request.requesterEmail || "EMAIL MISSING",
+    roomNumber: request.roomNumber || "ROOM MISSING",
+    location: request.location || "LOCATION MISSING",
+    requestType: request.requestType || "TYPE MISSING",
     ubicazione: extractUbicazione(request),
     dettagli: extractDettagli(request),
     dataOriginale: extractOriginalDate(request)
