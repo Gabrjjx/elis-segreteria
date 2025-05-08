@@ -290,7 +290,7 @@ export class DatabaseStorage implements IStorage {
             const requestStatus = MaintenanceRequestStatus.PENDING;
             
             // Determina priorità basata sul valore di priorità o dal testo dell'issue
-            let priority = MaintenanceRequestStatus.PENDING;
+            let priority = MaintenanceRequestPriority.MEDIUM;
             
             // Prima controlliamo il campo priorità esplicito
             if (priorityText) {
