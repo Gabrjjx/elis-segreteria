@@ -76,15 +76,27 @@ export default function PaymentsPage() {
       return response.json();
     },
     onSuccess: (data) => {
+      console.log('onSuccess chiamato con data:', data);
       // Calcola il totale degli importi da pagare (solo servizi non pagati)
       if (data && data.services) {
         // Filtra solo i servizi con status="unpaid"
         const unpaidServices = data.services.filter((service: Service) => service.status === 'unpaid');
         console.log('Servizi non pagati:', unpaidServices);
-        const total = unpaidServices.reduce((sum: number, service: Service) => sum + service.amount, 0);
+        
+        // Verifica se gli importi sono numeri validi
+        unpaidServices.forEach((service: Service) => {
+          console.log(`Servizio ${service.id}, importo: ${service.amount}, tipo: ${typeof service.amount}`);
+        });
+        
+        const total = unpaidServices.reduce((sum: number, service: Service) => {
+          const amount = typeof service.amount === 'number' ? service.amount : parseFloat(service.amount as any);
+          return sum + (isNaN(amount) ? 0 : amount);
+        }, 0);
+        
         console.log('Totale calcolato:', total);
         setTotalAmount(total);
       } else {
+        console.log('Nessun dato valido, totale impostato a 0');
         setTotalAmount(0);
       }
     }
