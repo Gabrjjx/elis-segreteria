@@ -257,7 +257,7 @@ export default function PaymentsPage() {
                 }}
               >
                 <SelectTrigger className="w-full md:w-[180px] mt-1">
-                  <SelectValue placeholder="Tipologia servizio" />
+                  <SelectValue placeholder="Tutte le tipologie" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tutte le tipologie</SelectItem>
