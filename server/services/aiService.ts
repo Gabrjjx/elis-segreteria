@@ -108,19 +108,19 @@ export async function analyzeSearchQuery(query: string): Promise<{
     
     // Ricerca per tipo di servizio
     if (lowerQuery.includes('siglatura')) {
-      searchParams.serviceType = 'siglatura';
+      searchParams.type = 'siglatura';
     } else if (lowerQuery.includes('happy hour') || lowerQuery.includes('happy_hour')) {
-      searchParams.serviceType = 'happy_hour';
+      searchParams.type = 'happy_hour';
     } else if (lowerQuery.includes('riparazione') || lowerQuery.includes('riparazioni')) {
-      searchParams.serviceType = 'riparazione';
+      searchParams.type = 'riparazione';
     }
     
     // Ricerca per stato pagamento
     if (lowerQuery.includes('non pagat') || lowerQuery.includes('in attesa') || lowerQuery.includes('unpaid') || 
       (lowerQuery.includes('pagament') && lowerQuery.includes('attesa'))) {
-      searchParams.paymentStatus = 'unpaid';
+      searchParams.status = 'unpaid';
     } else if (lowerQuery.includes('pagat') || lowerQuery.includes('paid')) {
-      searchParams.paymentStatus = 'paid';
+      searchParams.status = 'paid';
     }
     
     // Estrazione date (implementazione semplificata)
@@ -133,17 +133,17 @@ export async function analyzeSearchQuery(query: string): Promise<{
     // Costruisci una risposta naturale in base ai parametri rilevati
     let naturalLanguageResponse = "Sto cercando ";
     
-    if (searchParams.serviceType) {
-      const tipoServizio = searchParams.serviceType === 'siglatura' ? 'servizi di siglatura' : 
-                         searchParams.serviceType === 'happy_hour' ? 'consumazioni happy hour' : 
+    if (searchParams.type) {
+      const tipoServizio = searchParams.type === 'siglatura' ? 'servizi di siglatura' : 
+                         searchParams.type === 'happy_hour' ? 'consumazioni happy hour' : 
                          'servizi di riparazione';
       naturalLanguageResponse += tipoServizio;
     } else {
       naturalLanguageResponse += "tutti i servizi";
     }
     
-    if (searchParams.paymentStatus) {
-      naturalLanguageResponse += searchParams.paymentStatus === 'paid' ? ' pagati' : ' non pagati';
+    if (searchParams.status) {
+      naturalLanguageResponse += searchParams.status === 'paid' ? ' pagati' : ' non pagati';
     }
     
     if (searchParams.dateFrom && searchParams.dateTo) {
@@ -186,19 +186,19 @@ export async function semanticSearch(query: string, limit: number = 10): Promise
     
     // Ricerca per tipo di servizio
     if (lowerQuery.includes('siglatura')) {
-      searchParams.serviceType = 'siglatura';
+      searchParams.type = 'siglatura';
     } else if (lowerQuery.includes('happy hour') || lowerQuery.includes('happy_hour')) {
-      searchParams.serviceType = 'happy_hour';
+      searchParams.type = 'happy_hour';
     } else if (lowerQuery.includes('riparazione') || lowerQuery.includes('riparazioni')) {
-      searchParams.serviceType = 'riparazione';
+      searchParams.type = 'riparazione';
     }
     
     // Ricerca per stato pagamento
     if (lowerQuery.includes('non pagat') || lowerQuery.includes('in attesa') || lowerQuery.includes('unpaid') || 
       (lowerQuery.includes('pagament') && lowerQuery.includes('attesa'))) {
-      searchParams.paymentStatus = 'unpaid';
+      searchParams.status = 'unpaid';
     } else if (lowerQuery.includes('pagat') || lowerQuery.includes('paid')) {
-      searchParams.paymentStatus = 'paid';
+      searchParams.status = 'paid';
     }
     
     // Estrazione date (implementazione semplificata)
@@ -209,6 +209,7 @@ export async function semanticSearch(query: string, limit: number = 10): Promise
     }
     
     // Ottieni servizi e richieste di manutenzione dal database
+    console.log("Parametri di ricerca:", searchParams);
     const servicesResponse = await storage.getServices({
       page: 1,
       pageSize: 100,
@@ -241,12 +242,12 @@ export async function semanticSearch(query: string, limit: number = 10): Promise
       });
       
       // Aggiustamenti per tipo
-      if (searchParams.serviceType && service.type === searchParams.serviceType) {
+      if (searchParams.type && service.type === searchParams.type) {
         matchScore += 0.3;
       }
       
       // Aggiustamenti per stato pagamento
-      if (searchParams.paymentStatus && service.status === searchParams.paymentStatus) {
+      if (searchParams.status && service.status === searchParams.status) {
         matchScore += 0.3;
       }
       
@@ -292,12 +293,12 @@ export async function semanticSearch(query: string, limit: number = 10): Promise
     } else {
       explanation = `Trovati ${allResults.length} risultati corrispondenti alla tua ricerca.`;
       
-      if (searchParams.serviceType) {
-        explanation += ` Filtrati per tipo di servizio "${searchParams.serviceType}".`;
+      if (searchParams.type) {
+        explanation += ` Filtrati per tipo di servizio "${searchParams.type}".`;
       }
       
-      if (searchParams.paymentStatus) {
-        explanation += ` Filtrati per stato di pagamento "${searchParams.paymentStatus === 'paid' ? 'pagato' : 'non pagato'}".`;
+      if (searchParams.status) {
+        explanation += ` Filtrati per stato di pagamento "${searchParams.status === 'paid' ? 'pagato' : 'non pagato'}".`;
       }
       
       if (searchParams.dateFrom || searchParams.dateTo) {
