@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import * as fs from "fs";
 import { storage } from "./storage";
 import { 
   insertServiceSchema, 
@@ -11,7 +12,7 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { getMaintenanceRequestsCSV, readGoogleSheet, isSheetLoaded } from "./services/googleSheets";
+import { getMaintenanceRequestsCSV, readGoogleSheet, isSheetLoaded, findRequestRowInGoogleSheet, updateGoogleSheetStatus } from "./services/googleSheets";
 import { 
   hasOAuth2Credentials, 
   hasValidToken, 
@@ -582,7 +583,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       try {
-        await getTokenFromCode(code);
+        console.log("Codice di autorizzazione ricevuto:", code ? `${code.substring(0, 10)}...` : 'mancante');
+        // Otteniamo il token e lo salviamo
+        const token = await getTokenFromCode(code);
+        console.log("Token ottenuto:", token ? "presente" : "non presente");
+        
+        // Verifichiamo se il token è stato salvato correttamente
+        const tokenPath = "./google-token.json";
+        const tokenSaved = fs.existsSync(tokenPath);
+        console.log(`Verifica file token in ${tokenPath}:`, tokenSaved ? "presente" : "non presente");
+        
+        if (!tokenSaved && token) {
+          // Tenta di salvare manualmente il token
+          try {
+            console.log("Tentativo di salvataggio manuale del token...");
+            fs.writeFileSync(tokenPath, JSON.stringify(token), { mode: 0o600 });
+            console.log("Token salvato manualmente con successo");
+          } catch (saveError) {
+            console.error("Errore nel salvataggio manuale del token:", saveError);
+          }
+        }
+        
+        // Verifica la validità del token
+        const isValid = await verifyToken();
+        console.log("Verifica validità token:", isValid ? "valido" : "non valido");
         
         // Reindirizza alla pagina di autenticazione Google con un messaggio di successo
         res.send(`
@@ -598,6 +622,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <body>
               <h1>Autenticazione completata con successo!</h1>
               <p>Reindirizzamento in corso...</p>
+              <p>Dettagli:</p>
+              <ul>
+                <li>Token salvato: ${tokenSaved ? "✓" : "✗"}</li>
+                <li>Token valido: ${isValid ? "✓" : "✗"}</li>
+              </ul>
               <p>Se non vieni reindirizzato automaticamente, <a href="/google-auth?success=true">clicca qui</a>.</p>
             </body>
           </html>
