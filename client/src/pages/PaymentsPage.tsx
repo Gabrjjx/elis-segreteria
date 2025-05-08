@@ -249,6 +249,11 @@ export default function PaymentsPage() {
                     console.log("Nuovi filtri impostati:", newFilters);
                     return newFilters;
                   });
+                  // Esegui immediatamente refetch quando cambia il tipo
+                  setTimeout(() => {
+                    console.log("Esecuzione refetch dopo cambio filtro tipo:", value);
+                    refetch();
+                  }, 100);
                 }}
               >
                 <SelectTrigger className="w-full md:w-[180px] mt-1">
