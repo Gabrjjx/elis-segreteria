@@ -76,13 +76,15 @@ export default function GoogleAuthPage() {
   };
   
   // Carica lo stato solo all'avvio del componente, usando unmounted flag
+  // Carica lo stato solo all'avvio del componente, NON come dipendenza per evitare loop infinito
   useEffect(() => {
-    console.log("useEffect per fetchAuthStatus eseguito");
+    console.log("useEffect per fetchAuthStatus eseguito - SOLO MOUNT");
     let isMounted = true;
     
     const loadAuthStatus = async () => {
+      if (!isMounted) return;
+      
       try {
-        if (!isMounted) return;
         // Imposta il caricamento
         setIsStatusLoading(true);
         
@@ -106,7 +108,7 @@ export default function GoogleAuthPage() {
         console.log("Risultato API fetchAuthStatus:", data);
         
         if (isMounted) {
-          // Aggiorniamo lo stato solo se i dati sono diversi da quelli attuali
+          // Aggiorniamo lo stato direttamente
           setAuthStatus(data);
           setIsStatusLoading(false);
         }
@@ -128,7 +130,8 @@ export default function GoogleAuthPage() {
     return () => {
       isMounted = false;
     };
-  }, [toast]);
+  // Array vuoto assicura che venga eseguito solo al mount
+  }, []);
 
   // Mutation per ottenere l'URL di autorizzazione
   const getAuthUrlMutation = useMutation({

@@ -30,13 +30,11 @@ export function createOAuth2Client(): OAuth2Client {
     throw new Error('Credenziali OAuth2 mancanti. Configurare GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET');
   }
 
-  // Utilizziamo un flusso "installed application" senza redirect URI (OOB)
-  // Questo è perfetto per applicazioni che non possono ricevere callback URL
-  // Vedere: https://developers.google.com/identity/protocols/oauth2/native-app
+  // Utilizziamo l'approccio più semplice possibile senza redirect URI
+  // Questo dovrebbe funzionare indipendentemente dalle impostazioni della console Google Cloud
   const client = new OAuth2Client({
     clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    redirectUri: 'urn:ietf:wg:oauth:2.0:oob' // Specifico per flusso out-of-band (OOB)
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET
   });
 
   oAuth2Client = client;
@@ -90,9 +88,11 @@ export function getAuthorizationUrl(): string {
   }
 
   return oAuth2Client.generateAuthUrl({
-    access_type: 'offline',
+    access_type: 'offline', 
     scope: SCOPES,
     prompt: 'consent', // Forza il refresh token
+    // Aggiungiamo esplicitamente l'URI di redirect nullo
+    redirect_uri: 'https://developers.google.com/oauthplayground'
   });
 }
 
@@ -109,7 +109,13 @@ export async function getTokenFromCode(code: string): Promise<any> {
   }
 
   try {
-    const { tokens } = await oAuth2Client.getToken(code);
+    // È importante utilizzare lo stesso redirect_uri usato nella generazione dell'URL
+    const { tokens } = await oAuth2Client.getToken({
+      code,
+      redirect_uri: 'https://developers.google.com/oauthplayground'
+    });
+    
+    log(`Token ottenuto con successo: ${JSON.stringify(tokens).substring(0, 50)}...`, 'googleAuth');
     oAuth2Client.setCredentials(tokens);
     saveToken(tokens);
     return tokens;
