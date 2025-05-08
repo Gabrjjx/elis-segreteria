@@ -8,6 +8,8 @@ import MainLayout from "@/components/layout/MainLayout";
 import Dashboard from "@/pages/Dashboard";
 import ServicesPage from "@/pages/ServicesPage";
 import ServiceForm from "@/pages/ServiceForm";
+import ReportsPage from "@/pages/ReportsPage";
+import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -20,6 +22,8 @@ function Router() {
         <Route path="/services/:id/edit">
           {params => <ServiceForm id={params.id} />}
         </Route>
+        <Route path="/reports" component={ReportsPage} />
+        <Route path="/settings" component={SettingsPage} />
         <Route component={NotFound} />
       </Switch>
     </MainLayout>
