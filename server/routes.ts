@@ -479,7 +479,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             // Timestamp dalle "Informazioni cronologiche"
-            const timestamp = infoIdx >= 0 && infoIdx < row.length ? row[infoIdx] || new Date().toISOString() : new Date().toISOString();
+            let timestamp;
+            
+            if (infoIdx >= 0 && infoIdx < row.length && row[infoIdx]) {
+              // Formato tipico delle date nel foglio: "13/06/2022 16.37.17"
+              const rawDate = row[infoIdx];
+              
+              try {
+                // Convertire la data dal formato italiano al formato ISO
+                const parts = String(rawDate).split(' ');
+                if (parts.length >= 1) {
+                  const dateParts = parts[0].split('/');
+                  if (dateParts.length === 3) {
+                    // La data è nel formato GG/MM/AAAA
+                    const day = dateParts[0].padStart(2, '0');
+                    const month = dateParts[1].padStart(2, '0'); 
+                    const year = dateParts[2];
+                    
+                    // Se è presente anche l'ora
+                    let timeStr = "";
+                    if (parts.length > 1) {
+                      timeStr = parts[1].replace(/\./g, ':');
+                    }
+                    
+                    // Formato finale: AAAA-MM-GG oppure AAAA-MM-GG HH:MM:SS
+                    timestamp = timeStr ? `${year}-${month}-${day} ${timeStr}` : `${year}-${month}-${day}`;
+                  } else {
+                    timestamp = String(rawDate);
+                  }
+                } else {
+                  timestamp = String(rawDate);
+                }
+              } catch (e) {
+                console.error("Errore parsing data:", e);
+                timestamp = String(rawDate);
+              }
+            } else {
+              timestamp = new Date().toISOString();
+            }
             
             // Richiedente dalla "Sigla"
             let richiedente = "T00"; // Valore predefinito
@@ -539,7 +576,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 location: stanza,
                 status: MaintenanceRequestStatus.PENDING,
                 priority: priorita,
-                notes: ""
+                notes: "",
+                timestamp: timestamp
               });
               success++;
             } else {
