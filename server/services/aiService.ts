@@ -116,7 +116,8 @@ export async function analyzeSearchQuery(query: string): Promise<{
     }
     
     // Ricerca per stato pagamento
-    if (lowerQuery.includes('non pagat') || lowerQuery.includes('in attesa') || lowerQuery.includes('unpaid')) {
+    if (lowerQuery.includes('non pagat') || lowerQuery.includes('in attesa') || lowerQuery.includes('unpaid') || 
+      (lowerQuery.includes('pagament') && lowerQuery.includes('attesa'))) {
       searchParams.paymentStatus = 'unpaid';
     } else if (lowerQuery.includes('pagat') || lowerQuery.includes('paid')) {
       searchParams.paymentStatus = 'paid';
@@ -193,7 +194,8 @@ export async function semanticSearch(query: string, limit: number = 10): Promise
     }
     
     // Ricerca per stato pagamento
-    if (lowerQuery.includes('non pagat') || lowerQuery.includes('in attesa') || lowerQuery.includes('unpaid')) {
+    if (lowerQuery.includes('non pagat') || lowerQuery.includes('in attesa') || lowerQuery.includes('unpaid') || 
+      (lowerQuery.includes('pagament') && lowerQuery.includes('attesa'))) {
       searchParams.paymentStatus = 'unpaid';
     } else if (lowerQuery.includes('pagat') || lowerQuery.includes('paid')) {
       searchParams.paymentStatus = 'paid';
