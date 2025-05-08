@@ -49,16 +49,34 @@ export const insertServiceSchema = createInsertSchema(services).pick({
 }).extend({
   // Accept date as string (ISO format) or Date object
   date: z.string().or(z.date()).transform((val) => {
+    // Log per debug
+    console.log(`Schema validazione data ricevuta: ${val}, tipo: ${typeof val}`);
+    
     if (typeof val === 'string') {
       // Parse the string to a Date object
-      const date = new Date(val);
-      // Validate the date
-      if (isNaN(date.getTime())) {
-        throw new Error("Invalid date format");
+      try {
+        const date = new Date(val);
+        // Validate the date
+        if (isNaN(date.getTime())) {
+          console.log(`Data non valida: ${val}`);
+          throw new Error("Invalid date format");
+        }
+        console.log(`Data valida, return stringa: ${val}`);
+        return val; // Return the string as is, will be parsed in storage
+      } catch (error) {
+        console.error(`Errore parsing data: ${error}`);
+        throw error;
       }
-      return val; // Return the string as is, will be parsed in storage
     }
-    return val instanceof Date ? val.toISOString() : val;
+    
+    if (val instanceof Date) {
+      const isoString = val.toISOString();
+      console.log(`Data come Date, convertita in: ${isoString}`);
+      return isoString;
+    }
+    
+    console.log(`Tipo non gestito: ${typeof val}, valore: ${val}`);
+    return String(val);
   }),
   type: z.enum([
     ServiceType.SIGLATURA,
