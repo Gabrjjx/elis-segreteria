@@ -562,6 +562,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // OAuth2 callback handler
+  app.get("/oauth2callback", async (req: Request, res: Response) => {
+    try {
+      const code = req.query.code as string;
+      
+      if (!code) {
+        return res.status(400).send(`
+          <html>
+            <head><title>Errore di autenticazione</title></head>
+            <body>
+              <h1>Errore di autenticazione</h1>
+              <p>Codice di autorizzazione mancante.</p>
+              <p><a href="/">Torna all'applicazione</a></p>
+            </body>
+          </html>
+        `);
+      }
+      
+      try {
+        await getTokenFromCode(code);
+        
+        // Reindirizza alla pagina di autenticazione Google con un messaggio di successo
+        res.send(`
+          <html>
+            <head>
+              <title>Autenticazione completata</title>
+              <script>
+                window.onload = function() {
+                  window.location.href = '/google-auth?success=true';
+                }
+              </script>
+            </head>
+            <body>
+              <h1>Autenticazione completata con successo!</h1>
+              <p>Reindirizzamento in corso...</p>
+              <p>Se non vieni reindirizzato automaticamente, <a href="/google-auth?success=true">clicca qui</a>.</p>
+            </body>
+          </html>
+        `);
+      } catch (error) {
+        console.error("OAuth callback error:", error);
+        res.status(500).send(`
+          <html>
+            <head><title>Errore di autenticazione</title></head>
+            <body>
+              <h1>Errore durante l'autenticazione</h1>
+              <p>${error instanceof Error ? error.message : "Errore sconosciuto"}</p>
+              <p><a href="/google-auth">Torna alla pagina di autenticazione</a></p>
+            </body>
+          </html>
+        `);
+      }
+    } catch (error) {
+      console.error("OAuth callback general error:", error);
+      res.status(500).send("Errore durante il callback OAuth2.");
+    }
+  });
 
   // Synchronize maintenance requests from Google Sheets
   // Sincronizzare lo stato delle richieste di manutenzione verso Google Sheets

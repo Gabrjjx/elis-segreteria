@@ -30,11 +30,13 @@ export function createOAuth2Client(): OAuth2Client {
     throw new Error('Credenziali OAuth2 mancanti. Configurare GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET');
   }
 
-  // Utilizziamo l'approccio più semplice possibile senza redirect URI
-  // Questo dovrebbe funzionare indipendentemente dalle impostazioni della console Google Cloud
+  // Configuriamo il client con un redirect URI specifico
+  const redirectUri = 'https://segreteria-manager.replit.app/oauth2callback';
+  
   const client = new OAuth2Client({
     clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    redirectUri: redirectUri
   });
 
   oAuth2Client = client;
