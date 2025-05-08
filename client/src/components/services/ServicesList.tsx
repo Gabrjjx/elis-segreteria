@@ -207,9 +207,13 @@ export default function ServiceList({
                 </TableCell>
                 <TableCell className="font-medium">
                   {service.sigla}
-                  {service.student && (
+                  {service.student ? (
                     <div className="text-xs text-gray-500">
                       {service.student.firstName} {service.student.lastName}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-400 italic">
+                      Nessun studente associato
                     </div>
                   )}
                 </TableCell>
@@ -286,9 +290,13 @@ export default function ServiceList({
             <div className="flex justify-between items-start mb-2">
               <div>
                 <div className="text-lg font-semibold">{service.sigla}</div>
-                {service.student && (
+                {service.student ? (
                   <div className="text-xs text-gray-600">
                     {service.student.firstName} {service.student.lastName}
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-400 italic">
+                    Nessun studente associato
                   </div>
                 )}
                 <div className="text-sm text-gray-500">{format(new Date(service.date), "dd/MM/yyyy")}</div>
