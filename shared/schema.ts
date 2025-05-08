@@ -40,7 +40,6 @@ export const defaultPrices = {
 
 // Service insert schema
 export const insertServiceSchema = createInsertSchema(services).pick({
-  date: true,
   sigla: true,
   pieces: true,
   type: true,
@@ -48,6 +47,19 @@ export const insertServiceSchema = createInsertSchema(services).pick({
   status: true,
   notes: true,
 }).extend({
+  // Accept date as string (ISO format) or Date object
+  date: z.string().or(z.date()).transform((val) => {
+    if (typeof val === 'string') {
+      // Parse the string to a Date object
+      const date = new Date(val);
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        throw new Error("Invalid date format");
+      }
+      return val; // Return the string as is, will be parsed in storage
+    }
+    return val instanceof Date ? val.toISOString() : val;
+  }),
   type: z.enum([
     ServiceType.SIGLATURA,
     ServiceType.HAPPY_HOUR,

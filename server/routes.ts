@@ -52,12 +52,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new service
   app.post("/api/services", async (req: Request, res: Response) => {
     try {
+      console.log("Received data for service creation:", req.body);
+      
+      // If "sigla" is empty, reject early
+      if (!req.body.sigla || req.body.sigla.trim() === '') {
+        return res.status(400).json({ message: "La sigla è obbligatoria" });
+      }
+      
+      // Try to parse the request data through Zod schema
       const serviceData = insertServiceSchema.parse(req.body);
       const service = await storage.createService(serviceData);
+      
+      console.log("Service created successfully:", service);
       res.status(201).json(service);
     } catch (error) {
+      console.error("Error creating service:", error);
+      
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
+        console.error("Validation error:", validationError.message);
         res.status(400).json({ message: validationError.message });
       } else {
         res.status(500).json({ message: "Internal server error" });
