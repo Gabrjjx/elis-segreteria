@@ -289,14 +289,18 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
       
       // Aggiungi la riga se abbiamo dati significativi e la stanza non è vuota
       if (luogo && luogo !== "N/D") {
+        // Formato modificato secondo le indicazioni del cliente:
+        // La prima colonna "Timestamp" è sempre la data dalle "Informazioni cronologiche"
+        // La seconda colonna "Richiedente" è sempre la "Sigla"
+        // La terza colonna "Stanza" è sempre il "Luogo"
         formattedData.push([
-          timestamp,
-          sigla,
-          luogo,
-          'Manutenzione',
-          descrizione,
-          priorita,
-          note
+          timestamp,      // Data dalle "Informazioni cronologiche"
+          sigla,          // Richiedente dalla "Sigla"
+          luogo,          // Stanza dal "Luogo"
+          'Manutenzione', // Tipo fisso
+          descrizione,    // Descrizione dai dettagli
+          priorita,       // Priorità
+          note            // Note aggiuntive
         ]);
         
         processed++;

@@ -324,10 +324,14 @@ export class DatabaseStorage implements IStorage {
               notes = `Risolvibile con manutentori autarchici: ${resolvableBy}\n\nSuggerimento per la risoluzione: ${resolutionSuggestion}`;
             }
             
-            const request = {
-              requesterName: sigla, // La sigla diventa il richiedente
+            // I campi sono mappati esattamente come richiesto:
+            // - timestamp dal campo "Informazioni cronologiche"
+            // - requesterName dal campo "Sigla"
+            // - roomNumber dal campo "Luogo"
+            const request: InsertMaintenanceRequest = {
+              requesterName: sigla, // Richiedente è la "Sigla" dal foglio Excel
               requesterEmail: 'segreteria@elis.org',
-              roomNumber: location, // Il luogo diventa la stanza/numero stanza
+              roomNumber: location, // Stanza è il "Luogo" dal foglio Excel
               requestType: 'Manutenzione',
               description: `${specificLocation}: ${issueDetails}`,
               location: location,
