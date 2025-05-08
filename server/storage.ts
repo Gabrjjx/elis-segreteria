@@ -5,9 +5,12 @@ import {
   User, 
   InsertUser,
   ServiceType,
-  PaymentStatus
+  PaymentStatus,
+  services,
+  users
 } from "@shared/schema";
-import { format } from "date-fns";
+import { db } from "./db";
+import { eq, like, gte, lte, desc, count, sum } from "drizzle-orm";
 
 // Storage interface for CRUD operations
 export interface IStorage {
@@ -37,117 +40,101 @@ export interface IStorage {
   getRecentServices(limit: number): Promise<Service[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private services: Map<number, Service>;
-  private currentUserId: number;
-  private currentServiceId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.services = new Map();
-    this.currentUserId = 1;
-    this.currentServiceId = 1;
-    
-    // Initialize with some sample data
-    this.initializeSampleData();
-  }
-
+export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   // Service operations
   async getServices(params: ServiceSearch): Promise<{ services: Service[], total: number }> {
-    let services = Array.from(this.services.values());
+    // Start with a basic query
+    let query = db.select().from(services);
     
-    // Filter by query (search in sigla)
+    // Apply filters
     if (params.query) {
-      const query = params.query.toLowerCase();
-      services = services.filter(service => 
-        service.sigla.toLowerCase().includes(query)
-      );
+      query = query.where(like(services.sigla, `%${params.query}%`));
     }
     
-    // Filter by type
     if (params.type && params.type !== 'all') {
-      services = services.filter(service => service.type === params.type);
+      query = query.where(eq(services.type, params.type));
     }
     
-    // Filter by status
     if (params.status && params.status !== 'all') {
-      services = services.filter(service => service.status === params.status);
+      query = query.where(eq(services.status, params.status));
     }
     
-    // Filter by date range
     if (params.startDate) {
       const startDate = new Date(params.startDate);
-      services = services.filter(service => 
-        new Date(service.date) >= startDate
-      );
+      query = query.where(gte(services.date, startDate));
     }
     
     if (params.endDate) {
       const endDate = new Date(params.endDate);
-      services = services.filter(service => 
-        new Date(service.date) <= endDate
-      );
+      query = query.where(lte(services.date, endDate));
     }
     
-    // Sort by date (newest first)
-    services = services.sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    // Get the total count
+    const countQuery = db.select({ count: count() }).from(services);
+    const [{ count: total }] = await countQuery;
     
-    // Calculate pagination
-    const total = services.length;
+    // Apply pagination and sorting
     const page = params.page || 1;
     const limit = params.limit || 10;
-    const startIndex = (page - 1) * limit;
-    const endIndex = page * limit;
+    const offset = (page - 1) * limit;
+    
+    const resultServices = await query
+      .orderBy(desc(services.date))
+      .limit(limit)
+      .offset(offset);
     
     return {
-      services: services.slice(startIndex, endIndex),
-      total
+      services: resultServices,
+      total: Number(total)
     };
   }
 
   async getService(id: number): Promise<Service | undefined> {
-    return this.services.get(id);
+    const [service] = await db.select().from(services).where(eq(services.id, id));
+    return service || undefined;
   }
 
   async createService(insertService: InsertService): Promise<Service> {
-    const id = this.currentServiceId++;
-    const service: Service = { ...insertService, id };
-    this.services.set(id, service);
+    const [service] = await db
+      .insert(services)
+      .values(insertService)
+      .returning();
     return service;
   }
 
   async updateService(id: number, updates: Partial<InsertService>): Promise<Service | undefined> {
-    const service = this.services.get(id);
-    if (!service) return undefined;
-    
-    const updatedService: Service = { ...service, ...updates };
-    this.services.set(id, updatedService);
+    const [updatedService] = await db
+      .update(services)
+      .set(updates)
+      .where(eq(services.id, id))
+      .returning();
     return updatedService;
   }
 
   async deleteService(id: number): Promise<boolean> {
-    return this.services.delete(id);
+    const result = await db
+      .delete(services)
+      .where(eq(services.id, id));
+    return result.rowCount > 0;
   }
 
   // Dashboard operations
@@ -160,159 +147,196 @@ export class MemStorage implements IStorage {
     totalAmount: number;
     pendingAmount: number;
   }> {
-    const services = Array.from(this.services.values());
+    // Get total services count
+    const [{ count: totalServices }] = await db
+      .select({ count: count() })
+      .from(services);
     
-    const totalServices = services.length;
-    const pendingServices = services.filter(s => s.status === PaymentStatus.UNPAID);
-    const pendingPayments = pendingServices.length;
+    // Get pending payments count
+    const [{ count: pendingPayments }] = await db
+      .select({ count: count() })
+      .from(services)
+      .where(eq(services.status, PaymentStatus.UNPAID));
     
-    const siglaturaCount = services.filter(s => s.type === ServiceType.SIGLATURA).length;
-    const happyHourCount = services.filter(s => s.type === ServiceType.HAPPY_HOUR).length;
-    const repairCount = services.filter(s => s.type === ServiceType.RIPARAZIONE).length;
+    // Get service type counts
+    const [{ count: siglaturaCount }] = await db
+      .select({ count: count() })
+      .from(services)
+      .where(eq(services.type, ServiceType.SIGLATURA));
     
-    const totalAmount = services.reduce((sum, service) => sum + service.amount, 0);
-    const pendingAmount = pendingServices.reduce((sum, service) => sum + service.amount, 0);
+    const [{ count: happyHourCount }] = await db
+      .select({ count: count() })
+      .from(services)
+      .where(eq(services.type, ServiceType.HAPPY_HOUR));
+    
+    const [{ count: repairCount }] = await db
+      .select({ count: count() })
+      .from(services)
+      .where(eq(services.type, ServiceType.RIPARAZIONE));
+    
+    // Get total amount
+    const totalResult = await db
+      .select({ sum: sum(services.amount) })
+      .from(services);
+    const totalAmount = totalResult[0]?.sum || 0;
+    
+    // Get pending amount
+    const pendingResult = await db
+      .select({ sum: sum(services.amount) })
+      .from(services)
+      .where(eq(services.status, PaymentStatus.UNPAID));
+    const pendingAmount = pendingResult[0]?.sum || 0;
     
     return {
-      totalServices,
-      pendingPayments,
-      siglaturaCount,
-      happyHourCount,
-      repairCount,
-      totalAmount,
-      pendingAmount
+      totalServices: Number(totalServices),
+      pendingPayments: Number(pendingPayments),
+      siglaturaCount: Number(siglaturaCount),
+      happyHourCount: Number(happyHourCount),
+      repairCount: Number(repairCount),
+      totalAmount: Number(totalAmount),
+      pendingAmount: Number(pendingAmount)
     };
   }
 
   async getPendingPayments(): Promise<Service[]> {
-    const services = Array.from(this.services.values());
-    return services
-      .filter(service => service.status === PaymentStatus.UNPAID)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return db
+      .select()
+      .from(services)
+      .where(eq(services.status, PaymentStatus.UNPAID))
+      .orderBy(desc(services.date));
   }
 
   async getRecentServices(limit: number): Promise<Service[]> {
-    const services = Array.from(this.services.values());
-    return services
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, limit);
+    return db
+      .select()
+      .from(services)
+      .orderBy(desc(services.date))
+      .limit(limit);
   }
 
-  private initializeSampleData() {
-    // Add admin user
-    this.createUser({
-      username: "admin",
-      password: "admin"
-    });
+  // Initialize sample data - only used for first setup
+  async initializeSampleData(): Promise<void> {
+    // Check if there's any data already
+    const [{ count }] = await db.select({ count: count() }).from(services);
+    
+    // Only seed if the database is empty
+    if (Number(count) === 0) {
+      // Add admin user
+      await this.createUser({
+        username: "admin",
+        password: "admin"
+      });
 
-    // Sample services data from the Excel spreadsheet
-    const sampleServices = [
-      {
-        date: new Date("2025-05-05"),
-        sigla: "145",
-        pieces: 1,
-        type: ServiceType.SIGLATURA,
-        amount: 0.50,
-        status: PaymentStatus.UNPAID,
-        notes: ""
-      },
-      {
-        date: new Date("2025-04-29"),
-        sigla: "177",
-        pieces: 1,
-        type: ServiceType.SIGLATURA,
-        amount: 0.50,
-        status: PaymentStatus.PAID,
-        notes: ""
-      },
-      {
-        date: new Date("2025-04-11"),
-        sigla: "157",
-        pieces: 1,
-        type: ServiceType.SIGLATURA,
-        amount: 0.50,
-        status: PaymentStatus.PAID,
-        notes: ""
-      },
-      {
-        date: new Date("2025-04-09"),
-        sigla: "140",
-        pieces: 1,
-        type: ServiceType.HAPPY_HOUR,
-        amount: 1.00,
-        status: PaymentStatus.PAID,
-        notes: ""
-      },
-      {
-        date: new Date("2025-04-07"),
-        sigla: "141",
-        pieces: 1,
-        type: ServiceType.RIPARAZIONE,
-        amount: 4.00,
-        status: PaymentStatus.PAID,
-        notes: ""
-      },
-      {
-        date: new Date("2025-04-07"),
-        sigla: "139",
-        pieces: 1,
-        type: ServiceType.SIGLATURA,
-        amount: 0.50,
-        status: PaymentStatus.PAID,
-        notes: ""
-      },
-      {
-        date: new Date("2025-04-04"),
-        sigla: "135",
-        pieces: 1,
-        type: ServiceType.SIGLATURA,
-        amount: 0.50,
-        status: PaymentStatus.PAID,
-        notes: ""
-      },
-      {
-        date: new Date("2025-04-04"),
-        sigla: "164",
-        pieces: 1,
-        type: ServiceType.HAPPY_HOUR,
-        amount: 1.00,
-        status: PaymentStatus.PAID,
-        notes: ""
-      },
-      {
-        date: new Date("2025-04-01"),
-        sigla: "28",
-        pieces: 1,
-        type: ServiceType.SIGLATURA,
-        amount: 1.00,
-        status: PaymentStatus.PAID,
-        notes: ""
-      },
-      {
-        date: new Date("2025-04-08"),
-        sigla: "142",
-        pieces: 1,
-        type: ServiceType.SIGLATURA,
-        amount: 0.50,
-        status: PaymentStatus.PAID,
-        notes: ""
-      },
-      {
-        date: new Date("2025-04-08"),
-        sigla: "177",
-        pieces: 1,
-        type: ServiceType.SIGLATURA,
-        amount: 0.50,
-        status: PaymentStatus.PAID,
-        notes: ""
+      // Sample services data
+      const sampleServices = [
+        {
+          date: new Date("2025-05-05"),
+          sigla: "145",
+          pieces: 1,
+          type: ServiceType.SIGLATURA,
+          amount: 0.50,
+          status: PaymentStatus.UNPAID,
+          notes: ""
+        },
+        {
+          date: new Date("2025-04-29"),
+          sigla: "177",
+          pieces: 1,
+          type: ServiceType.SIGLATURA,
+          amount: 0.50,
+          status: PaymentStatus.PAID,
+          notes: ""
+        },
+        {
+          date: new Date("2025-04-11"),
+          sigla: "157",
+          pieces: 1,
+          type: ServiceType.SIGLATURA,
+          amount: 0.50,
+          status: PaymentStatus.PAID,
+          notes: ""
+        },
+        {
+          date: new Date("2025-04-09"),
+          sigla: "140",
+          pieces: 1,
+          type: ServiceType.HAPPY_HOUR,
+          amount: 1.00,
+          status: PaymentStatus.PAID,
+          notes: ""
+        },
+        {
+          date: new Date("2025-04-07"),
+          sigla: "141",
+          pieces: 1,
+          type: ServiceType.RIPARAZIONE,
+          amount: 4.00,
+          status: PaymentStatus.PAID,
+          notes: ""
+        },
+        {
+          date: new Date("2025-04-07"),
+          sigla: "139",
+          pieces: 1,
+          type: ServiceType.SIGLATURA,
+          amount: 0.50,
+          status: PaymentStatus.PAID,
+          notes: ""
+        },
+        {
+          date: new Date("2025-04-04"),
+          sigla: "135",
+          pieces: 1,
+          type: ServiceType.SIGLATURA,
+          amount: 0.50,
+          status: PaymentStatus.PAID,
+          notes: ""
+        },
+        {
+          date: new Date("2025-04-04"),
+          sigla: "164",
+          pieces: 1,
+          type: ServiceType.HAPPY_HOUR,
+          amount: 1.00,
+          status: PaymentStatus.PAID,
+          notes: ""
+        },
+        {
+          date: new Date("2025-04-01"),
+          sigla: "28",
+          pieces: 1,
+          type: ServiceType.SIGLATURA,
+          amount: 1.00,
+          status: PaymentStatus.PAID,
+          notes: ""
+        },
+        {
+          date: new Date("2025-04-08"),
+          sigla: "142",
+          pieces: 1,
+          type: ServiceType.SIGLATURA,
+          amount: 0.50,
+          status: PaymentStatus.PAID,
+          notes: ""
+        },
+        {
+          date: new Date("2025-04-08"),
+          sigla: "177",
+          pieces: 1,
+          type: ServiceType.SIGLATURA,
+          amount: 0.50,
+          status: PaymentStatus.PAID,
+          notes: ""
+        }
+      ];
+
+      // Add sample services
+      for (const service of sampleServices) {
+        await this.createService(service);
       }
-    ];
-
-    // Add sample services
-    for (const service of sampleServices) {
-      this.createService(service);
     }
   }
 }
 
-export const storage = new MemStorage();
+// Create and export a single instance of the storage implementation
+export const storage = new DatabaseStorage();
