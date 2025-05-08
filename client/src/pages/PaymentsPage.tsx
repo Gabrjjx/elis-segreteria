@@ -248,7 +248,15 @@ export default function PaymentsPage() {
               <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-md px-6 py-3 border border-blue-100">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700 mr-4">Totale da incassare:</span>
-                  <span className="text-xl font-bold text-destructive">€{totalAmount.toFixed(2)}</span>
+                  <span className="text-xl font-bold text-destructive">
+                    €{(() => {
+                      // Calcola direttamente il totale qui per essere sicuri che sia aggiornato
+                      if (!data?.services) return "0.00";
+                      const unpaidServices = data.services.filter(s => s.status === 'unpaid');
+                      const total = unpaidServices.reduce((sum, s) => sum + Number(s.amount), 0);
+                      return total.toFixed(2);
+                    })()}
+                  </span>
                 </div>
               </div>
             </div>
@@ -270,9 +278,14 @@ export default function PaymentsPage() {
               <h4 className="text-sm font-medium text-gray-500">Importo medio</h4>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {(() => {
-                  const unpaidServices = data?.services ? data.services.filter((service: Service) => service.status === 'unpaid') : [];
+                  if (!data?.services) return "€0.00";
+                  const unpaidServices = data.services.filter(s => s.status === 'unpaid');
                   const unpaidCount = unpaidServices.length;
-                  return `€${unpaidCount > 0 ? (totalAmount / unpaidCount).toFixed(2) : '0.00'}`;
+                  if (unpaidCount === 0) return "€0.00";
+                  
+                  // Calcola il totale direttamente per l'importo medio
+                  const total = unpaidServices.reduce((sum, s) => sum + Number(s.amount), 0);
+                  return `€${(total / unpaidCount).toFixed(2)}`;
                 })()}
               </p>
             </div>
