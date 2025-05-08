@@ -111,6 +111,13 @@ export async function startDeviceFlow(): Promise<DeviceCodeResponse> {
       formData.append(key, value);
     }
     
+    // Log dettagliato dei dati inviati (senza esporre il client_secret completo)
+    const logData = {...data};
+    if (logData.client_secret) {
+      logData.client_secret = logData.client_secret.substring(0, 5) + '...';
+    }
+    log(`Invio richiesta a ${url} con dati: ${JSON.stringify(logData)}`, 'googleAuth');
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -120,7 +127,23 @@ export async function startDeviceFlow(): Promise<DeviceCodeResponse> {
     });
     
     if (!response.ok) {
-      throw new Error(`Errore HTTP: ${response.status} - ${response.statusText}`);
+      // Estrai più informazioni possibili dall'errore
+      let errorDetails = '';
+      try {
+        const errorData = await response.json();
+        errorDetails = JSON.stringify(errorData);
+        log(`Dettagli errore 401: ${errorDetails}`, 'googleAuth');
+      } catch (e) {
+        // Se non riusciamo a ottenere JSON, proviamo con il testo
+        try {
+          errorDetails = await response.text();
+          log(`Risposta errore (text): ${errorDetails}`, 'googleAuth');
+        } catch (e2) {
+          log(`Impossibile leggere dettagli errore: ${e2}`, 'googleAuth');
+        }
+      }
+      
+      throw new Error(`Errore HTTP: ${response.status} - ${response.statusText}${errorDetails ? ' - ' + errorDetails : ''}`);
     }
     
     const responseData = await response.json() as DeviceCodeResponse;
@@ -163,6 +186,13 @@ export async function checkDeviceFlowStatus(): Promise<{ status: 'pending' | 'co
     for (const [key, value] of Object.entries(data)) {
       formData.append(key, value);
     }
+    
+    // Log dettagliato dei dati inviati (senza esporre il client_secret completo)
+    const logData = {...data};
+    if (logData.client_secret) {
+      logData.client_secret = logData.client_secret.substring(0, 5) + '...';
+    }
+    log(`Verifica device flow: richiesta a ${url} con dati: ${JSON.stringify(logData)}`, 'googleAuth');
     
     const response = await fetch(url, {
       method: 'POST',
