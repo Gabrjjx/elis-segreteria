@@ -38,6 +38,23 @@ export interface IStorage {
   }>;
   getPendingPayments(): Promise<Service[]>;
   getRecentServices(limit: number): Promise<Service[]>;
+  
+  // Maintenance request operations
+  getMaintenanceRequests(params: MaintenanceRequestSearch): Promise<{ requests: MaintenanceRequest[], total: number }>;
+  getMaintenanceRequest(id: number): Promise<MaintenanceRequest | undefined>;
+  createMaintenanceRequest(request: InsertMaintenanceRequest): Promise<MaintenanceRequest>;
+  updateMaintenanceRequest(id: number, request: Partial<InsertMaintenanceRequest>): Promise<MaintenanceRequest | undefined>;
+  deleteMaintenanceRequest(id: number): Promise<boolean>;
+  getMaintenanceMetrics(): Promise<{
+    totalRequests: number,
+    pendingRequests: number,
+    inProgressRequests: number,
+    completedRequests: number,
+    urgentRequests: number
+  }>;
+  getPendingMaintenanceRequests(): Promise<MaintenanceRequest[]>;
+  getRecentMaintenanceRequests(limit: number): Promise<MaintenanceRequest[]>;
+  importMaintenanceRequestsFromCSV(csvData: string): Promise<{ success: number, failed: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -58,6 +75,209 @@ export class DatabaseStorage implements IStorage {
       .values(insertUser)
       .returning();
     return user;
+  }
+  
+  // Maintenance request operations
+  async getMaintenanceRequests(params: MaintenanceRequestSearch): Promise<{ requests: MaintenanceRequest[], total: number }> {
+    // Start with a basic query
+    let query = db.select().from(maintenanceRequests);
+    
+    // Apply filters
+    if (params.query) {
+      query = query.where(
+        like(maintenanceRequests.requesterName, `%${params.query}%`) || 
+        like(maintenanceRequests.roomNumber, `%${params.query}%`) ||
+        like(maintenanceRequests.description, `%${params.query}%`)
+      );
+    }
+    
+    if (params.status && params.status !== 'all') {
+      query = query.where(eq(maintenanceRequests.status, params.status));
+    }
+    
+    if (params.priority && params.priority !== 'all') {
+      query = query.where(eq(maintenanceRequests.priority, params.priority));
+    }
+    
+    if (params.startDate) {
+      const startDate = new Date(params.startDate);
+      query = query.where(gte(maintenanceRequests.timestamp, startDate));
+    }
+    
+    if (params.endDate) {
+      const endDate = new Date(params.endDate);
+      query = query.where(lte(maintenanceRequests.timestamp, endDate));
+    }
+    
+    // Get the total count
+    const countQuery = db.select({ count: count() }).from(maintenanceRequests);
+    const [{ count: total }] = await countQuery;
+    
+    // Apply pagination and sorting
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const offset = (page - 1) * limit;
+    
+    const resultRequests = await query
+      .orderBy(desc(maintenanceRequests.timestamp))
+      .limit(limit)
+      .offset(offset);
+    
+    return {
+      requests: resultRequests,
+      total: Number(total)
+    };
+  }
+
+  async getMaintenanceRequest(id: number): Promise<MaintenanceRequest | undefined> {
+    const [request] = await db.select().from(maintenanceRequests).where(eq(maintenanceRequests.id, id));
+    return request || undefined;
+  }
+
+  async createMaintenanceRequest(request: InsertMaintenanceRequest): Promise<MaintenanceRequest> {
+    const [newRequest] = await db
+      .insert(maintenanceRequests)
+      .values(request)
+      .returning();
+    return newRequest;
+  }
+
+  async updateMaintenanceRequest(id: number, updates: Partial<InsertMaintenanceRequest>): Promise<MaintenanceRequest | undefined> {
+    const processedUpdates: any = { ...updates };
+    
+    if (updates.status === MaintenanceRequestStatus.COMPLETED && !processedUpdates.completedAt) {
+      processedUpdates.completedAt = new Date();
+    }
+    
+    const [updatedRequest] = await db
+      .update(maintenanceRequests)
+      .set(processedUpdates)
+      .where(eq(maintenanceRequests.id, id))
+      .returning();
+      
+    return updatedRequest;
+  }
+
+  async deleteMaintenanceRequest(id: number): Promise<boolean> {
+    const result = await db
+      .delete(maintenanceRequests)
+      .where(eq(maintenanceRequests.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getMaintenanceMetrics(): Promise<{
+    totalRequests: number;
+    pendingRequests: number;
+    inProgressRequests: number;
+    completedRequests: number;
+    urgentRequests: number;
+  }> {
+    // Get total requests count
+    const [{ count: totalRequests }] = await db
+      .select({ count: count() })
+      .from(maintenanceRequests);
+    
+    // Get pending requests count
+    const [{ count: pendingRequests }] = await db
+      .select({ count: count() })
+      .from(maintenanceRequests)
+      .where(eq(maintenanceRequests.status, MaintenanceRequestStatus.PENDING));
+    
+    // Get in progress requests count
+    const [{ count: inProgressRequests }] = await db
+      .select({ count: count() })
+      .from(maintenanceRequests)
+      .where(eq(maintenanceRequests.status, MaintenanceRequestStatus.IN_PROGRESS));
+    
+    // Get completed requests count
+    const [{ count: completedRequests }] = await db
+      .select({ count: count() })
+      .from(maintenanceRequests)
+      .where(eq(maintenanceRequests.status, MaintenanceRequestStatus.COMPLETED));
+    
+    // Get urgent requests count
+    const [{ count: urgentRequests }] = await db
+      .select({ count: count() })
+      .from(maintenanceRequests)
+      .where(eq(maintenanceRequests.priority, MaintenanceRequestPriority.URGENT));
+    
+    return {
+      totalRequests: Number(totalRequests),
+      pendingRequests: Number(pendingRequests),
+      inProgressRequests: Number(inProgressRequests),
+      completedRequests: Number(completedRequests),
+      urgentRequests: Number(urgentRequests)
+    };
+  }
+
+  async getPendingMaintenanceRequests(): Promise<MaintenanceRequest[]> {
+    return db
+      .select()
+      .from(maintenanceRequests)
+      .where(eq(maintenanceRequests.status, MaintenanceRequestStatus.PENDING))
+      .orderBy(desc(maintenanceRequests.timestamp));
+  }
+
+  async getRecentMaintenanceRequests(limit: number): Promise<MaintenanceRequest[]> {
+    return db
+      .select()
+      .from(maintenanceRequests)
+      .orderBy(desc(maintenanceRequests.timestamp))
+      .limit(limit);
+  }
+
+  async importMaintenanceRequestsFromCSV(csvData: string): Promise<{ success: number, failed: number }> {
+    let success = 0;
+    let failed = 0;
+    
+    try {
+      // Parse CSV data (simple implementation)
+      const lines = csvData.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',');
+      
+      // Map field indices
+      const fieldMap = {
+        timestamp: headers.findIndex(h => h.includes('Timestamp')),
+        requesterName: headers.findIndex(h => h.includes('Nome')),
+        requesterEmail: headers.findIndex(h => h.includes('Email')),
+        roomNumber: headers.findIndex(h => h.includes('Numero di stanza')),
+        requestType: headers.findIndex(h => h.includes('Tipo di richiesta')),
+        description: headers.findIndex(h => h.includes('Descrizione')),
+        location: headers.findIndex(h => h.includes('Luogo')),
+      };
+      
+      // Process each line
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          
+          if (values.length <= 1) continue; // Skip empty lines
+          
+          const request: InsertMaintenanceRequest = {
+            requesterName: values[fieldMap.requesterName] || 'Sconosciuto',
+            requesterEmail: values[fieldMap.requesterEmail] || 'sconosciuto@example.com',
+            roomNumber: values[fieldMap.roomNumber] || 'N/D',
+            requestType: values[fieldMap.requestType] || 'Altro',
+            description: values[fieldMap.description] || 'Nessuna descrizione',
+            location: values[fieldMap.location] || 'N/D',
+            status: MaintenanceRequestStatus.PENDING,
+            priority: MaintenanceRequestPriority.MEDIUM,
+            notes: '',
+          };
+          
+          await this.createMaintenanceRequest(request);
+          success++;
+        } catch (error) {
+          console.error(`Error importing row ${i}:`, error);
+          failed++;
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing CSV:', error);
+      throw new Error('Errore nel formato CSV');
+    }
+    
+    return { success, failed };
   }
 
   // Service operations

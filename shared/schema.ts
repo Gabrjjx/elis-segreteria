@@ -110,3 +110,95 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// Enum per lo stato delle richieste di manutenzione
+export const MaintenanceRequestStatus = {
+  PENDING: "pending",
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "completed",
+  REJECTED: "rejected",
+} as const;
+
+export type MaintenanceRequestStatusValue = typeof MaintenanceRequestStatus[keyof typeof MaintenanceRequestStatus];
+
+// Enum per la priorità delle richieste
+export const MaintenanceRequestPriority = {
+  LOW: "low",
+  MEDIUM: "medium",
+  HIGH: "high",
+  URGENT: "urgent",
+} as const;
+
+export type MaintenanceRequestPriorityValue = typeof MaintenanceRequestPriority[keyof typeof MaintenanceRequestPriority];
+
+// Tabella per le richieste di manutenzione
+export const maintenanceRequests = pgTable("maintenance_requests", {
+  id: serial("id").primaryKey(),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  requesterName: text("requester_name").notNull(),
+  requesterEmail: text("requester_email").notNull(),
+  roomNumber: text("room_number").notNull(),
+  requestType: text("request_type").notNull(),
+  description: text("description").notNull(),
+  location: text("location").notNull(),
+  status: text("status").notNull().default(MaintenanceRequestStatus.PENDING),
+  priority: text("priority").notNull().default(MaintenanceRequestPriority.MEDIUM),
+  notes: text("notes"),
+  assignedTo: text("assigned_to"),
+  completedAt: timestamp("completed_at"),
+  attachmentUrl: text("attachment_url"),
+});
+
+// Schema per l'inserimento di nuove richieste
+export const insertMaintenanceRequestSchema = createInsertSchema(maintenanceRequests).pick({
+  requesterName: true,
+  requesterEmail: true,
+  roomNumber: true,
+  requestType: true,
+  description: true,
+  location: true,
+  priority: true,
+  notes: true,
+  assignedTo: true,
+  attachmentUrl: true,
+}).extend({
+  status: z.enum([
+    MaintenanceRequestStatus.PENDING,
+    MaintenanceRequestStatus.IN_PROGRESS,
+    MaintenanceRequestStatus.COMPLETED,
+    MaintenanceRequestStatus.REJECTED,
+  ]).default(MaintenanceRequestStatus.PENDING),
+  priority: z.enum([
+    MaintenanceRequestPriority.LOW,
+    MaintenanceRequestPriority.MEDIUM,
+    MaintenanceRequestPriority.HIGH,
+    MaintenanceRequestPriority.URGENT,
+  ]).default(MaintenanceRequestPriority.MEDIUM),
+});
+
+// Schema per la ricerca delle richieste
+export const maintenanceRequestSearchSchema = z.object({
+  query: z.string().optional(),
+  status: z.enum([
+    "all",
+    MaintenanceRequestStatus.PENDING,
+    MaintenanceRequestStatus.IN_PROGRESS,
+    MaintenanceRequestStatus.COMPLETED,
+    MaintenanceRequestStatus.REJECTED,
+  ]).optional(),
+  priority: z.enum([
+    "all",
+    MaintenanceRequestPriority.LOW,
+    MaintenanceRequestPriority.MEDIUM,
+    MaintenanceRequestPriority.HIGH,
+    MaintenanceRequestPriority.URGENT,
+  ]).optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  page: z.number().int().positive().optional().default(1),
+  limit: z.number().int().positive().optional().default(10),
+});
+
+export type InsertMaintenanceRequest = z.infer<typeof insertMaintenanceRequestSchema>;
+export type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;
+export type MaintenanceRequestSearch = z.infer<typeof maintenanceRequestSearchSchema>;
