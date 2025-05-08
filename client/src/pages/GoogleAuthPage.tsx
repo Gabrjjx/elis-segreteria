@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, ExternalLink, Check, KeyRound, Cloud, Download, Upload } from "lucide-react";
+import { AlertCircle, ExternalLink, Check, KeyRound, Cloud, Download, Upload, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLoading } from "@/contexts/loading-context";
 
@@ -21,26 +21,53 @@ export default function GoogleAuthPage() {
   const [authCode, setAuthCode] = useState("");
   const [authUrl, setAuthUrl] = useState<string | null>(null);
 
-  // Utilizza useQuery per ottenere lo stato di autenticazione (singola richiesta)
-  const { 
-    data: authStatus = { hasCredentials: false, hasValidToken: false }, 
-    isLoading: isStatusLoading,
-    refetch
-  } = useQuery({
-    queryKey: ['googleAuthStatus'], // Chiave fissa, evita aggiornamenti continui
-    queryFn: async () => {
-      // Aggiungiamo un parametro cache buster per evitare risposte cachate
-      const cacheBuster = `?t=${Date.now()}`;
-      const res = await apiRequest(`/api/google/auth/status${cacheBuster}`);
-      const data = await res.json();
-      console.log("API Request:", "/api/google/auth/status");
-      console.log("API Response data:", data);
-      return data as AuthStatus;
-    },
-    staleTime: 60 * 1000, // Consideriamo i dati validi per 60 secondi
-    refetchOnWindowFocus: false, // Disabilitiamo il rifetch automatico
-    refetchInterval: false, // Nessun intervallo di aggiornamento automatico
+  // Utilizziamo useState invece di useQuery per lo stato di autenticazione
+  const [authStatus, setAuthStatus] = useState<AuthStatus>({ 
+    hasCredentials: false, 
+    hasValidToken: false
   });
+  const [isStatusLoading, setIsStatusLoading] = useState(true);
+
+  // Funzione per caricare manualmente lo stato di autenticazione
+  const fetchAuthStatus = async () => {
+    try {
+      setIsStatusLoading(true);
+      // Utilizziamo direttamente fetch con headers per prevenire caching
+      const cacheBuster = `?nocache=${Date.now()}`;
+      const response = await fetch(`/api/google/auth/status${cacheBuster}`, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Errore nella richiesta: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Fetch diretta API: /api/google/auth/status", data);
+      
+      // Aggiorniamo lo stato manualmente
+      setAuthStatus(data);
+    } catch (error) {
+      console.error("Errore nel caricamento dello stato:", error);
+      toast({
+        variant: "destructive",
+        title: "Errore di connessione",
+        description: "Impossibile verificare lo stato dell'autenticazione Google.",
+      });
+    } finally {
+      setIsStatusLoading(false);
+    }
+  };
+  
+  // Carica lo stato all'avvio del componente
+  useEffect(() => {
+    fetchAuthStatus();
+  }, []);
 
   // Mutation per ottenere l'URL di autorizzazione
   const getAuthUrlMutation = useMutation({
