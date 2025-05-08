@@ -26,6 +26,7 @@ const LazyPaymentsPage = lazy(() => import("@/pages/PaymentsPage"));
 const LazyReportsPage = lazy(() => import("@/pages/ReportsPage"));
 const LazySettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const LazyMaintenancePage = lazy(() => import("@/pages/MaintenancePage"));
+const LazyStudentsPage = lazy(() => import("@/pages/StudentsPage"));
 const LazyGoogleAuthPage = lazy(() => import("@/pages/GoogleAuthPage"));
 const LazyPublicPaymentPage = lazy(() => import("@/pages/PublicPaymentPage"));
 

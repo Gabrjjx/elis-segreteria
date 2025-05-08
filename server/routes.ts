@@ -1475,9 +1475,11 @@ RifID: ${hashId}`
         return res.status(400).json({ message: "Sigla richiesta" });
       }
       
+      const formattedSigla = sigla.trim();
+      
       // Recuperiamo i servizi non pagati per questa sigla
       const result = await storage.getServices({
-        sigla: sigla.trim(),
+        sigla: formattedSigla,
         status: 'unpaid',
         page: 1,
         limit: 50
@@ -1486,13 +1488,147 @@ RifID: ${hashId}`
       // Calcoliamo il totale da pagare
       const totalAmount = result.services.reduce((sum, service) => sum + service.amount, 0);
       
+      // Recuperiamo le informazioni dello studente
+      const student = await storage.getStudentBySigla(formattedSigla);
+      
       res.json({
         ...result,
-        totalAmount
+        totalAmount,
+        student: student ? {
+          id: student.id,
+          sigla: student.sigla,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          fullName: `${student.firstName} ${student.lastName}`
+        } : null
       });
     } catch (error) {
       console.error("Errore durante il recupero dei servizi per sigla:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ===== API per gestione studenti =====
+  
+  // Ottieni tutti gli studenti
+  app.get("/api/students", async (req: Request, res: Response) => {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const sigla = req.query.sigla as string | undefined;
+      const firstName = req.query.firstName as string | undefined;
+      const lastName = req.query.lastName as string | undefined;
+      
+      const result = await storage.getStudents({
+        sigla,
+        firstName,
+        lastName,
+        page,
+        limit
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Errore nel recupero degli studenti:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Ottieni uno studente specifico
+  app.get("/api/students/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const student = await storage.getStudent(id);
+      
+      if (!student) {
+        return res.status(404).json({ message: "Studente non trovato" });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Errore nel recupero dello studente:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Ottieni uno studente per sigla
+  app.get("/api/students/by-sigla/:sigla", async (req: Request, res: Response) => {
+    try {
+      const sigla = req.params.sigla;
+      const student = await storage.getStudentBySigla(sigla);
+      
+      if (!student) {
+        return res.status(404).json({ message: "Studente non trovato" });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Errore nel recupero dello studente per sigla:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Crea un nuovo studente
+  app.post("/api/students", async (req: Request, res: Response) => {
+    try {
+      const studentData = req.body;
+      const student = await storage.createStudent(studentData);
+      res.status(201).json(student);
+    } catch (error) {
+      console.error("Errore nella creazione dello studente:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Aggiorna uno studente
+  app.put("/api/students/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const studentData = req.body;
+      const student = await storage.updateStudent(id, studentData);
+      
+      if (!student) {
+        return res.status(404).json({ message: "Studente non trovato" });
+      }
+      
+      res.json(student);
+    } catch (error) {
+      console.error("Errore nell'aggiornamento dello studente:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Elimina uno studente
+  app.delete("/api/students/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteStudent(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Studente non trovato" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Errore nell'eliminazione dello studente:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Importa studenti da CSV
+  app.post("/api/students/import", async (req: Request, res: Response) => {
+    try {
+      const { csvData } = req.body;
+      
+      if (!csvData) {
+        return res.status(400).json({ message: "Dati CSV non forniti" });
+      }
+      
+      const result = await storage.importStudentsFromCSV(csvData);
+      res.json(result);
+    } catch (error) {
+      console.error("Errore nell'importazione degli studenti:", error);
+      res.status(500).json({ message: "Errore interno del server" });
     }
   });
 

@@ -1086,6 +1086,45 @@ export class DatabaseStorage implements IStorage {
         await this.createService(service);
       }
     }
+    
+    // Check if we have any existing students
+    const { students } = await this.getStudents({
+      page: 1,
+      limit: 1
+    });
+    
+    if (students.length === 0) {
+      console.log("Initializing students data");
+      
+      // CSV data di esempio
+      const csvData = `NOME,COGNOME,SIGLA
+ROBERTO,FERULANO,26
+DOMENICO,PONTARI,41
+MARCO,VANZINI,57
+ANTONINO,GENCO,87
+GIUSEPPE,ALASTRA,90
+PAOLO,ARDOLINO,91
+GIACOMO,BONGIOVANNI,92
+FABIO,BOSCO,93
+GIOELE,CALUISI,95
+GIUSEPPE,DI MATTEO,98
+KEVIN,ALUTHDURAG,102
+MATTEO,CONVERTINO,103
+SERGIO,CASTIGLIONE,105
+ANDREA,GRIMAUDO,106
+ANTONINO,ALESTRA,107
+SERGIO,FUMAGALLI,108
+NICOLO,BALDARI,109
+PIETRO,FORNAI,110
+EDOARDO,CACCIAPUOTI,111
+VIENCENZO,CAPALBO,114
+ANTONIO,CANGIANO,115
+MANUEL,LAMMOGLIA,116
+PIETRO,ADRAGNA,117
+GIUSEPPE,PALMIERI,119`;
+      
+      await this.importStudentsFromCSV(csvData);
+    }
   }
   // Student operations
   async getStudents(params: StudentSearch): Promise<{ students: Student[], total: number }> {
