@@ -137,10 +137,10 @@ export default function MaintenancePage() {
   // Stato per i filtri
   const [filters, setFilters] = useState<MaintenanceFilters>({
     query: "",
-    status: "all",
+    status: "pending",  // Di default mostriamo solo le richieste in attesa
     priority: "all",
     page: 1,
-    limit: 10
+    limit: 50  // Aumentato a 50 elementi per pagina per visualizzare più richieste contemporaneamente
   });
   
   // Stato temporaneo per la ricerca

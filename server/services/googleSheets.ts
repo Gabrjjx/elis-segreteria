@@ -208,18 +208,31 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
     console.log(`Processando ${data.length} righe dal foglio`);
     let processed = 0;
     
-    // Verifichiamo quali righe hanno un primo campo che indica se sono state risolte
-    let skipFirstColumn = false;
-    if (data[1] && data[1][0] && typeof data[1][0] === 'string' && 
-        (data[1][0].toLowerCase().includes('risolto') || data[1][0].toLowerCase().includes('segnalato'))) {
-      skipFirstColumn = true;
-      console.log("Rilevata colonna di stato risolta/segnalata nel primo campo, la ignoreremo");
+    // Verifichiamo se è presente una colonna di stato
+    let statoIdx = -1;
+    if (data[0] && data[0].length > 0 && typeof data[0][0] === 'string' && 
+        data[0][0].toLowerCase().includes('stato')) {
+      statoIdx = 0;
+      console.log("Rilevata colonna di stato alla posizione 0");
     }
     
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
       if (!row || row.length < Math.max(siglaIdx, luogoIdx, infoIdx) + 1) {
         continue; // Salta righe troppo corte
+      }
+      
+      // Controlla se la richiesta ha già uno stato (risolto/completato)
+      // Importa solo le richieste SENZA stato o con stato vuoto o "segnalato"
+      if (statoIdx >= 0 && row[statoIdx]) {
+        const statoValue = String(row[statoIdx]).toLowerCase();
+        if (statoValue === "risolto" || statoValue === "completato") {
+          // Salta richieste già risolte
+          if (i <= 5) {
+            console.log(`Riga ${i} saltata perché risulta già risolta (stato: "${row[statoIdx]}")`);
+          }
+          continue;
+        }
       }
       
       // Valori predefiniti
@@ -248,13 +261,27 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
       // Stanza proviene da "Luogo"
       if (luogoIdx >= 0 && luogoIdx < row.length) luogo = row[luogoIdx] || luogo;
       
-      // Componiamo la descrizione e le note con informazioni aggiuntive
+      // Componiamo la descrizione con i dettagli del difetto
       if (dettagliIdx >= 0 && dettagliIdx < row.length && row[dettagliIdx]) {
         descrizione = row[dettagliIdx];
       }
       
+      // Prepariamo note complete con ubicazione specifica e altri dettagli
+      note = "Importato dal foglio Google";
+      
+      // Aggiungiamo la data originale
+      if (infoIdx >= 0 && infoIdx < row.length && row[infoIdx]) {
+        note += `\nData: ${row[infoIdx]}`;
+      }
+      
+      // Aggiungiamo l'ubicazione specifica
       if (ubicazioneIdx >= 0 && ubicazioneIdx < row.length && row[ubicazioneIdx]) {
-        note = `Ubicazione: ${row[ubicazioneIdx]}`;
+        note += `\nUbicazione specifica: ${row[ubicazioneIdx]}`;
+      }
+      
+      // Aggiungiamo i dettagli del difetto
+      if (dettagliIdx >= 0 && dettagliIdx < row.length && row[dettagliIdx]) {
+        note += `\nDettagli del difetto: ${row[dettagliIdx]}`;
       }
       
       // Priorità
@@ -300,7 +327,7 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
           'Manutenzione', // Tipo fisso
           descrizione,    // Descrizione dai dettagli
           priorita,       // Priorità
-          note            // Note aggiuntive
+          note            // Note complete con tutti i dettagli strutturati
         ]);
         
         processed++;
