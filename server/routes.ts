@@ -388,27 +388,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Sincronizzazione Google Sheets avviata");
       
-      // Recupera i dati dal foglio Google
-      const csvData = await getMaintenanceRequestsCSV();
-      
-      // Importa i dati nel sistema
-      if (!csvData) {
-        console.log("Nessun dato trovato nel foglio Google");
-        return res.status(400).json({ message: "No data found in Google Sheet" });
+      // Importa direttamente dal foglio Google Sheet, senza passare per il CSV
+      try {
+        // Leggi i dati dal foglio Google
+        const data = await readGoogleSheet();
+        
+        if (!data || data.length < 2) {
+          console.log("Dati insufficienti nel foglio Google");
+          return res.status(400).json({ message: "Insufficient data in Google Sheet" });
+        }
+        
+        // Log informazioni sul foglio
+        console.log("FOGLIO RICEVUTO:");
+        console.log("Prima riga (intestazioni):", JSON.stringify(data[0]));
+        console.log("Seconda riga (primo record):", JSON.stringify(data[1]));
+        console.log("Terza riga (secondo record):", JSON.stringify(data[2]));
+        
+        // Identifica le colonne importanti
+        let headerRow = data[0] || [];
+        
+        let siglaIdx = -1;    // Per il "Richiedente"
+        let luogoIdx = -1;    // Per la "Stanza" 
+        let infoIdx = -1;     // Per il "Timestamp"
+        let ubicazioneIdx = -1;
+        let dettagliIdx = -1;
+        let prioritaIdx = -1;
+        
+        // Cerca le colonne in base ai nomi
+        console.log("Analisi intestazioni:");
+        for (let i = 0; i < headerRow.length; i++) {
+          const header = String(headerRow[i] || '').toLowerCase();
+          console.log(`Colonna ${i}: "${headerRow[i]}" (${header})`);
+          
+          if (header.includes('sigla')) {
+            siglaIdx = i;
+            console.log(`-> Trovata colonna SIGLA all'indice ${i}`);
+          }
+          else if (header.includes('luogo') && !header.includes('ubicazione')) {
+            luogoIdx = i;
+            console.log(`-> Trovata colonna LUOGO all'indice ${i}`);
+          }
+          else if (header.includes('informazioni') || header.includes('cronologiche')) {
+            infoIdx = i;
+            console.log(`-> Trovata colonna INFORMAZIONI CRONOLOGICHE all'indice ${i}`);
+          }
+          else if (header.includes('ubicazione') || header.includes('specifica')) {
+            ubicazioneIdx = i;
+            console.log(`-> Trovata colonna UBICAZIONE all'indice ${i}`);
+          }
+          else if (header.includes('dettagli') || header.includes('difetto')) {
+            dettagliIdx = i;
+            console.log(`-> Trovata colonna DETTAGLI DIFETTO all'indice ${i}`);
+          }
+          else if (header.includes('priorità')) {
+            prioritaIdx = i;
+            console.log(`-> Trovata colonna PRIORITÀ all'indice ${i}`);
+          }
+        }
+        
+        // Assegna indici di default se non trovati (basandoci sulla struttura osservata)
+        if (siglaIdx === -1 && data[0].length > 2) siglaIdx = 2;    // Terza colonna
+        if (luogoIdx === -1 && data[0].length > 3) luogoIdx = 3;    // Quarta colonna
+        if (infoIdx === -1 && data[0].length > 1) infoIdx = 1;      // Seconda colonna
+        if (ubicazioneIdx === -1 && data[0].length > 4) ubicazioneIdx = 4;  // Quinta colonna
+        if (dettagliIdx === -1 && data[0].length > 5) dettagliIdx = 5;    // Sesta colonna
+        if (prioritaIdx === -1 && data[0].length > 6) prioritaIdx = 6;    // Settima colonna
+        
+        console.log(`Indici finali: Sigla=${siglaIdx}, Luogo=${luogoIdx}, Info=${infoIdx}, Ubicazione=${ubicazioneIdx}, Dettagli=${dettagliIdx}, Priorità=${prioritaIdx}`);
+        
+        // Verifica colonna stato (risolto/segnalato)
+        const hasStatusColumn = data[1] && data[1][0] && typeof data[1][0] === 'string' && 
+            (data[1][0].toLowerCase().includes('risolto') || data[1][0].toLowerCase().includes('segnalato'));
+        
+        if (hasStatusColumn) {
+          console.log("Rilevata colonna di stato risolta/segnalata nel primo campo, la ignoreremo");
+        }
+        
+        let success = 0;
+        let failed = 0;
+        
+        // Importa tutte le righe direttamente nel database
+        console.log(`Processando ${data.length-1} righe dal foglio`);
+        
+        for (let i = 1; i < data.length; i++) {
+          try {
+            const row = data[i];
+            if (!row || row.length < Math.max(siglaIdx, luogoIdx, infoIdx) + 1) {
+              console.log(`Riga ${i} troppo corta, saltata`);
+              continue;
+            }
+            
+            // Timestamp dalle "Informazioni cronologiche"
+            const timestamp = infoIdx >= 0 && infoIdx < row.length ? row[infoIdx] || new Date().toISOString() : new Date().toISOString();
+            
+            // Richiedente dalla "Sigla"
+            let richiedente = "T00"; // Valore predefinito
+            if (siglaIdx >= 0 && siglaIdx < row.length) {
+              const rawSigla = row[siglaIdx];
+              // Se è un ID Google Forms (numero lungo), generiamo una sigla leggibile
+              if (rawSigla && String(rawSigla).length > 8 && !isNaN(Number(rawSigla))) {
+                richiedente = "T" + String(i).padStart(2, '0');
+                console.log(`Riga ${i}: Sostituita sigla anomala ${rawSigla} con ${richiedente}`);
+              } else {
+                richiedente = rawSigla || richiedente;
+              }
+            }
+            
+            // Stanza dal "Luogo"
+            const stanza = luogoIdx >= 0 && luogoIdx < row.length ? row[luogoIdx] || "N/D" : "N/D";
+            
+            // Dettagli per la descrizione
+            const ubicazione = ubicazioneIdx >= 0 && ubicazioneIdx < row.length ? row[ubicazioneIdx] || "" : "";
+            const dettagli = dettagliIdx >= 0 && dettagliIdx < row.length ? row[dettagliIdx] || "" : "";
+            const descrizione = ubicazione ? `${ubicazione}: ${dettagli}` : dettagli || "Manutenzione richiesta";
+            
+            // Priorità 
+            let priorita = MaintenanceRequestPriority.MEDIUM; // Default
+            if (prioritaIdx >= 0 && prioritaIdx < row.length && row[prioritaIdx]) {
+              const priorityVal = row[prioritaIdx];
+              if (typeof priorityVal === 'number' || !isNaN(Number(priorityVal))) {
+                const numPriority = Number(priorityVal);
+                if (numPriority === 1) priorita = MaintenanceRequestPriority.LOW;
+                else if (numPriority === 3) priorita = MaintenanceRequestPriority.HIGH;
+                else if (numPriority === 4) priorita = MaintenanceRequestPriority.URGENT;
+              } else if (typeof priorityVal === 'string') {
+                const lowerPriority = priorityVal.toLowerCase();
+                if (lowerPriority.includes('bassa') || lowerPriority.includes('low')) {
+                  priorita = MaintenanceRequestPriority.LOW;
+                } else if (lowerPriority.includes('alta') || lowerPriority.includes('high')) {
+                  priorita = MaintenanceRequestPriority.HIGH;
+                } else if (lowerPriority.includes('urgente') || lowerPriority.includes('urgent')) {
+                  priorita = MaintenanceRequestPriority.URGENT;
+                }
+              }
+            }
+            
+            // Log dei primi 5 record per verifica
+            if (i <= 5) {
+              console.log(`Riga ${i} - Richiedente: "${richiedente}", Stanza: "${stanza}", Data: "${timestamp}", Priorità: "${priorita}"`);
+            }
+            
+            // Crea la richiesta di manutenzione se la stanza non è vuota
+            if (stanza && stanza !== "N/D") {
+              await storage.createMaintenanceRequest({
+                requesterName: richiedente,
+                requesterEmail: "segreteria@elis.org",
+                roomNumber: stanza,
+                requestType: "Manutenzione",
+                description: descrizione,
+                location: stanza,
+                status: MaintenanceRequestStatus.PENDING,
+                priority: priorita,
+                notes: ""
+              });
+              success++;
+            } else {
+              console.log(`Riga ${i} saltata perché la stanza/luogo è vuoto`);
+              failed++;
+            }
+          } catch (error) {
+            console.error(`Errore nell'importazione della riga ${i}:`, error);
+            failed++;
+          }
+        }
+        
+        console.log(`Importate ${success} righe con successo, ${failed} fallite`);
+        
+        res.status(200).json({
+          message: "Maintenance requests synchronized successfully",
+          imported: success,
+          failed: failed,
+          total: success + failed
+        });
+      } catch (error: any) {
+        console.error("Error during Google Sheets synchronization:", error);
+        return res.status(500).json({
+          message: "Error during Google Sheets synchronization",
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
       }
-      
-      console.log("Dati CSV recuperati, lunghezza:", csvData.length);
-      
-      const result = await storage.importMaintenanceRequestsFromCSV(csvData);
-      
-      console.log("Risultato importazione:", result);
-      
-      res.status(200).json({
-        message: "Maintenance requests synchronized successfully",
-        imported: result.success,
-        failed: result.failed,
-        total: result.success + result.failed
-      });
     } catch (error) {
       console.error("Error synchronizing from Google Sheets:", error);
       res.status(500).json({ 
