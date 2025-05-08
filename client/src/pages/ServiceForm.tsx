@@ -145,19 +145,16 @@ export default function ServiceForm({ id }: ServiceFormProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/recent-services'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/pending-payments'] });
       
-      toast({
-        title: "Servizio aggiornato",
-        description: "Il servizio è stato aggiornato con successo.",
-      });
+      // Sostituisco il toast con un alert per evitare errori
+      console.log("Servizio aggiornato con successo");
+      // alert("Il servizio è stato aggiornato con successo.");
       
       setLocation("/services");
     },
     onError: (error) => {
-      toast({
-        title: "Errore",
-        description: `Si è verificato un errore: ${error.message}`,
-        variant: "destructive",
-      });
+      // Sostituisco il toast con un alert per evitare errori
+      console.error("Errore durante l'aggiornamento del servizio:", error);
+      alert(`Si è verificato un errore: ${error.message}`);
     },
   });
 
@@ -181,11 +178,8 @@ export default function ServiceForm({ id }: ServiceFormProps) {
       }
     } catch (error) {
       console.error("Error in form submission:", error);
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore nel processare i dati del form.",
-        variant: "destructive",
-      });
+      // Sostituisco toast con alert
+      alert("Si è verificato un errore nel processare i dati del form.");
     }
   };
 
