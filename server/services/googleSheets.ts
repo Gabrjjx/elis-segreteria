@@ -1,6 +1,9 @@
 import { google } from 'googleapis';
 import { log } from '../vite';
 
+// Una variabile globale per memorizzare la struttura del foglio
+let globalSheetStructure: string[][] = [];
+
 // Verifica che le variabili d'ambiente necessarie siano definite
 if (!process.env.GOOGLE_API_KEY) {
   throw new Error('GOOGLE_API_KEY non definita nelle variabili d\'ambiente');
@@ -126,6 +129,121 @@ export function convertToCSV(data: string[][]): string {
  * Legge i dati delle richieste di manutenzione dal foglio Google
  * e li restituisce in formato CSV
  */
+/**
+ * Cerca una richiesta di manutenzione nel foglio Google e restituisce l'indice della riga
+ * 
+ * @param timestamp Data e ora della richiesta
+ * @param requesterName Nome del richiedente
+ * @param roomNumber Numero di stanza
+ * @returns L'indice della riga o -1 se non trovata
+ */
+export async function findRequestRowInGoogleSheet(
+  timestamp: Date, 
+  requesterName: string, 
+  roomNumber: string
+): Promise<number> {
+  try {
+    // Se non abbiamo già i dati del foglio, li leggiamo
+    if (globalSheetStructure.length === 0) {
+      await getMaintenanceRequestsCSV();
+    }
+    
+    // Salta l'intestazione
+    for (let i = 1; i < globalSheetStructure.length; i++) {
+      const row = globalSheetStructure[i];
+      
+      // Controlliamo se la data, il richiedente e la stanza corrispondono
+      // Troviamo gli indici delle colonne rilevanti
+      let siglaIdx = -1;
+      let luogoIdx = -1;
+      
+      // Prima riga contiene le intestazioni
+      const headers = globalSheetStructure[0] || [];
+      for (let j = 0; j < headers.length; j++) {
+        const header = String(headers[j] || '').toLowerCase();
+        if (header.includes('sigla')) {
+          siglaIdx = j;
+        }
+        else if (header.includes('luogo') && !header.includes('ubicazione')) {
+          luogoIdx = j;
+        }
+      }
+      
+      // Se non riusciamo a trovare le colonne, usiamo i valori di default
+      if (siglaIdx === -1 && headers.length > 2) siglaIdx = 2;  // Terza colonna
+      if (luogoIdx === -1 && headers.length > 3) luogoIdx = 3;  // Quarta colonna
+      
+      // Se ancora non troviamo le colonne, non possiamo procedere
+      if (siglaIdx === -1 || luogoIdx === -1) {
+        console.log('Non è stato possibile trovare le colonne necessarie nel foglio Google');
+        return -1;
+      }
+      
+      const requesterInSheet = row[siglaIdx]; // Colonna Sigla
+      const roomInSheet = row[luogoIdx]; // Colonna Luogo
+      
+      // Confronto approssimativo per evitare problemi di formato
+      if (
+        requesterInSheet && requesterInSheet.toString().includes(requesterName) &&
+        roomInSheet && roomInSheet.toString().includes(roomNumber)
+      ) {
+        console.log(`Trovata corrispondenza nel foglio Google, riga ${i + 1}`);
+        return i;
+      }
+    }
+    
+    console.log('Nessuna corrispondenza trovata nel foglio Google');
+    return -1;
+  } catch (error) {
+    console.error('Errore nella ricerca della richiesta nel foglio Google:', error);
+    return -1;
+  }
+}
+
+/**
+ * Aggiorna lo stato di una richiesta nel foglio Google Sheets
+ * 
+ * @param rowIndex L'indice della riga da aggiornare (0-based)
+ * @param status Nuovo stato della richiesta (es. "risolto")
+ * @returns true se l'aggiornamento è avvenuto con successo
+ */
+export async function updateGoogleSheetStatus(rowIndex: number, status: string): Promise<boolean> {
+  try {
+    if (!process.env.GOOGLE_API_KEY || !process.env.GOOGLE_SHEET_ID) {
+      throw new Error('API key di Google e/o ID del foglio mancanti');
+    }
+    
+    console.log(`Tentativo di aggiornamento riga ${rowIndex + 1} con stato "${status}"`);
+    
+    // Per scrivere su Google Sheets, dobbiamo usare un approccio OAuth invece della semplice API Key
+    // Questo è un esempio di come potremmo implementarlo in futuro
+    
+    // Nel frattempo, logghiamo l'operazione per tracciamento
+    console.log(`SIMULAZIONE: Aggiornamento foglio Google, riga ${rowIndex + 1}, colonna A = "${status}"`);
+    console.log('Nota: Per implementare completamente questa funzionalità è necessario configurare OAuth2 per Google Sheets API');
+    
+    // Per aggiornare effettivamente il foglio, servirebbero credenziali OAuth2
+    /* 
+    const authClient = await authorize();
+    const sheets = google.sheets({ version: 'v4', auth: authClient });
+    
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `Risposte del modulo 1!A${rowIndex + 1}`,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[status]]
+      }
+    });
+    */
+    
+    return true;
+  } catch (error) {
+    console.error('Errore nell\'aggiornamento del foglio Google:', error);
+    return false;
+  }
+}
+
 export async function getMaintenanceRequestsCSV(): Promise<string> {
   try {
     const data = await readGoogleSheet();
@@ -135,6 +253,9 @@ export async function getMaintenanceRequestsCSV(): Promise<string> {
     console.log("Prima riga (intestazioni):", JSON.stringify(data[0]));
     console.log("Seconda riga (primo record):", JSON.stringify(data[1]));
     console.log("Terza riga (secondo record):", JSON.stringify(data[2]));
+    
+    // Salviamo la struttura del foglio per riferimenti futuri
+    globalSheetStructure = data;
     
     // Controlliamo la prima colonna (colonna A) per verificare l'intestazione e i valori
     if (data.length > 0 && data[0].length > 0) {

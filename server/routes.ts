@@ -637,24 +637,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               }
               
-              // Se è risolta o è un duplicato, saltiamo
-              if (isRisolto) {
-                console.log(`Riga ${i} saltata perché è già risolta`);
-                failed++;
-              } else if (isExisting) {
-                console.log(`Riga ${i} saltata perché è un duplicato`);
-                failed++;
+              // Determiniamo lo stato in base alla colonna A
+              let maintenanceStatus = MaintenanceRequestStatus.PENDING; // Default è pending
+              
+              // Se la colonna A è "risolto", lo stato diventa "completato"
+              if (row[0] && String(row[0]).toLowerCase().trim() === 'risolto') {
+                  maintenanceStatus = MaintenanceRequestStatus.COMPLETED;
+                  console.log(`Riga ${i}: Stato nel foglio = COMPLETATO, colonna A contiene: "${row[0]}"`);
               } else {
-                // Determiniamo lo stato in base alla colonna A
-                let maintenanceStatus = MaintenanceRequestStatus.PENDING; // Default è pending
-                
-                // Se la colonna A è "risolto", lo stato diventa "completato"
-                if (row[0] && String(row[0]).toLowerCase().trim() === 'risolto') {
-                    maintenanceStatus = MaintenanceRequestStatus.COMPLETED;
-                    console.log(`Riga ${i}: Impostato stato COMPLETATO, colonna A contiene: "${row[0]}"`);
-                } else {
-                    console.log(`Riga ${i}: Impostato stato IN ATTESA, colonna A contiene: "${row[0] || '<vuoto>'}"`);
+                  console.log(`Riga ${i}: Stato nel foglio = IN ATTESA, colonna A contiene: "${row[0] || '<vuoto>'}"`);
+              }
+              
+              // Se è un duplicato, controlliamo se è cambiato lo stato
+              if (isExisting) {
+                // Troviamo la richiesta esistente
+                let existingRequest = null;
+                for (const existing of existingRequests.requests) {
+                  const sameRoom = existing.roomNumber === stanza;
+                  const sameRequester = existing.requesterName === richiedente;
+                  
+                  // Confronta le date con un margine di 1 giorno
+                  const existingDate = new Date(existing.timestamp);
+                  const timeDiff = Math.abs(timestamp.getTime() - existingDate.getTime());
+                  const daysDiff = timeDiff / (1000 * 3600 * 24);
+                  const closeDate = daysDiff < 1;
+                  
+                  if (sameRoom && sameRequester && closeDate) {
+                    existingRequest = existing;
+                    break;
+                  }
                 }
+                
+                if (existingRequest && existingRequest.status !== maintenanceStatus) {
+                  // Lo stato è cambiato, aggiorniamo la richiesta
+                  console.log(`Riga ${i}: Aggiornamento stato da ${existingRequest.status} a ${maintenanceStatus} per richiesta ID ${existingRequest.id}`);
+                  
+                  await storage.updateMaintenanceRequest(existingRequest.id, {
+                    status: maintenanceStatus as MaintenanceRequestStatusValue,
+                    notes: `${existingRequest.notes}\n\nAggiornamento automatico: Stato cambiato da "${existingRequest.status}" a "${maintenanceStatus}" il ${new Date().toLocaleString()}`
+                  });
+                  
+                  success++;
+                  console.log(`Riga ${i}: Richiesta ID ${existingRequest.id} aggiornata con successo`);
+                } else {
+                  console.log(`Riga ${i}: Richiesta già esistente e stato non cambiato, nessun aggiornamento necessario`);
+                  failed++;
+                }
+              } else {
+                // Nuova richiesta da creare
                 
                 // Creiamo la richiesta con lo stato determinato
                 await storage.createMaintenanceRequest({
