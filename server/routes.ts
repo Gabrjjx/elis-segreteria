@@ -99,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update a service
   app.put("/api/services/:id", async (req: Request, res: Response) => {
     try {
-      console.log("Ricevuti dati per aggiornamento servizio:", req.body);
+      console.log("Ricevuti dati per aggiornamento servizio:", JSON.stringify(req.body, null, 2));
       
       const id = parseInt(req.params.id);
       console.log("ID servizio da aggiornare:", id);
@@ -116,8 +116,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       try {
-        const updates = insertServiceSchema.partial().parse(req.body);
-        console.log("Dati validati con successo:", updates);
+        // Prima di validare, facciamo una copia dell'oggetto per evitare modifiche indesiderate
+        const dataToValidate = { ...req.body };
+        console.log("Dati da validare:", JSON.stringify(dataToValidate, null, 2));
+        
+        try {
+          // Prima proviamo lo schema completo per vedere se genera errori
+          insertServiceSchema.parse(dataToValidate);
+          console.log("Schema completo valido");
+        } catch (fullSchemaError) {
+          console.log("Schema completo non valido, dettaglio:", fullSchemaError);
+        }
+        
+        // Ora proviamo con lo schema parziale per l'aggiornamento
+        const updates = insertServiceSchema.partial().parse(dataToValidate);
+        console.log("Dati validati con successo (schema parziale):", JSON.stringify(updates, null, 2));
         
         const updatedService = await storage.updateService(id, updates);
         
@@ -132,7 +145,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (validationError instanceof ZodError) {
           const formattedError = fromZodError(validationError);
           console.error("Dettaglio errore Zod:", formattedError.message);
-          res.status(400).json({ message: formattedError.message });
+          
+          // Log dettagliato per errori Zod
+          validationError.errors.forEach((err, index) => {
+            console.error(`Errore #${index + 1}:`, {
+              path: err.path,
+              message: err.message,
+              code: err.code,
+              expected: err.expected,
+              received: err.received
+            });
+          });
+          
+          res.status(400).json({ 
+            message: formattedError.message,
+            errors: validationError.errors.map(e => ({
+              path: e.path.join('.'),
+              message: e.message
+            }))
+          });
         } else {
           throw validationError; // Rilancia per gestirlo nel catch esterno
         }
