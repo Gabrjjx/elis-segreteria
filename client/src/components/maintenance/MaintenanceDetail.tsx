@@ -121,6 +121,11 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
         }
         const data = await response.json();
         console.log("Raw maintenance request data:", data);
+        // Logging completo per debug
+        console.log("DATI RICHIESTA COMPLETI:", {
+          ...data,
+          originalRequest: request  // Confronto con i dati precedenti per debug
+        });
         return data;
       } catch (error) {
         console.error("Error fetching maintenance request:", error);
@@ -447,6 +452,14 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
               className="w-full min-h-[60px] text-sm"
             />
           </div>
+          
+          {/* Stato sincronizzazione Google Sheets */}
+          {request.status === "completed" && request.notes?.includes("Stato originale: \"risolto\"") && (
+            <div className="bg-green-50 p-2 rounded-md border border-green-200 mt-2">
+              <h3 className="text-xs font-medium text-green-700">Sincronizzazione</h3>
+              <p className="text-green-800 text-xs">Richiesta già sincronizzata con Google Sheets</p>
+            </div>
+          )}
         </div>
         
         <DialogFooter className="mt-2">

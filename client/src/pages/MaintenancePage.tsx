@@ -165,12 +165,31 @@ export default function MaintenancePage() {
         body: JSON.stringify({ status })
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });
-      toast({
-        title: "Stato aggiornato",
-        description: "Lo stato della richiesta è stato aggiornato con successo",
-      });
+      
+      // Controlla se la richiesta è COMPLETED e abbiamo informazioni su Google Sheets
+      const googleSheetSync = data?.googleSheetSync;
+      
+      if (data?.status === "completed" && googleSheetSync) {
+        if (googleSheetSync.success) {
+          toast({
+            title: "Stato aggiornato",
+            description: `Richiesta completata e sincronizzata con Google Sheets: ${googleSheetSync.message}`,
+          });
+        } else {
+          toast({
+            title: "Stato aggiornato parzialmente",
+            description: `La richiesta è stata completata ma non è stato possibile sincronizzare con Google Sheets: ${googleSheetSync.message}`,
+            variant: "warning",
+          });
+        }
+      } else {
+        toast({
+          title: "Stato aggiornato",
+          description: "Lo stato della richiesta è stato aggiornato con successo",
+        });
+      }
     },
     onError: () => {
       toast({
