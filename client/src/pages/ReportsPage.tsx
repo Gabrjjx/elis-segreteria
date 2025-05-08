@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, parseISO, getMonth, getYear, isEqual, isSameMonth } from "date-fns";
 import { it } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,15 +11,33 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { Separator } from "@/components/ui/separator";
 import { 
-  BarChart, 
-  LineChart, 
-  PieChart, 
+  BarChart as BarChartIcon, 
+  LineChart as LineChartIcon, 
+  PieChart as PieChartIcon, 
   FileDown, 
   Calendar as CalendarIcon,
   Filter, 
   ChevronDown,
   ChevronsUpDown
 } from "lucide-react";
+
+// Importazioni per i grafici con recharts
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from "recharts";
+
 import { ServiceType, PaymentStatus, type Service } from "@shared/schema";
 import { getServiceTypeLabel, getPaymentStatusLabel, formatDate, formatAmount } from "@/lib/utils/services";
 
@@ -213,6 +231,72 @@ export default function ReportsPage() {
     
     return { countData, amountData };
   }, [filteredServices, stats.totalAmount]);
+  
+  // Compute service trend data (monthly aggregation)
+  const trendData = React.useMemo(() => {
+    if (!filteredServices.length) return [];
+    
+    // Group services by month
+    const servicesByMonth: Record<string, { 
+      count: Record<string, number>, 
+      amount: Record<string, number> 
+    }> = {};
+    
+    // Sort services by date first
+    const sortedServices = [...filteredServices].sort((a, b) => {
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+    
+    // Process each service
+    sortedServices.forEach(service => {
+      const date = new Date(service.date);
+      const monthKey = format(date, 'yyyy-MM');
+      const monthLabel = format(date, 'MMM yyyy', { locale: it });
+      
+      if (!servicesByMonth[monthKey]) {
+        servicesByMonth[monthKey] = { 
+          count: {
+            [ServiceType.SIGLATURA]: 0,
+            [ServiceType.HAPPY_HOUR]: 0,
+            [ServiceType.RIPARAZIONE]: 0,
+            total: 0
+          }, 
+          amount: {
+            [ServiceType.SIGLATURA]: 0,
+            [ServiceType.HAPPY_HOUR]: 0,
+            [ServiceType.RIPARAZIONE]: 0,
+            total: 0
+          },
+          label: monthLabel
+        };
+      }
+      
+      // Increment counters
+      servicesByMonth[monthKey].count[service.type] = 
+        (servicesByMonth[monthKey].count[service.type] || 0) + 1;
+      servicesByMonth[monthKey].count.total += 1;
+      
+      // Add amounts
+      servicesByMonth[monthKey].amount[service.type] = 
+        (servicesByMonth[monthKey].amount[service.type] || 0) + service.amount;
+      servicesByMonth[monthKey].amount.total += service.amount;
+    });
+    
+    // Convert to array suitable for charts
+    return Object.entries(servicesByMonth)
+      .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+      .map(([key, data]) => ({
+        name: data.label,
+        // Service counts
+        [getServiceTypeLabel(ServiceType.SIGLATURA)]: data.count[ServiceType.SIGLATURA],
+        [getServiceTypeLabel(ServiceType.HAPPY_HOUR)]: data.count[ServiceType.HAPPY_HOUR],
+        [getServiceTypeLabel(ServiceType.RIPARAZIONE)]: data.count[ServiceType.RIPARAZIONE],
+        // Total for line chart
+        Totale: data.count.total,
+        // For tooltip display
+        amount: data.amount.total
+      }));
+  }, [filteredServices]);
   
   // Table columns for data export
   const tableColumns = [
@@ -671,11 +755,120 @@ export default function ReportsPage() {
               <CardTitle className="text-lg">Andamento Servizi</CardTitle>
               <CardDescription>Evoluzione mensile dei servizi</CardDescription>
             </CardHeader>
-            <CardContent className="h-72 flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <p>I grafici di andamento saranno implementati in una versione successiva.</p>
-                <p className="text-sm text-gray-400 mt-2">Esporta i dati in CSV per analisi avanzate in Excel.</p>
-              </div>
+            <CardContent className="h-[450px] pt-4">
+              {isLoading ? (
+                <Skeleton className="h-full w-full" />
+              ) : trendData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-center text-gray-500">
+                  <div>
+                    <p>Nessun dato disponibile per il periodo selezionato.</p>
+                    <p className="text-sm text-gray-400 mt-2">Prova a modificare i filtri o selezionare un periodo più ampio.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full">
+                  <Tabs defaultValue="bar" className="mb-4">
+                    <TabsList className="w-full justify-start mb-4">
+                      <TabsTrigger value="bar" className="flex items-center">
+                        <BarChartIcon className="h-4 w-4 mr-2" />
+                        <span>Istogramma</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="line" className="flex items-center">
+                        <LineChartIcon className="h-4 w-4 mr-2" />
+                        <span>Lineare</span>
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="bar" className="h-[350px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={trendData}
+                          margin={{ top: 5, right: 30, left: 20, bottom: 70 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="name" 
+                            angle={-45} 
+                            textAnchor="end"
+                            height={70}
+                            tickMargin={20}
+                          />
+                          <YAxis />
+                          <Tooltip 
+                            formatter={(value: any, name: any) => [value, name]}
+                            labelFormatter={(label) => `Mese: ${label}`}
+                          />
+                          <Legend />
+                          <Bar 
+                            dataKey={getServiceTypeLabel(ServiceType.SIGLATURA)} 
+                            fill="#3b82f6" 
+                            stackId="a"
+                          />
+                          <Bar 
+                            dataKey={getServiceTypeLabel(ServiceType.HAPPY_HOUR)} 
+                            fill="#eab308" 
+                            stackId="a"
+                          />
+                          <Bar 
+                            dataKey={getServiceTypeLabel(ServiceType.RIPARAZIONE)} 
+                            fill="#22c55e" 
+                            stackId="a"
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </TabsContent>
+                    
+                    <TabsContent value="line" className="h-[350px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={trendData}
+                          margin={{ top: 5, right: 30, left: 20, bottom: 70 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="name" 
+                            angle={-45} 
+                            textAnchor="end"
+                            height={70}
+                            tickMargin={20}
+                          />
+                          <YAxis />
+                          <Tooltip 
+                            formatter={(value: any, name: any) => {
+                              if (name === "Totale") return [`${value} servizi`, name];
+                              return [value, name];
+                            }}
+                            labelFormatter={(label) => `Mese: ${label}`}
+                          />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="Totale" 
+                            stroke="#6366f1" 
+                            strokeWidth={3}
+                            activeDot={{ r: 6 }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey={getServiceTypeLabel(ServiceType.SIGLATURA)} 
+                            stroke="#3b82f6" 
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey={getServiceTypeLabel(ServiceType.HAPPY_HOUR)} 
+                            stroke="#eab308" 
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey={getServiceTypeLabel(ServiceType.RIPARAZIONE)} 
+                            stroke="#22c55e" 
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
