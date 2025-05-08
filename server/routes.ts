@@ -12,6 +12,13 @@ import {
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { getMaintenanceRequestsCSV, readGoogleSheet, isSheetLoaded } from "./services/googleSheets";
+import { 
+  hasOAuth2Credentials, 
+  hasValidToken, 
+  getAuthorizationUrl, 
+  getTokenFromCode,
+  verifyToken
+} from "./services/googleAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -437,6 +444,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // === Google OAuth2 Authentication routes ===
+
+  // Get OAuth2 status
+  app.get("/api/google/auth/status", async (_req: Request, res: Response) => {
+    try {
+      const status = {
+        hasCredentials: hasOAuth2Credentials(),
+        hasValidToken: false
+      };
+      
+      if (status.hasCredentials) {
+        try {
+          status.hasValidToken = await verifyToken();
+        } catch (error) {
+          console.log("Errore nella verifica del token:", error);
+        }
+      }
+      
+      res.json(status);
+    } catch (error) {
+      console.error("Error checking OAuth2 status:", error);
+      res.status(500).json({ message: "Error checking OAuth2 status" });
+    }
+  });
+  
+  // Get OAuth2 authorization URL
+  app.get("/api/google/auth/url", async (_req: Request, res: Response) => {
+    try {
+      if (!hasOAuth2Credentials()) {
+        return res.status(400).json({
+          message: "Google OAuth2 credentials are missing. Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET."
+        });
+      }
+      
+      const authUrl = getAuthorizationUrl();
+      res.json({ url: authUrl });
+    } catch (error) {
+      console.error("Error generating auth URL:", error);
+      res.status(500).json({ message: "Error generating auth URL" });
+    }
+  });
+  
+  // Exchange OAuth2 code for token
+  app.post("/api/google/auth/token", async (req: Request, res: Response) => {
+    try {
+      if (!req.body.code) {
+        return res.status(400).json({ message: "Authorization code is required" });
+      }
+      
+      if (!hasOAuth2Credentials()) {
+        return res.status(400).json({
+          message: "Google OAuth2 credentials are missing. Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET."
+        });
+      }
+      
+      const token = await getTokenFromCode(req.body.code);
+      res.json({ success: true, message: "OAuth2 token obtained successfully" });
+    } catch (error) {
+      console.error("Error exchanging code for token:", error);
+      res.status(500).json({ 
+        message: "Error exchanging code for token", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // Synchronize maintenance requests from Google Sheets
   app.post("/api/maintenance/sync-google-sheets", async (_req: Request, res: Response) => {
     try {

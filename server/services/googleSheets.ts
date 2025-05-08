@@ -227,22 +227,49 @@ export async function updateGoogleSheetStatus(rowIndex: number, status: string):
     
     // Nel frattempo, logghiamo l'operazione per tracciamento
     console.log(`SIMULAZIONE: Aggiornamento foglio Google, riga ${rowIndex + 1}, colonna A = "${status}"`);
+    
+    // NOTA PER L'UTENTE: Per implementare completamente questa funzionalità è necessario:
+    // 1. Configurare un progetto su Google Cloud Console
+    // 2. Abilitare Google Sheets API
+    // 3. Creare credenziali OAuth2 (tipo "Desktop application")
+    // 4. Scaricare il file JSON delle credenziali e configurarlo nell'applicazione
+    // 5. Implementare il flusso di autorizzazione OAuth2
+    //
+    // Questo richiede configurazioni aggiuntive non implementabili nella versione attuale
+    // dell'applicazione senza le credenziali necessarie.
     console.log('Nota: Per implementare completamente questa funzionalità è necessario configurare OAuth2 per Google Sheets API');
     
-    // Per aggiornare effettivamente il foglio, servirebbero credenziali OAuth2
-    /* 
-    const authClient = await authorize();
-    const sheets = google.sheets({ version: 'v4', auth: authClient });
-    
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID,
-      range: `Risposte del modulo 1!A${rowIndex + 1}`,
-      valueInputOption: 'RAW',
-      requestBody: {
-        values: [[status]]
+    // Tentativamente, proviamo ad usare l'API fetch per aggiornare il foglio
+    // Nota: questo metodo non funzionerà con una semplice API key, ma lo includiamo
+    // come esempio di come potrebbe funzionare con le credenziali appropriate
+    try {
+      const apiKey = process.env.GOOGLE_API_KEY;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Risposte del modulo 1!A${rowIndex + 1}?valueInputOption=RAW&key=${apiKey}`;
+      
+      console.log("Tentativo di scrittura su Google Sheets (potrebbe non funzionare con sola API key)");
+      
+      // Questa richiesta fallirà con una semplice API key, ma la includiamo come esempio
+      /* 
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          values: [[status]]
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Google Sheets API error (${response.status}): ${errorText}`);
+        throw new Error(`Google Sheets API error: ${response.status} ${response.statusText}`);
       }
-    });
-    */
+      */
+    } catch (fetchError) {
+      console.error("Errore durante la scrittura su Google Sheets:", fetchError);
+      // Non propaghiamo l'errore, continueremo con la simulazione
+    }
     
     return true;
   } catch (error) {
