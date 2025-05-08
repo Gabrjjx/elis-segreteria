@@ -99,8 +99,16 @@ export default function ServiceForm({ id }: ServiceFormProps) {
   // Create service mutation
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      // apiRequest già restituisce i dati JSON parseati, non serve chiamare .json()
-      return await apiRequest("POST", "/api/services", data);
+      try {
+        console.log("Invio dati per creazione:", data);
+        // apiRequest già restituisce i dati JSON parseati, non serve chiamare .json()
+        const response = await apiRequest("POST", "/api/services", data);
+        console.log("Risposta creazione dal server:", response);
+        return response;
+      } catch (error) {
+        console.error("Errore completo durante la creazione:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/services'] });
@@ -124,17 +132,25 @@ export default function ServiceForm({ id }: ServiceFormProps) {
   // Update service mutation
   const updateMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      // Prepare the data for the API - convert date to YYYY-MM-DD format string
-      const dateObj = data.date instanceof Date ? data.date : new Date(data.date as string);
-      const formattedDate = `${dateObj.getFullYear()}-${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${dateObj.getDate().toString().padStart(2, '0')}`;
-      
-      const apiData = {
-        ...data,
-        date: formattedDate
-      };
-      console.log("Inviando dati formattati:", apiData);
-      // apiRequest già restituisce i dati JSON parseati, non serve chiamare .json()
-      return await apiRequest("PUT", `/api/services/${id}`, apiData);
+      try {
+        // Prepare the data for the API - convert date to YYYY-MM-DD format string
+        const dateObj = data.date instanceof Date ? data.date : new Date(data.date as string);
+        const formattedDate = `${dateObj.getFullYear()}-${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${dateObj.getDate().toString().padStart(2, '0')}`;
+        
+        const apiData = {
+          ...data,
+          date: formattedDate
+        };
+        console.log("Inviando dati formattati:", apiData);
+        
+        // apiRequest già restituisce i dati JSON parseati, non serve chiamare .json()
+        const response = await apiRequest("PUT", `/api/services/${id}`, apiData);
+        console.log("Risposta dal server:", response);
+        return response;
+      } catch (error) {
+        console.error("Errore completo durante l'aggiornamento:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/services'] });

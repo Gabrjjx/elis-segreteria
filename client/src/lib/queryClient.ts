@@ -5,44 +5,71 @@ const CACHE_TIME = 5 * 60 * 1000;
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    try {
+      // Prova a leggere il corpo come JSON
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorJson = await res.clone().json();
+        console.error("API Error (JSON):", errorJson);
+        throw new Error(`${res.status}: ${JSON.stringify(errorJson)}`);
+      } else {
+        // Fallback a testo normale
+        const text = await res.text();
+        console.error("API Error (Text):", text || res.statusText);
+        throw new Error(`${res.status}: ${text || res.statusText}`);
+      }
+    } catch (parseError) {
+      // Se non riusciamo a fare il parsing, utilizza lo statusText
+      console.error("API Error (Parse failed):", parseError);
+      throw new Error(`${res.status}: ${res.statusText}`);
+    }
   }
 }
 
 export async function apiRequest(
-  url: string,
-  options?: RequestInit,
+  method: string,
+  endpoint: string,
+  data?: any
 ): Promise<any> {
   // Aggiunta di un timeout per evitare richieste che rimangono bloccate
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), 15000); // 15 secondi di timeout
   
   // Debug
-  console.log("API Request:", url);
+  console.log(`API Request: ${method} ${endpoint}`, data);
   
-  // Assicuriamoci che le headers siano impostate correttamente
-  const headers = {
-    ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
-    ...(options?.headers || {})
-  };
-  
-  const res = await fetch(url, {
-    method: options?.method || 'GET',
-    headers,
-    body: options?.body,
-    credentials: "include",
-    signal: controller.signal,
-    ...options
-  });
-  
-  clearTimeout(id);
-  await throwIfResNotOk(res);
-  
-  // Parse JSON and return the data directly
-  const data = await res.json();
-  console.log("API Response data:", data);
-  return data;
+  try {
+    // Creare le opzioni per la richiesta
+    const options: RequestInit = {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: "include",
+      signal: controller.signal
+    };
+    
+    // Aggiungi il corpo solo per metodi diversi da GET
+    if (method !== 'GET' && data) {
+      options.body = JSON.stringify(data);
+    }
+    
+    const res = await fetch(endpoint, options);
+    
+    clearTimeout(id);
+    await throwIfResNotOk(res);
+    
+    // Parse JSON and return the data directly
+    const responseData = await res.json();
+    console.log("API Response data:", responseData);
+    return responseData;
+  } catch (error) {
+    console.error(`API Error in ${method} ${endpoint}:`, error);
+    throw error;
+  } finally {
+    clearTimeout(id);
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
