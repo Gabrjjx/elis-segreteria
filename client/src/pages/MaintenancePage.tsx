@@ -35,7 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, UploadCloud, RefreshCw, Filter, Cloud } from "lucide-react";
+import { Loader2, Search, UploadCloud, RefreshCw, Filter, Cloud, Upload, Download, AlertCircle } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import { formatDate } from "@/lib/utils";
 
@@ -147,6 +147,7 @@ export default function MaintenancePage() {
   const [searchInput, setSearchInput] = useState("");
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
+  const [isStatusSyncDialogOpen, setIsStatusSyncDialogOpen] = useState(false);
   const [csvData, setCsvData] = useState("");
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -364,8 +365,52 @@ export default function MaintenancePage() {
     deleteMutation.mutate(id);
   };
   
+  // Mutation per sincronizzare lo stato con Google Sheets
+  const statusSyncGoogleSheetsMutation = useMutation({
+    mutationFn: async () => {
+      try {
+        const response = await fetch('/api/google/sheets/sync-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: '{}'
+        });
+      
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      
+        return await response.json();
+      } catch (error) {
+        console.error("Errore richiesta sync status:", error);
+        throw error;
+      }
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });
+      toast({
+        title: "Sincronizzazione completata",
+        description: `Aggiornati con successo ${data.updated} stati nel foglio Google (falliti: ${data.failed})`,
+      });
+      setIsStatusSyncDialogOpen(false);
+    },
+    onError: (error) => {
+      console.error("Errore sincronizzazione stati:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante la sincronizzazione degli stati con Google Sheets",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleSyncGoogleSheets = () => {
     syncGoogleSheetsMutation.mutate();
+  };
+  
+  const handleStatusSyncGoogleSheets = () => {
+    statusSyncGoogleSheetsMutation.mutate();
   };
   
   // Definizione colonne per la tabella
@@ -503,7 +548,7 @@ export default function MaintenancePage() {
             <AlertDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" className="flex items-center">
-                  <Cloud className="mr-2 h-4 w-4" />
+                  <Download className="mr-2 h-4 w-4" />
                   Sincronizza da Google
                 </Button>
               </AlertDialogTrigger>
@@ -531,6 +576,45 @@ export default function MaintenancePage() {
                       </>
                     ) : (
                       "Sincronizza"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
+            {/* Pulsante per sincronizzare lo stato verso Google Sheets */}
+            <AlertDialog open={isStatusSyncDialogOpen} onOpenChange={setIsStatusSyncDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="flex items-center">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Aggiorna stati su Google
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Aggiorna stati su Google Sheets</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Questa operazione aggiornerà lo stato delle richieste di manutenzione nel foglio Google Forms.
+                    Le richieste completate o rifiutate saranno marcate come "risolto" nel foglio.
+                    È necessario aver configurato l'autenticazione Google OAuth2.
+                  </AlertDialogDescription>
+                  {statusSyncGoogleSheetsMutation.isError && (
+                    <div className="mt-2 p-3 bg-red-50 text-red-800 rounded-md text-sm">
+                      <p className="font-semibold">Errore di sincronizzazione:</p>
+                      <p>Verifica che l'autenticazione OAuth2 sia stata configurata correttamente.</p>
+                    </div>
+                  )}
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annulla</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleStatusSyncGoogleSheets} disabled={statusSyncGoogleSheetsMutation.isPending}>
+                    {statusSyncGoogleSheetsMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sincronizzazione...
+                      </>
+                    ) : (
+                      "Aggiorna stati"
                     )}
                   </AlertDialogAction>
                 </AlertDialogFooter>

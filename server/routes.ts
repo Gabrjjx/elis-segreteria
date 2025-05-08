@@ -511,6 +511,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Synchronize maintenance requests from Google Sheets
+  // Sincronizzare lo stato delle richieste di manutenzione verso Google Sheets
+  app.post("/api/google/sheets/sync-status", async (_req: Request, res: Response) => {
+    try {
+      // Verifica che l'autenticazione OAuth2 sia configurata
+      if (!hasOAuth2Credentials()) {
+        return res.status(400).json({
+          message: "Google OAuth2 credentials are missing. Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET."
+        });
+      }
+
+      if (!await verifyToken()) {
+        return res.status(401).json({
+          message: "Google OAuth2 token is invalid or missing. Please authenticate first."
+        });
+      }
+
+      if (!process.env.GOOGLE_SHEET_ID) {
+        return res.status(400).json({
+          message: "Google Sheet ID is missing. Please check your environment configuration."
+        });
+      }
+
+      console.log("Sincronizzazione stati verso Google Sheets avviata");
+
+      // Ottiene tutte le richieste completate o rifiutate che potrebbero dover essere aggiornate su Google Sheets
+      const maintenanceRequests = await storage.getMaintenanceRequests({
+        status: "all", // Recupera tutte per filtrare manualmente
+        priority: "all",
+        page: 1,
+        limit: 1000, // Un limite ragionevolmente alto
+        query: ""
+      });
+
+      // Filtra solo le richieste completate o rifiutate
+      const completedRequests = maintenanceRequests.requests.filter(req => 
+        req.status === "completed" || req.status === "rejected"
+      );
+
+      console.log(`Trovate ${completedRequests.length} richieste completate/rifiutate da sincronizzare`);
+
+      let updated = 0;
+      let failed = 0;
+
+      // Per ogni richiesta completata, trova la riga corrispondente nel foglio Google e aggiorna lo stato
+      for (const request of completedRequests) {
+        try {
+          // Cerca la richiesta nel foglio Google usando timestamp e richiedente
+          const timestamp = new Date(request.timestamp);
+          const rowIndex = await findRequestRowInGoogleSheet(
+            timestamp,
+            request.requesterName,
+            request.roomNumber
+          );
+
+          if (rowIndex >= 0) {
+            // Aggiorna lo stato nel foglio Google
+            const success = await updateGoogleSheetStatus(rowIndex, "risolto");
+            if (success) {
+              updated++;
+              console.log(`✓ Aggiornata richiesta ID ${request.id} nella riga ${rowIndex} del foglio Google (stato: risolto)`);
+            } else {
+              failed++;
+              console.log(`✗ Impossibile aggiornare richiesta ID ${request.id} nella riga ${rowIndex} del foglio Google`);
+            }
+          } else {
+            failed++;
+            console.log(`✗ Richiesta ID ${request.id} non trovata nel foglio Google`);
+          }
+        } catch (error) {
+          failed++;
+          console.error(`Errore nell'aggiornamento della richiesta ID ${request.id}:`, error);
+        }
+      }
+
+      res.json({
+        message: "Synchronization completed",
+        total: completedRequests.length,
+        updated,
+        failed
+      });
+    } catch (error) {
+      console.error("Error syncing status to Google Sheets:", error);
+      res.status(500).json({ 
+        message: "Error syncing status to Google Sheets",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   app.post("/api/maintenance/sync-google-sheets", async (_req: Request, res: Response) => {
     try {
       // Controlla che le chiavi API Google siano configurate

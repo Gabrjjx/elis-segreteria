@@ -23,7 +23,9 @@ import {
   PackageOpen,
   ChevronDown,
   Hammer,
-  AlertCircle
+  AlertCircle,
+  CloudSync,
+  KeySquare
 } from "lucide-react";
 
 interface MainLayoutProps {
@@ -93,6 +95,19 @@ export default function MainLayout({ children }: MainLayoutProps) {
       name: "Impostazioni",
       path: "/settings",
       icon: <Settings className="h-5 w-5" />,
+      dropdown: true,
+      children: [
+        {
+          name: "Generali",
+          path: "/settings",
+          icon: <Settings className="h-5 w-5" />,
+        },
+        {
+          name: "Google Auth",
+          path: "/google-auth",
+          icon: <CloudSync className="h-5 w-5" />,
+        },
+      ]
     },
   ];
 
