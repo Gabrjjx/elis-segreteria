@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useRoute } from "wouter";
+import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
 const NavigationProgress = () => {
   const [progress, setProgress] = useState(0);
   const [visible, setVisible] = useState(false);
-  const [route] = useRoute();
+  const [location] = useLocation();
   
   useEffect(() => {
     let timeout: NodeJS.Timeout;
@@ -42,7 +42,7 @@ const NavigationProgress = () => {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [route]);
+  }, [location]);
   
   if (!visible && progress === 0) return null;
   

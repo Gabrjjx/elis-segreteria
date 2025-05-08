@@ -68,7 +68,7 @@ export const queryClient = new QueryClient({
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: 60000, // 1 minuto di validità cache prima che diventi stale
-      cacheTime: CACHE_TIME, // 5 minuti di caching
+      gcTime: CACHE_TIME, // 5 minuti di caching (in TanStack v5 gcTime sostituisce cacheTime)
       retry: 1, // Un retry in caso di errore
       retryDelay: 1000, // Ritardo di 1 secondo prima del retry
     },
