@@ -118,6 +118,7 @@ export const insertServiceSchema = createInsertSchema(services).pick({
 // Service search parameters schema
 export const serviceSearchSchema = z.object({
   query: z.string().optional(),
+  sigla: z.string().optional(), // Aggiunto campo per cercare per sigla esatta
   type: z.enum([
     "all",
     ServiceType.SIGLATURA,

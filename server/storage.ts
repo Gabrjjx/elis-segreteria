@@ -682,7 +682,13 @@ export class DatabaseStorage implements IStorage {
     // Costruisci le condizioni di query
     const whereConditions = [];
     
-    if (params.query) {
+    // Filtro per sigla esatta (prioritario rispetto al filtro query)
+    if (params.sigla) {
+      whereConditions.push(eq(services.sigla, params.sigla));
+      console.log(`Filtro per sigla esatta: ${params.sigla}`);
+    }
+    // Filtro di ricerca generico (se non è specificata una sigla esatta)
+    else if (params.query) {
       whereConditions.push(like(services.sigla, `%${params.query}%`));
     }
     
