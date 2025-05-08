@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "@/contexts/loading-context";
 import { apiRequest } from "@/lib/queryClient";
+import MaintenanceDetail from "@/components/maintenance/MaintenanceDetail";
 import { 
   Card, 
   CardContent, 
@@ -147,6 +148,8 @@ export default function MaintenancePage() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [csvData, setCsvData] = useState("");
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   
   // Query per ottenere le richieste di manutenzione
   const maintenanceQuery = useQuery({
@@ -419,6 +422,16 @@ export default function MaintenancePage() {
       header: "Azioni", 
       cell: (item: MaintenanceRequest) => (
         <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              setSelectedRequestId(item.id);
+              setDetailDialogOpen(true);
+            }}
+          >
+            Dettagli
+          </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm">Elimina</Button>
