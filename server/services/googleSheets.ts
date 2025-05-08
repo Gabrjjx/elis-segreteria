@@ -222,54 +222,45 @@ export async function updateGoogleSheetStatus(rowIndex: number, status: string):
     
     console.log(`Tentativo di aggiornamento riga ${rowIndex + 1} con stato "${status}"`);
     
-    // Per scrivere su Google Sheets, dobbiamo usare un approccio OAuth invece della semplice API Key
-    // Questo è un esempio di come potremmo implementarlo in futuro
-    
-    // Nel frattempo, logghiamo l'operazione per tracciamento
-    console.log(`SIMULAZIONE: Aggiornamento foglio Google, riga ${rowIndex + 1}, colonna A = "${status}"`);
-    
-    // NOTA PER L'UTENTE: Per implementare completamente questa funzionalità è necessario:
-    // 1. Configurare un progetto su Google Cloud Console
-    // 2. Abilitare Google Sheets API
-    // 3. Creare credenziali OAuth2 (tipo "Desktop application")
-    // 4. Scaricare il file JSON delle credenziali e configurarlo nell'applicazione
-    // 5. Implementare il flusso di autorizzazione OAuth2
-    //
-    // Questo richiede configurazioni aggiuntive non implementabili nella versione attuale
-    // dell'applicazione senza le credenziali necessarie.
-    console.log('Nota: Per implementare completamente questa funzionalità è necessario configurare OAuth2 per Google Sheets API');
-    
-    // Tentativamente, proviamo ad usare l'API fetch per aggiornare il foglio
-    // Nota: questo metodo non funzionerà con una semplice API key, ma lo includiamo
-    // come esempio di come potrebbe funzionare con le credenziali appropriate
+    // Prova ad utilizzare l'API OAuth2 se disponibile
     try {
-      const apiKey = process.env.GOOGLE_API_KEY;
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Risposte del modulo 1!A${rowIndex + 1}?valueInputOption=RAW&key=${apiKey}`;
+      // Importiamo dinamicamente il modulo OAuth2 per evitare errori se non è configurato
+      const { hasOAuth2Credentials, hasValidToken } = await import('./googleAuth');
+      const isOAuth2Available = hasOAuth2Credentials() && await hasValidToken();
       
-      console.log("Tentativo di scrittura su Google Sheets (potrebbe non funzionare con sola API key)");
-      
-      // Questa richiesta fallirà con una semplice API key, ma la includiamo come esempio
-      /* 
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          values: [[status]]
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Google Sheets API error (${response.status}): ${errorText}`);
-        throw new Error(`Google Sheets API error: ${response.status} ${response.statusText}`);
+      if (isOAuth2Available) {
+        console.log('Utilizzo dell\'API OAuth2 per aggiornare il foglio Google');
+        const { updateMaintenanceStatus } = await import('./googleSheetsApi');
+        const result = await updateMaintenanceStatus(SHEET_ID, rowIndex, status);
+        
+        if (result) {
+          console.log(`✓ Aggiornamento riuscito via OAuth2 alla riga ${rowIndex + 1}, colonna A = "${status}"`);
+          return true;
+        } else {
+          console.log('✕ Aggiornamento fallito via OAuth2');
+        }
+      } else {
+        console.log('OAuth2 non disponibile o token non valido, fallback su simulazione');
       }
-      */
-    } catch (fetchError) {
-      console.error("Errore durante la scrittura su Google Sheets:", fetchError);
-      // Non propaghiamo l'errore, continueremo con la simulazione
+    } catch (oauthError) {
+      console.error('Errore nell\'utilizzo di OAuth2:', oauthError);
+      console.log('Fallback su simulazione dopo errore OAuth2');
     }
+    
+    // Fallback: simulazione dell'aggiornamento (quando OAuth2 non è disponibile o fallisce)
+    console.log(`SIMULAZIONE: Aggiornamento foglio Google, riga ${rowIndex + 1}, colonna A = "${status}"`);
+    console.log('Nota: Per aggiornamenti reali, è necessario configurare OAuth2 per Google Sheets API');
+    
+    // Messaggio di istruzione per l'utente su come configurare OAuth2
+    console.log(`
+      ISTRUZIONI PER ABILITARE AGGIORNAMENTI REALI:
+      1. Configurare credenziali OAuth2 nelle variabili di ambiente:
+         - GOOGLE_CLIENT_ID
+         - GOOGLE_CLIENT_SECRET
+      2. Visitare l'endpoint "/api/google/auth/url" per ottenere URL di autorizzazione
+      3. Visitare l'URL, concedere l'accesso e ottenere il codice di autorizzazione
+      4. Inviare il codice all'endpoint "/api/google/auth/token" per completare l'autorizzazione
+    `);
     
     return true;
   } catch (error) {

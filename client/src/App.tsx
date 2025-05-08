@@ -25,6 +25,7 @@ const LazyServiceForm = lazy(() => import("@/pages/ServiceForm"));
 const LazyReportsPage = lazy(() => import("@/pages/ReportsPage"));
 const LazySettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const LazyMaintenancePage = lazy(() => import("@/pages/MaintenancePage"));
+const LazyGoogleAuthPage = lazy(() => import("@/pages/GoogleAuthPage"));
 
 function LoadingFallback() {
   return <LoadingScreen text="Caricamento pagina..." />;
@@ -46,6 +47,7 @@ function Router() {
           <Route path="/reports" component={LazyReportsPage} />
           <Route path="/maintenance" component={LazyMaintenancePage} />
           <Route path="/settings" component={LazySettingsPage} />
+          <Route path="/google-auth" component={LazyGoogleAuthPage} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>
