@@ -47,36 +47,41 @@ export const insertServiceSchema = createInsertSchema(services).pick({
   status: true,
   notes: true,
 }).extend({
-  // Accept date as string (ISO format) or Date object
-  date: z.string().or(z.date()).transform((val) => {
-    // Log per debug
+  // Accept date as string (YYYY-MM-DD or ISO format) or Date object
+  date: z.union([
+    // Accept simple YYYY-MM-DD format
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Data deve essere in formato YYYY-MM-DD" }),
+    // Accept ISO format string
+    z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, { message: "Data ISO non valida" }),
+    // Accept Date objects
+    z.date()
+  ]).transform((val) => {
     console.log(`Schema validazione data ricevuta: ${val}, tipo: ${typeof val}`);
     
+    // Se è già una stringa in formato YYYY-MM-DD, la usiamo così com'è
+    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      console.log(`Formato data semplice valido: ${val}, lo uso così com'è`);
+      return val;
+    }
+    
+    // Per date in formato ISO string o Date object, convertiamo in YYYY-MM-DD
+    let dateObj: Date;
     if (typeof val === 'string') {
-      // Parse the string to a Date object
-      try {
-        const date = new Date(val);
-        // Validate the date
-        if (isNaN(date.getTime())) {
-          console.log(`Data non valida: ${val}`);
-          throw new Error("Invalid date format");
-        }
-        console.log(`Data valida, return stringa: ${val}`);
-        return val; // Return the string as is, will be parsed in storage
-      } catch (error) {
-        console.error(`Errore parsing data: ${error}`);
-        throw error;
-      }
+      dateObj = new Date(val);
+    } else {
+      dateObj = val as Date;
     }
     
-    if (val instanceof Date) {
-      const isoString = val.toISOString();
-      console.log(`Data come Date, convertita in: ${isoString}`);
-      return isoString;
+    // Verifica che la data sia valida
+    if (isNaN(dateObj.getTime())) {
+      console.error(`Data non valida: ${val}`);
+      throw new Error("Invalid date");
     }
     
-    console.log(`Tipo non gestito: ${typeof val}, valore: ${val}`);
-    return String(val);
+    // Formatta in YYYY-MM-DD
+    const formatted = `${dateObj.getFullYear()}-${(dateObj.getMonth() + 1).toString().padStart(2, '0')}-${dateObj.getDate().toString().padStart(2, '0')}`;
+    console.log(`Data convertita in: ${formatted}`);
+    return formatted;
   }),
   type: z.enum([
     ServiceType.SIGLATURA,
