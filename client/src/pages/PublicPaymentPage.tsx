@@ -10,20 +10,32 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Icons } from "@/components/ui/icons";
 import { PayPalButton } from "@/components/payments/PayPalButton";
 import { Service, ServiceType } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PublicPaymentPage() {
   const [sigla, setSigla] = useState("");
   const [searchedSigla, setSearchedSigla] = useState("");
   const [searchAttempted, setSearchAttempted] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const { toast } = useToast();
   
-  // Query per recuperare i servizi non pagati con una certa sigla
-  const { data: services, isLoading, error, refetch } = useQuery<{ services: Service[], total: number }>({
-    queryKey: ["/api/services", { sigla: searchedSigla, status: "unpaid" }],
+  // Query per recuperare i servizi non pagati con una certa sigla, usando l'endpoint pubblico
+  const { 
+    data: servicesData, 
+    isLoading, 
+    error, 
+    refetch, 
+    isError 
+  } = useQuery<{ services: Service[], total: number, totalAmount: number }>({
+    queryKey: ["/api/public/services/by-sigla", searchedSigla],
     queryFn: async () => {
-      if (!searchedSigla) return { services: [], total: 0 };
+      if (!searchedSigla) return { services: [], total: 0, totalAmount: 0 };
       
-      const response = await fetch(`/api/services?sigla=${searchedSigla}&status=unpaid&limit=50`);
-      if (!response.ok) throw new Error("Errore durante il recupero dei servizi");
+      const response = await fetch(`/api/public/services/by-sigla/${encodeURIComponent(searchedSigla)}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Errore durante il recupero dei servizi");
+      }
       return response.json();
     },
     enabled: searchedSigla !== "", // La query viene eseguita solo quando si cerca una sigla
@@ -33,15 +45,33 @@ export default function PublicPaymentPage() {
     if (!sigla.trim()) return;
     setSearchedSigla(sigla.trim());
     setSearchAttempted(true);
+    setPaymentSuccess(false);
   };
   
   const handlePaymentComplete = () => {
+    // Messaggio di successo
+    toast({
+      title: "Pagamento completato",
+      description: "Grazie per il tuo pagamento. Tutti i servizi sono stati saldati.",
+      variant: "success",
+    });
+    
+    // Imposta lo stato di pagamento completato
+    setPaymentSuccess(true);
+    
     // Aggiorna la lista dei servizi dopo un pagamento completato
-    refetch();
+    setTimeout(() => {
+      refetch();
+    }, 1000);
   };
   
-  // Calcola il totale dei servizi non pagati
-  const totalAmount = services?.services.reduce((sum, service) => sum + service.amount, 0) || 0;
+  const handlePaymentCancel = () => {
+    toast({
+      title: "Pagamento annullato",
+      description: "Il processo di pagamento è stato annullato.",
+      variant: "default",
+    });
+  };
   
   // Helper per mostrare il tipo di servizio in italiano
   const getServiceTypeLabel = (type: string) => {
@@ -57,11 +87,21 @@ export default function PublicPaymentPage() {
     }
   };
   
+  // Estrai i dati dalla risposta
+  const services = servicesData?.services || [];
+  const totalAmount = servicesData?.totalAmount || 0;
+  const hasServices = services.length > 0;
+  
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
       <div className="max-w-3xl w-full space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Pagamento Servizi</h1>
+          <div className="flex justify-center mb-4">
+            <div className="h-16 w-16 text-primary">
+              <Icons.elisLogo />
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900">Pagamento Servizi ELIS</h1>
           <p className="mt-2 text-gray-600">
             Inserisci la tua sigla per visualizzare e pagare i servizi non ancora saldati
           </p>
@@ -83,6 +123,7 @@ export default function PublicPaymentPage() {
                 onChange={(e) => setSigla(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 className="flex-1"
+                autoFocus
               />
               <Button 
                 onClick={handleSearch}
@@ -101,14 +142,21 @@ export default function PublicPaymentPage() {
         
         {searchAttempted && !isLoading && (
           <>
-            {error ? (
+            {isError ? (
               <Alert variant="destructive">
                 <AlertTitle>Errore</AlertTitle>
                 <AlertDescription>
-                  Si è verificato un errore durante la ricerca. Riprova più tardi.
+                  {error instanceof Error ? error.message : "Si è verificato un errore durante la ricerca. Riprova più tardi."}
                 </AlertDescription>
               </Alert>
-            ) : services?.services.length === 0 ? (
+            ) : paymentSuccess ? (
+              <Alert variant="success">
+                <AlertTitle>Pagamento completato con successo</AlertTitle>
+                <AlertDescription>
+                  Tutti i servizi associati alla sigla "{searchedSigla}" sono stati pagati. Grazie!
+                </AlertDescription>
+              </Alert>
+            ) : !hasServices ? (
               <Alert>
                 <AlertTitle>Nessun servizio da pagare</AlertTitle>
                 <AlertDescription>
@@ -120,12 +168,12 @@ export default function PublicPaymentPage() {
                 <CardHeader>
                   <CardTitle>Servizi da pagare</CardTitle>
                   <CardDescription>
-                    Sono stati trovati {services?.services.length} servizi non pagati per la sigla "{searchedSigla}"
+                    Sono stati trovati {services.length} servizi non pagati per la sigla "{searchedSigla}"
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {services?.services.map((service) => (
+                    {services.map((service) => (
                       <div 
                         key={service.id} 
                         className="p-4 border rounded-lg bg-white shadow-sm flex justify-between items-center"
@@ -163,7 +211,9 @@ export default function PublicPaymentPage() {
                   <PayPalButton 
                     serviceId={-1} // Speciale valore per indicare pagamento multiplo
                     amount={totalAmount} 
+                    sigla={searchedSigla} // Passiamo la sigla per il pagamento pubblico
                     onPaymentComplete={handlePaymentComplete}
+                    onPaymentCancel={handlePaymentCancel}
                     className="w-full md:w-auto"
                   />
                 </CardFooter>
@@ -171,6 +221,13 @@ export default function PublicPaymentPage() {
             )}
           </>
         )}
+        
+        {/* Informazioni aggiuntive e supporto */}
+        <div className="mt-8 text-center text-gray-600">
+          <p>Per assistenza contattare la segreteria ELIS:</p>
+          <p>Email: segreteria@elis.org</p>
+          <p>Telefono: 06 1234567</p>
+        </div>
       </div>
     </div>
   );
