@@ -48,17 +48,55 @@ export function createOAuth2Client(): OAuth2Client {
  */
 export function hasValidToken(): boolean {
   try {
-    if (!fs.existsSync(TOKEN_PATH)) {
-      return false;
+    // Prima controlliamo se c'è un token in memoria
+    if (tokenData && tokenData.access_token) {
+      log(`Token trovato in memoria: ${tokenData.access_token.substring(0, 10)}...`, 'googleAuth');
+      
+      // Controlla se il token è scaduto (con un margine di sicurezza di 5 minuti)
+      if (tokenData.expiry_date && tokenData.expiry_date > Date.now() + 5 * 60 * 1000) {
+        return true;
+      } else if (tokenData.expiry_date) {
+        log(`Token in memoria scaduto: ${new Date(tokenData.expiry_date).toISOString()}`, 'googleAuth');
+      }
     }
-
-    const tokenString = fs.readFileSync(TOKEN_PATH, 'utf-8');
-    const token = JSON.parse(tokenString);
     
-    // Controlla se il token è scaduto (con un margine di sicurezza di 5 minuti)
-    if (token.expiry_date && token.expiry_date > Date.now() + 5 * 60 * 1000) {
-      tokenData = token;
-      return true;
+    // Altrimenti controlliamo se c'è un token salvato su file
+    if (fs.existsSync(TOKEN_PATH)) {
+      log(`File token trovato in: ${TOKEN_PATH}`, 'googleAuth');
+      try {
+        // Leggiamo e analizziamo il file del token
+        const tokenString = fs.readFileSync(TOKEN_PATH, 'utf-8');
+        log(`Contenuto file token (lunghezza): ${tokenString.length} caratteri`, 'googleAuth');
+        
+        if (!tokenString || tokenString.trim() === '') {
+          log('File token esiste ma è vuoto', 'googleAuth');
+          return false;
+        }
+        
+        const token = JSON.parse(tokenString);
+        
+        if (!token || !token.access_token) {
+          log('Token non valido (access_token mancante)', 'googleAuth');
+          return false;
+        }
+        
+        // Controlla se il token è scaduto (con un margine di sicurezza di 5 minuti)
+        if (token.expiry_date && token.expiry_date > Date.now() + 5 * 60 * 1000) {
+          // Aggiorniamo il token in memoria
+          tokenData = token;
+          log(`Token valido trovato nel file, access_token: ${token.access_token.substring(0, 10)}...`, 'googleAuth');
+          return true;
+        } else if (token.expiry_date) {
+          log(`Token nel file scaduto: ${new Date(token.expiry_date).toISOString()}`, 'googleAuth');
+        } else {
+          log('Token nel file non ha expiry_date', 'googleAuth');
+        }
+      } catch (parseError) {
+        log(`Errore nel parsing del file token: ${parseError}`, 'googleAuth');
+        return false;
+      }
+    } else {
+      log(`File token non trovato in: ${TOKEN_PATH}`, 'googleAuth');
     }
     
     return false;
@@ -72,9 +110,30 @@ export function hasValidToken(): boolean {
  * Salva il token su file
  */
 export function saveToken(token: any): void {
-  fs.writeFileSync(TOKEN_PATH, JSON.stringify(token));
-  log('Token salvato con successo', 'googleAuth');
-  tokenData = token;
+  try {
+    // Assicuriamoci che il token sia valido
+    if (!token || !token.access_token) {
+      log('Errore nel salvataggio del token: token non valido o access_token mancante', 'googleAuth');
+      return;
+    }
+    
+    // Salva il token con permessi di scrittura appropriati
+    fs.writeFileSync(TOKEN_PATH, JSON.stringify(token), { mode: 0o600 });
+    log(`Token salvato con successo in ${TOKEN_PATH}, access_token: ${token.access_token.substring(0, 10)}...`, 'googleAuth');
+    
+    // Aggiorna il token in memoria
+    tokenData = token;
+    
+    // Verifica che il file esista dopo il salvataggio
+    if (fs.existsSync(TOKEN_PATH)) {
+      const stats = fs.statSync(TOKEN_PATH);
+      log(`File token creato correttamente: ${stats.size} bytes`, 'googleAuth');
+    } else {
+      log('ERRORE: Il file token non esiste dopo il salvataggio', 'googleAuth');
+    }
+  } catch (error) {
+    log(`ERRORE nel salvataggio del token: ${error}`, 'googleAuth');
+  }
 }
 
 // Struttura dati per il Device Flow
