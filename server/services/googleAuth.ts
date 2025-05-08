@@ -75,10 +75,94 @@ export function saveToken(token: any): void {
   tokenData = token;
 }
 
+// Struttura dati per il Device Flow
+interface DeviceCodeResponse {
+  device_code: string;
+  user_code: string;
+  verification_url: string;
+  expires_in: number;
+  interval: number;
+}
+
+let deviceCodeInfo: DeviceCodeResponse | null = null;
+
 /**
- * Ottiene un URL di autorizzazione per il flusso OAuth2
+ * Avvia il Device Flow per l'autenticazione senza URI di reindirizzamento
+ * Questa è una soluzione migliore per applicazioni che non hanno un browser integrato
+ */
+export async function startDeviceFlow(): Promise<DeviceCodeResponse> {
+  if (!oAuth2Client) {
+    createOAuth2Client();
+  }
+  
+  if (!oAuth2Client) {
+    throw new Error('Impossibile creare il client OAuth2');
+  }
+
+  try {
+    // Usiamo la Google Auth Library per avviare il Device Flow
+    const response = await oAuth2Client.getDeviceCode({
+      scope: SCOPES
+    });
+    
+    // Salviamo le informazioni del device code per poterle utilizzare dopo
+    deviceCodeInfo = response.data as DeviceCodeResponse;
+    log(`Device Flow avviato: ${JSON.stringify(deviceCodeInfo)}`, 'googleAuth');
+    
+    return deviceCodeInfo;
+  } catch (error) {
+    log(`Errore durante l'avvio del Device Flow: ${error}`, 'googleAuth');
+    throw error;
+  }
+}
+
+/**
+ * Verifica lo stato del Device Flow e ottiene il token quando l'utente ha completato l'autorizzazione
+ */
+export async function checkDeviceFlowStatus(): Promise<{ status: 'pending' | 'complete' | 'error', tokens?: any, error?: string }> {
+  if (!deviceCodeInfo) {
+    return { status: 'error', error: 'Device Flow non avviato' };
+  }
+
+  if (!oAuth2Client) {
+    createOAuth2Client();
+  }
+  
+  try {
+    // Verifica se l'utente ha completato l'autorizzazione
+    const { tokens } = await oAuth2Client.getToken({
+      deviceCode: deviceCodeInfo.device_code
+    });
+    
+    // Se siamo qui, l'utente ha completato l'autorizzazione
+    log(`Token ottenuto con successo tramite Device Flow: ${JSON.stringify(tokens).substring(0, 50)}...`, 'googleAuth');
+    oAuth2Client.setCredentials(tokens);
+    saveToken(tokens);
+    
+    // Puliamo lo stato del Device Flow
+    deviceCodeInfo = null;
+    
+    return { status: 'complete', tokens };
+  } catch (error: any) {
+    // Se il codice non è ancora stato usato (l'utente non ha ancora autorizzato), 
+    // Google restituisce un errore con il codice 'authorization_pending'
+    if (error.message && error.message.includes('authorization_pending')) {
+      return { status: 'pending' };
+    }
+    
+    // Se c'è un altro errore, qualcosa è andato storto
+    log(`Errore durante il controllo del Device Flow: ${error}`, 'googleAuth');
+    return { status: 'error', error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+/**
+ * Ottiene un URL di autorizzazione per il flusso OAuth2 (mantenuto per compatibilità)
+ * Nota: questa funzione è deprecata e dovrebbe essere sostituita dall'utilizzo del Device Flow
  */
 export function getAuthorizationUrl(): string {
+  log('AVVISO: getAuthorizationUrl è deprecato. Si consiglia di utilizzare startDeviceFlow().', 'googleAuth');
+  
   if (!oAuth2Client) {
     createOAuth2Client();
   }
@@ -90,16 +174,17 @@ export function getAuthorizationUrl(): string {
   return oAuth2Client.generateAuthUrl({
     access_type: 'offline', 
     scope: SCOPES,
-    prompt: 'consent', // Forza il refresh token
-    // Aggiungiamo esplicitamente l'URI di redirect nullo
-    redirect_uri: 'https://developers.google.com/oauthplayground'
+    prompt: 'consent' // Forza il refresh token
   });
 }
 
 /**
- * Genera un token di accesso a partire da un codice di autorizzazione
+ * Genera un token di accesso a partire da un codice di autorizzazione (mantenuto per compatibilità)
+ * Nota: questa funzione è deprecata e dovrebbe essere sostituita dall'utilizzo del Device Flow
  */
 export async function getTokenFromCode(code: string): Promise<any> {
+  log('AVVISO: getTokenFromCode è deprecato. Si consiglia di utilizzare il Device Flow.', 'googleAuth');
+  
   if (!oAuth2Client) {
     createOAuth2Client();
   }
@@ -109,10 +194,8 @@ export async function getTokenFromCode(code: string): Promise<any> {
   }
 
   try {
-    // È importante utilizzare lo stesso redirect_uri usato nella generazione dell'URL
     const { tokens } = await oAuth2Client.getToken({
-      code,
-      redirect_uri: 'https://developers.google.com/oauthplayground'
+      code
     });
     
     log(`Token ottenuto con successo: ${JSON.stringify(tokens).substring(0, 50)}...`, 'googleAuth');
