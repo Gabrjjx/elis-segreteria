@@ -162,18 +162,43 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   
   if (!isOpen) return null;
 
-  // Funzione per controllare la validità di una data
+  // Funzione per controllare la validità di una data e formattarla correttamente
   const safeDate = (dateString?: string | null): Date | null => {
     if (!dateString) return null;
     
     try {
-      const date = new Date(dateString);
-      // Controlla se la data è valida
-      if (isNaN(date.getTime())) {
-        return null;
+      // Prova a interpretare il formato italiano (DD/MM/YYYY HH.MM.SS)
+      if (dateString.includes('/') && dateString.includes('.')) {
+        const parts = dateString.split(' ');
+        if (parts.length === 2) {
+          const dateParts = parts[0].split('/');
+          const timeParts = parts[1].split('.');
+          
+          if (dateParts.length === 3 && timeParts.length >= 2) {
+            const day = parseInt(dateParts[0], 10);
+            const month = parseInt(dateParts[1], 10) - 1; // I mesi in JS sono 0-based
+            const year = parseInt(dateParts[2], 10);
+            const hour = parseInt(timeParts[0], 10);
+            const minute = parseInt(timeParts[1], 10);
+            const second = timeParts.length > 2 ? parseInt(timeParts[2], 10) : 0;
+            
+            const date = new Date(year, month, day, hour, minute, second);
+            if (!isNaN(date.getTime())) {
+              return date;
+            }
+          }
+        }
       }
-      return date;
+      
+      // Formato standard
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+      
+      return null;
     } catch (e) {
+      console.error("Errore nel parsing della data:", e);
       return null;
     }
   };
@@ -244,22 +269,28 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl" aria-describedby="maintenance-request-description">
         {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
-          </div>
+          <>
+            <DialogTitle>Caricamento in corso...</DialogTitle>
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+            </div>
+          </>
         ) : isError ? (
-          <div className="text-center py-8">
-            <p className="text-red-500">Si è verificato un errore durante il caricamento dei dettagli della richiesta.</p>
-            <Button 
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/maintenance', requestId] })}
-              variant="outline"
-              className="mt-2"
-            >
-              Riprova
-            </Button>
-          </div>
+          <>
+            <DialogTitle>Errore</DialogTitle>
+            <div className="text-center py-8">
+              <p className="text-red-500">Si è verificato un errore durante il caricamento dei dettagli della richiesta.</p>
+              <Button 
+                onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/maintenance', requestId] })}
+                variant="outline"
+                className="mt-2"
+              >
+                Riprova
+              </Button>
+            </div>
+          </>
         ) : request ? (
           <>
             <DialogHeader>
@@ -274,7 +305,7 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
                   </Badge>
                 </div>
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-500">
+              <DialogDescription id="maintenance-request-description" className="text-sm text-gray-500">
                 Inviata il {safeDate(request.timestamp) ? formatDate(safeDate(request.timestamp)!) : 'Data non disponibile'}
                 {safeDate(request.completedAt) ? ` • Completata il ${formatDate(safeDate(request.completedAt)!)}` : ''}
               </DialogDescription>
