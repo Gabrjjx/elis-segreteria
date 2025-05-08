@@ -19,6 +19,27 @@ export const PaymentStatus = {
 
 export type PaymentStatusValue = typeof PaymentStatus[keyof typeof PaymentStatus];
 
+// Metodi di pagamento supportati
+export const PaymentMethod = {
+  CASH: "cash",
+  PAYPAL: "paypal",
+  CARD: "card",
+  BANK_TRANSFER: "bank_transfer",
+} as const;
+
+export type PaymentMethodValue = typeof PaymentMethod[keyof typeof PaymentMethod];
+
+// Stati degli ordini PayPal
+export const PaypalOrderStatus = {
+  CREATED: "created",
+  APPROVED: "approved",
+  COMPLETED: "completed",
+  CANCELLED: "cancelled",
+  FAILED: "failed",
+} as const;
+
+export type PaypalOrderStatusValue = typeof PaypalOrderStatus[keyof typeof PaypalOrderStatus];
+
 // Services table
 export const services = pgTable("services", {
   id: serial("id").primaryKey(),
@@ -225,3 +246,107 @@ export const maintenanceRequestSearchSchema = z.object({
 export type InsertMaintenanceRequest = z.infer<typeof insertMaintenanceRequestSchema>;
 export type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;
 export type MaintenanceRequestSearch = z.infer<typeof maintenanceRequestSearchSchema>;
+
+// Tabella per gli ordini PayPal
+export const paypalOrders = pgTable("paypal_orders", {
+  id: text("id").primaryKey(), // ID dell'ordine PayPal
+  serviceId: integer("service_id").notNull(),
+  amount: doublePrecision("amount").notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  status: text("status").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+  paypalResponse: text("paypal_response"), // Risposta JSON da PayPal
+});
+
+// Schema per l'inserimento di ordini PayPal
+export const insertPaypalOrderSchema = createInsertSchema(paypalOrders).pick({
+  id: true,
+  serviceId: true,
+  amount: true,
+  currency: true,
+  status: true,
+  paypalResponse: true,
+}).extend({
+  status: z.enum([
+    PaypalOrderStatus.CREATED,
+    PaypalOrderStatus.APPROVED,
+    PaypalOrderStatus.COMPLETED,
+    PaypalOrderStatus.CANCELLED,
+    PaypalOrderStatus.FAILED,
+  ]),
+});
+
+// Schema per la ricerca degli ordini PayPal
+export const paypalOrderSearchSchema = z.object({
+  status: z.enum([
+    "all",
+    PaypalOrderStatus.CREATED,
+    PaypalOrderStatus.APPROVED,
+    PaypalOrderStatus.COMPLETED,
+    PaypalOrderStatus.CANCELLED,
+    PaypalOrderStatus.FAILED,
+  ]).optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  page: z.number().int().positive().optional().default(1),
+  limit: z.number().int().positive().optional().default(10),
+});
+
+export type InsertPaypalOrder = z.infer<typeof insertPaypalOrderSchema>;
+export type PaypalOrder = typeof paypalOrders.$inferSelect;
+export type PaypalOrderSearch = z.infer<typeof paypalOrderSearchSchema>;
+
+// Tabella per le ricevute
+export const receipts = pgTable("receipts", {
+  id: serial("id").primaryKey(),
+  serviceId: integer("service_id").notNull(),
+  receiptNumber: text("receipt_number").notNull().unique(),
+  receiptDate: timestamp("receipt_date").notNull().defaultNow(),
+  amount: doublePrecision("amount").notNull(),
+  paymentMethod: text("payment_method").notNull(),
+  notes: text("notes"),
+  pdfUrl: text("pdf_url"), // URL del PDF della ricevuta
+});
+
+// Schema per l'inserimento delle ricevute
+export const insertReceiptSchema = createInsertSchema(receipts).pick({
+  serviceId: true,
+  receiptNumber: true,
+  amount: true,
+  paymentMethod: true,
+  notes: true,
+  pdfUrl: true,
+}).extend({
+  receiptDate: z.union([
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Data deve essere in formato YYYY-MM-DD" }),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, { message: "Data ISO non valida" }),
+    z.date()
+  ]),
+  paymentMethod: z.enum([
+    PaymentMethod.CASH,
+    PaymentMethod.PAYPAL,
+    PaymentMethod.CARD,
+    PaymentMethod.BANK_TRANSFER,
+  ]),
+});
+
+// Schema per la ricerca delle ricevute
+export const receiptSearchSchema = z.object({
+  serviceId: z.number().int().optional(),
+  paymentMethod: z.enum([
+    "all",
+    PaymentMethod.CASH,
+    PaymentMethod.PAYPAL,
+    PaymentMethod.CARD,
+    PaymentMethod.BANK_TRANSFER,
+  ]).optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  page: z.number().int().positive().optional().default(1),
+  limit: z.number().int().positive().optional().default(10),
+});
+
+export type InsertReceipt = z.infer<typeof insertReceiptSchema>;
+export type Receipt = typeof receipts.$inferSelect;
+export type ReceiptSearch = z.infer<typeof receiptSearchSchema>;

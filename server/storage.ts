@@ -61,6 +61,18 @@ export interface IStorage {
   getPendingMaintenanceRequests(): Promise<MaintenanceRequest[]>;
   getRecentMaintenanceRequests(limit: number): Promise<MaintenanceRequest[]>;
   importMaintenanceRequestsFromCSV(csvData: string): Promise<{ success: number, failed: number }>;
+  
+  // PayPal operations
+  storePaypalOrderInfo(orderId: string, orderInfo: any): Promise<void>;
+  getPaypalOrderInfo(orderId: string): Promise<any | null>;
+  updatePaypalOrderInfo(orderId: string, updates: any): Promise<void>;
+  getPaypalOrders(params: PaypalOrderSearch): Promise<{ orders: PaypalOrder[], total: number }>;
+  
+  // Receipt operations
+  createReceipt(receipt: Partial<InsertReceipt>): Promise<number>;
+  getReceipt(id: number): Promise<Receipt | undefined>;
+  getReceiptByServiceId(serviceId: number): Promise<Receipt | undefined>;
+  getReceipts(params: ReceiptSearch): Promise<{ receipts: Receipt[], total: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -230,6 +242,163 @@ export class DatabaseStorage implements IStorage {
       .from(maintenanceRequests)
       .orderBy(desc(maintenanceRequests.timestamp))
       .limit(limit);
+  }
+
+  // PayPal operations
+  async storePaypalOrderInfo(orderId: string, orderInfo: any): Promise<void> {
+    // Assumiamo che il parametro orderInfo includa almeno serviceId, amount, currency e status
+    await db.insert(paypalOrders).values({
+      id: orderId,
+      serviceId: orderInfo.serviceId,
+      amount: orderInfo.amount,
+      currency: orderInfo.currency || "EUR",
+      status: orderInfo.status,
+      paypalResponse: JSON.stringify(orderInfo),
+    });
+  }
+
+  async getPaypalOrderInfo(orderId: string): Promise<any | null> {
+    const [order] = await db.select().from(paypalOrders).where(eq(paypalOrders.id, orderId));
+    
+    if (!order) return null;
+    
+    // Se c'è una risposta JSON memorizzata, la convertiamo
+    if (order.paypalResponse) {
+      try {
+        return {
+          ...order,
+          paypalResponseObj: JSON.parse(order.paypalResponse)
+        };
+      } catch (e) {
+        console.error("Errore nel parsing della risposta PayPal:", e);
+        return order;
+      }
+    }
+    
+    return order;
+  }
+
+  async updatePaypalOrderInfo(orderId: string, updates: any): Promise<void> {
+    const processedUpdates: any = { ...updates };
+    
+    // Se lo stato è completed, impostiamo completedAt
+    if (updates.status === PaypalOrderStatus.COMPLETED && !processedUpdates.completedAt) {
+      processedUpdates.completedAt = new Date();
+    }
+    
+    // Aggiorniamo la risposta JSON se presente
+    if (updates.paypalResponse) {
+      processedUpdates.paypalResponse = typeof updates.paypalResponse === 'string' 
+        ? updates.paypalResponse 
+        : JSON.stringify(updates.paypalResponse);
+    }
+    
+    await db
+      .update(paypalOrders)
+      .set(processedUpdates)
+      .where(eq(paypalOrders.id, orderId));
+  }
+
+  async getPaypalOrders(params: PaypalOrderSearch): Promise<{ orders: PaypalOrder[], total: number }> {
+    // Inizia con una query base
+    let query = db.select().from(paypalOrders);
+    
+    // Applica filtri
+    if (params.status && params.status !== 'all') {
+      query = query.where(eq(paypalOrders.status, params.status));
+    }
+    
+    if (params.startDate) {
+      const startDate = new Date(params.startDate);
+      query = query.where(gte(paypalOrders.createdAt, startDate));
+    }
+    
+    if (params.endDate) {
+      const endDate = new Date(params.endDate);
+      query = query.where(lte(paypalOrders.createdAt, endDate));
+    }
+    
+    // Ottieni il conteggio totale
+    const countQuery = db.select({ count: count() }).from(paypalOrders);
+    const [{ count: total }] = await countQuery;
+    
+    // Applica paginazione e ordinamento
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const offset = (page - 1) * limit;
+    
+    const resultOrders = await query
+      .orderBy(desc(paypalOrders.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    return {
+      orders: resultOrders,
+      total: Number(total)
+    };
+  }
+
+  // Receipt operations
+  async createReceipt(receipt: Partial<InsertReceipt>): Promise<number> {
+    const [newReceipt] = await db
+      .insert(receipts)
+      .values(receipt)
+      .returning();
+    
+    return newReceipt.id;
+  }
+
+  async getReceipt(id: number): Promise<Receipt | undefined> {
+    const [receipt] = await db.select().from(receipts).where(eq(receipts.id, id));
+    return receipt || undefined;
+  }
+
+  async getReceiptByServiceId(serviceId: number): Promise<Receipt | undefined> {
+    const [receipt] = await db.select().from(receipts).where(eq(receipts.serviceId, serviceId));
+    return receipt || undefined;
+  }
+
+  async getReceipts(params: ReceiptSearch): Promise<{ receipts: Receipt[], total: number }> {
+    // Inizia con una query base
+    let query = db.select().from(receipts);
+    
+    // Applica filtri
+    if (params.serviceId) {
+      query = query.where(eq(receipts.serviceId, params.serviceId));
+    }
+    
+    if (params.paymentMethod && params.paymentMethod !== 'all') {
+      query = query.where(eq(receipts.paymentMethod, params.paymentMethod));
+    }
+    
+    if (params.startDate) {
+      const startDate = new Date(params.startDate);
+      query = query.where(gte(receipts.receiptDate, startDate));
+    }
+    
+    if (params.endDate) {
+      const endDate = new Date(params.endDate);
+      query = query.where(lte(receipts.receiptDate, endDate));
+    }
+    
+    // Ottieni il conteggio totale
+    const countQuery = db.select({ count: count() }).from(receipts);
+    const [{ count: total }] = await countQuery;
+    
+    // Applica paginazione e ordinamento
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const offset = (page - 1) * limit;
+    
+    const resultReceipts = await query
+      .orderBy(desc(receipts.receiptDate))
+      .limit(limit)
+      .offset(offset);
+    
+    return {
+      receipts: resultReceipts,
+      total: Number(total)
+    };
   }
 
   async importMaintenanceRequestsFromCSV(csvData: string): Promise<{ success: number, failed: number }> {
