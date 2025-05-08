@@ -64,16 +64,30 @@ export default function PaymentsPage() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters.query) params.append("query", filters.query);
-      if (filters.type !== "all") params.append("type", filters.type);
+      
+      // Verifica e stampa il valore di filters.type
+      console.log("Filtro per tipo:", filters.type);
+      if (filters.type !== "all") {
+        params.append("type", filters.type);
+        console.log(`Filtrando servizi per tipo: ${filters.type}`);
+      }
+      
       params.append("status", "unpaid");
       params.append("page", filters.page.toString());
       params.append("limit", filters.limit.toString());
       params.append("startDate", startDate.toISOString());
       params.append("endDate", endDate.toISOString());
       
-      const response = await fetch(`/api/services?${params.toString()}`);
+      const url = `/api/services?${params.toString()}`;
+      console.log("Chiamata API:", url);
+      
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Errore nel caricamento dei pagamenti in sospeso");
-      return response.json();
+      
+      const data = await response.json();
+      console.log("Risposta ricevuta:", data);
+      
+      return data;
     },
     onSuccess: (data) => {
       console.log('onSuccess chiamato con data:', data);
@@ -104,6 +118,8 @@ export default function PaymentsPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Filtri applicati:", filters);
+    console.log("Intervallo di date:", { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
     refetch();
   };
 
