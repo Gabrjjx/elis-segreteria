@@ -77,13 +77,15 @@ export default function PaymentsPage() {
     },
     onSuccess: (data) => {
       // Calcola il totale degli importi da pagare (solo servizi non pagati)
-      if (data?.services) {
+      if (data && data.services) {
         // Filtra solo i servizi con status="unpaid"
         const unpaidServices = data.services.filter((service: Service) => service.status === 'unpaid');
         console.log('Servizi non pagati:', unpaidServices);
         const total = unpaidServices.reduce((sum: number, service: Service) => sum + service.amount, 0);
         console.log('Totale calcolato:', total);
         setTotalAmount(total);
+      } else {
+        setTotalAmount(0);
       }
     }
   });
@@ -243,13 +245,13 @@ export default function PaymentsPage() {
             <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
               <h4 className="text-sm font-medium text-gray-500">Totale servizi da pagare</h4>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {data.services.filter((service: Service) => service.status === 'unpaid').length}
+                {data?.services ? data.services.filter((service: Service) => service.status === 'unpaid').length : 0}
               </p>
             </div>
             <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
               <h4 className="text-sm font-medium text-gray-500">Servizi visualizzati</h4>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {data.services.filter((service: Service) => service.status === 'unpaid').length}
+                {data?.services ? data.services.filter((service: Service) => service.status === 'unpaid').length : 0}
               </p>
             </div>
             <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
@@ -279,7 +281,7 @@ export default function PaymentsPage() {
                   (() => {
                     const unpaidCount = data?.services ? data.services.filter((service: Service) => service.status === 'unpaid').length : 0;
                     return unpaidCount ? 
-                      `${unpaidCount} pagamenti in sospeso su ${data.total} totali` : 
+                      `${unpaidCount} pagamenti in sospeso su ${data?.total || 0} totali` : 
                       "Nessun pagamento in sospeso";
                   })()
                 )}
