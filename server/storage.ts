@@ -721,31 +721,37 @@ export class DatabaseStorage implements IStorage {
     console.log(`Tipo servizio: ${params.type}, Stato: ${params.status}`);
     
     // Applica gli stessi filtri alla query di conteggio
-    if (params.query) {
-      countQuery.where(like(services.sigla, `%${params.query}%`));
+    try {
+      if (params.query) {
+        countQuery = countQuery.where(like(services.sigla, `%${params.query}%`));
+      }
+      
+      if (params.type && params.type !== 'all') {
+        console.log(`Applicando filtro per tipo: ${params.type}`);
+        countQuery = countQuery.where(eq(services.type, params.type));
+      }
+      
+      if (params.status && params.status !== 'all') {
+        console.log(`Applicando filtro per stato: ${params.status}`);
+        countQuery = countQuery.where(eq(services.status, params.status));
+      }
+      
+      if (params.startDate) {
+        const startDate = new Date(params.startDate);
+        countQuery = countQuery.where(gte(services.date, startDate));
+      }
+      
+      if (params.endDate) {
+        const endDate = new Date(params.endDate);
+        countQuery = countQuery.where(lte(services.date, endDate));
+      }
+      
+      const countResult = await countQuery;
+      const total = countResult[0]?.count || 0;
+    } catch (error) {
+      console.error("Errore nell'esecuzione query conteggio:", error);
+      return { services: [], total: 0 };
     }
-    
-    if (params.type && params.type !== 'all') {
-      console.log(`Applicando filtro per tipo: ${params.type}`);
-      countQuery.where(eq(services.type, params.type));
-    }
-    
-    if (params.status && params.status !== 'all') {
-      console.log(`Applicando filtro per stato: ${params.status}`);
-      countQuery.where(eq(services.status, params.status));
-    }
-    
-    if (params.startDate) {
-      const startDate = new Date(params.startDate);
-      countQuery.where(gte(services.date, startDate));
-    }
-    
-    if (params.endDate) {
-      const endDate = new Date(params.endDate);
-      countQuery.where(lte(services.date, endDate));
-    }
-    
-    const [{ count: total }] = await countQuery;
     
     // Apply pagination and sorting
     const page = params.page || 1;
@@ -757,19 +763,24 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset);
     
-    // Trasforma i risultati nel formato atteso
-    const formattedServices = results.map(result => ({
-      ...result.service,
-      student: result.student.firstName ? {
-        firstName: result.student.firstName,
-        lastName: result.student.lastName
-      } : null
-    }));
-    
-    return {
-      services: formattedServices,
-      total: Number(total)
-    };
+    try {
+      // Trasforma i risultati nel formato atteso
+      const formattedServices = results.map(result => ({
+        ...result.service,
+        student: result.student?.firstName ? {
+          firstName: result.student.firstName,
+          lastName: result.student.lastName
+        } : null
+      }));
+      
+      return {
+        services: formattedServices,
+        total: typeof total === 'number' ? total : 0
+      };
+    } catch (error) {
+      console.error("Errore nella formattazione dei risultati:", error);
+      return { services: [], total: 0 };
+    }
   }
 
   async getService(id: number): Promise<(Service & { student?: { firstName: string, lastName: string } }) | undefined> {
