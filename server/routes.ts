@@ -1310,19 +1310,61 @@ RifID: ${hashId}`
   // Crea un nuovo ordine PayPal
   app.post("/api/paypal/create-order", async (req: Request, res: Response) => {
     try {
-      const { serviceId, amount, currency } = req.body;
+      const { serviceId, amount, currency, sigla, isPublicPayment } = req.body;
       
-      if (!serviceId || !amount) {
-        return res.status(400).json({ message: "Service ID and amount are required" });
+      if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+        return res.status(400).json({ message: "Importo non valido" });
       }
       
-      const result = await createPaypalOrder(
-        parseInt(serviceId), 
-        amount.toString(), 
-        currency || 'EUR'
-      );
+      if (!currency) {
+        return res.status(400).json({ message: "Valuta non specificata" });
+      }
       
-      res.json(result);
+      // Gestione di pagamento pubblico (da pagina pubblica)
+      if (isPublicPayment && sigla) {
+        // Per pagamenti pubblici con sigla, recuperiamo tutti i servizi non pagati
+        const { services } = await storage.getServices({
+          sigla,
+          status: 'unpaid',
+          page: 1,
+          limit: 50
+        });
+        
+        if (services.length === 0) {
+          return res.status(404).json({ message: "Nessun servizio da pagare trovato per questa sigla" });
+        }
+        
+        // Verifichiamo che il totale corrisponda
+        const totalAmount = services.reduce((sum, service) => sum + service.amount, 0);
+        if (Math.abs(totalAmount - parseFloat(amount)) > 0.01) { // Piccola tolleranza per errori di arrotondamento
+          return res.status(400).json({ 
+            message: "L'importo non corrisponde al totale dei servizi da pagare",
+            expectedAmount: totalAmount.toFixed(2)
+          });
+        }
+        
+        // Creiamo l'ordine con i dettagli di tutti i servizi
+        const serviceIds = services.map(service => service.id);
+        const orderResult = await createOrder(serviceIds, parseFloat(amount), currency, sigla);
+        return res.json({ id: orderResult.id });
+      } 
+      // Gestione pagamento singolo servizio (da dashboard admin)
+      else if (serviceId && serviceId > 0) {
+        const service = await storage.getService(serviceId);
+        if (!service) {
+          return res.status(404).json({ message: "Servizio non trovato" });
+        }
+        
+        if (service.status === 'paid') {
+          return res.status(400).json({ message: "Il servizio è già stato pagato" });
+        }
+        
+        // Creiamo l'ordine per un singolo servizio
+        const orderResult = await createOrder(serviceId, parseFloat(amount), currency);
+        return res.json({ id: orderResult.id });
+      } else {
+        return res.status(400).json({ message: "Parametri richiesti mancanti" });
+      }
     } catch (error) {
       console.error("Errore durante la creazione dell'ordine PayPal:", error);
       res.status(500).json({ 
@@ -1441,6 +1483,36 @@ RifID: ${hashId}`
       res.json(receipt);
     } catch (error) {
       console.error("Errore durante il recupero della ricevuta:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Endpoint pubblico per ottenere i servizi da pagare per una sigla
+  app.get("/api/public/services/by-sigla/:sigla", async (req: Request, res: Response) => {
+    try {
+      const { sigla } = req.params;
+      
+      if (!sigla || sigla.trim() === "") {
+        return res.status(400).json({ message: "Sigla richiesta" });
+      }
+      
+      // Recuperiamo i servizi non pagati per questa sigla
+      const result = await storage.getServices({
+        sigla: sigla.trim(),
+        status: 'unpaid',
+        page: 1,
+        limit: 50
+      });
+      
+      // Calcoliamo il totale da pagare
+      const totalAmount = result.services.reduce((sum, service) => sum + service.amount, 0);
+      
+      res.json({
+        ...result,
+        totalAmount
+      });
+    } catch (error) {
+      console.error("Errore durante il recupero dei servizi per sigla:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

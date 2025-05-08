@@ -14,23 +14,42 @@ if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
 
 /**
  * Crea un nuovo ordine PayPal
+ * @param serviceIds ID dei servizi da pagare (array per pagamenti multipli)
+ * @param amount Importo totale
+ * @param currency Valuta (default EUR)
+ * @param sigla Opzionale, sigla dell'utente per pagamenti pubblici
  */
-export async function createOrder(serviceId: number, amount: string, currency: string = 'EUR'): Promise<{ id: string }> {
+export async function createOrder(
+  serviceIds: number | number[], 
+  amount: number, 
+  currency: string = 'EUR',
+  sigla?: string
+): Promise<{ id: string }> {
   try {
+    // Convertiamo serviceIds in array se è un numero singolo
+    const serviceIdsList = Array.isArray(serviceIds) ? serviceIds : [serviceIds];
+    
     // Validazione
-    if (!serviceId || isNaN(Number(serviceId))) {
-      throw new Error('Invalid service ID');
+    if (serviceIdsList.length === 0) {
+      throw new Error('No service IDs provided');
     }
 
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
+    if (isNaN(amount) || amount <= 0) {
       throw new Error('Invalid amount');
     }
 
-    // Recupera il servizio dal database
-    const service = await storage.getService(serviceId);
-    if (!service) {
-      throw new Error(`Service with ID ${serviceId} not found`);
+    // Verifichiamo che tutti i servizi esistano
+    for (const id of serviceIdsList) {
+      if (id > 0) { // Ignoriamo l'ID speciale -1 usato nelle richieste pubbliche
+        const service = await storage.getService(id);
+        if (!service) {
+          throw new Error(`Service with ID ${id} not found`);
+        }
+        
+        if (service.status === 'paid') {
+          throw new Error(`Service with ID ${id} is already paid`);
+        }
+      }
     }
 
     // Genera un ID ordine simulato
@@ -38,8 +57,9 @@ export async function createOrder(serviceId: number, amount: string, currency: s
 
     // Salva le informazioni dell'ordine
     await storage.storePaypalOrderInfo(orderId, {
-      serviceId,
-      amount: numAmount,
+      serviceIds: serviceIdsList,
+      sigla, // Salviamo anche la sigla se presente
+      amount,
       currency,
       status: 'CREATED', // Stati PayPal: CREATED, APPROVED, COMPLETED, VOIDED, EXPIRED
       createdAt: new Date().toISOString(),
@@ -79,9 +99,12 @@ export async function captureOrder(orderId: string): Promise<{ success: boolean,
 
     await storage.updatePaypalOrderInfo(orderId, updatedOrder);
 
-    // Aggiorna lo stato del servizio a "pagato"
-    const serviceId = orderInfo.serviceId;
-    if (serviceId) {
+    // Gestisci i servizi associati all'ordine
+    const receiptIds = [];
+    
+    // Supporto per il vecchio formato con serviceId singolo
+    if (orderInfo.serviceId && !orderInfo.serviceIds) {
+      const serviceId = orderInfo.serviceId;
       const service = await storage.getService(serviceId);
       
       if (service) {
@@ -97,9 +120,58 @@ export async function captureOrder(orderId: string): Promise<{ success: boolean,
           date: new Date(),
         });
         
-        updatedOrder.receiptId = receiptId;
-        await storage.updatePaypalOrderInfo(orderId, updatedOrder);
+        receiptIds.push(receiptId);
       }
+    } 
+    // Nuovo formato con array di serviceIds
+    else if (orderInfo.serviceIds && Array.isArray(orderInfo.serviceIds)) {
+      // Contatore per verificare il numero di servizi effettivamente aggiornati
+      let updatedServices = 0;
+      
+      // Se è un pagamento multiplo, creiamo una ricevuta per ogni servizio
+      for (const serviceId of orderInfo.serviceIds) {
+        if (serviceId > 0) { // Ignoriamo eventuali ID speciali come -1
+          const service = await storage.getService(serviceId);
+          
+          if (service && service.status !== 'paid') {
+            // Aggiorna lo stato del servizio
+            await storage.updateService(serviceId, { status: 'paid' });
+            updatedServices++;
+            
+            // Crea una ricevuta individuale per questo servizio
+            const receiptId = await storage.createReceipt({
+              serviceId,
+              amount: service.amount, // Usiamo l'importo specifico di questo servizio
+              currency: orderInfo.currency || 'EUR',
+              paymentMethod: 'paypal',
+              paymentReference: orderId,
+              date: new Date(),
+            });
+            
+            receiptIds.push(receiptId);
+          }
+        }
+      }
+      
+      // Se non abbiamo aggiornato nessun servizio, creiamo una ricevuta generica
+      if (updatedServices === 0 && orderInfo.sigla) {
+        // Creiamo una ricevuta generica con la sigla
+        const receiptId = await storage.createReceipt({
+          amount: orderInfo.amount,
+          currency: orderInfo.currency || 'EUR',
+          paymentMethod: 'paypal',
+          paymentReference: orderId,
+          date: new Date(),
+          notes: `Pagamento multiplo per sigla: ${orderInfo.sigla}`
+        });
+        receiptIds.push(receiptId);
+      }
+    }
+    
+    // Aggiorna l'ordine con i riferimenti alle ricevute
+    if (receiptIds.length > 0) {
+      updatedOrder.receiptIds = receiptIds;
+      await storage.updatePaypalOrderInfo(orderId, updatedOrder);
     }
 
     return { success: true, order: updatedOrder };
