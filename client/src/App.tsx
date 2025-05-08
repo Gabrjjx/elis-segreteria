@@ -27,33 +27,55 @@ const LazyReportsPage = lazy(() => import("@/pages/ReportsPage"));
 const LazySettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const LazyMaintenancePage = lazy(() => import("@/pages/MaintenancePage"));
 const LazyGoogleAuthPage = lazy(() => import("@/pages/GoogleAuthPage"));
+const LazyPublicPaymentPage = lazy(() => import("@/pages/PublicPaymentPage"));
 
 function LoadingFallback() {
   return <LoadingScreen text="Caricamento pagina..." />;
 }
 
+// Layout for public pages without navigation menu
+function PublicLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {children}
+    </div>
+  );
+}
+
 function Router() {
   return (
-    <MainLayout>
-      <Suspense fallback={<LoadingFallback />}>
-        <Switch>
-          <Route path="/" component={LazyDashboard} />
-          <Route path="/services" component={LazyServicesPage} />
-          <Route path="/services/new">
-            <LazyServiceForm />
-          </Route>
-          <Route path="/services/:id/edit">
-            {params => <ServiceForm id={params.id} />}
-          </Route>
-          <Route path="/payments" component={LazyPaymentsPage} />
-          <Route path="/reports" component={LazyReportsPage} />
-          <Route path="/maintenance" component={LazyMaintenancePage} />
-          <Route path="/settings" component={LazySettingsPage} />
-          <Route path="/google-auth" component={LazyGoogleAuthPage} />
-          <Route component={NotFound} />
-        </Switch>
-      </Suspense>
-    </MainLayout>
+    <Suspense fallback={<LoadingFallback />}>
+      <Switch>
+        {/* Rotta pubblica per i pagamenti */}
+        <Route path="/pay">
+          <PublicLayout>
+            <LazyPublicPaymentPage />
+          </PublicLayout>
+        </Route>
+        
+        {/* Rotte protette con MainLayout */}
+        <Route>
+          <MainLayout>
+            <Switch>
+              <Route path="/" component={LazyDashboard} />
+              <Route path="/services" component={LazyServicesPage} />
+              <Route path="/services/new">
+                <LazyServiceForm />
+              </Route>
+              <Route path="/services/:id/edit">
+                {params => <ServiceForm id={params.id} />}
+              </Route>
+              <Route path="/payments" component={LazyPaymentsPage} />
+              <Route path="/reports" component={LazyReportsPage} />
+              <Route path="/maintenance" component={LazyMaintenancePage} />
+              <Route path="/settings" component={LazySettingsPage} />
+              <Route path="/google-auth" component={LazyGoogleAuthPage} />
+              <Route component={NotFound} />
+            </Switch>
+          </MainLayout>
+        </Route>
+      </Switch>
+    </Suspense>
   );
 }
 

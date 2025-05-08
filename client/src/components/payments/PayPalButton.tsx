@@ -3,14 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Service } from "@shared/schema";
 
 interface PayPalButtonProps {
-  serviceId: number;
+  serviceId: number; // -1 indica un pagamento multiplo dalla pagina pubblica
   amount: number;
   onPaymentComplete?: (serviceId: number) => void;
   onPaymentCancel?: () => void;
   className?: string;
+  sigla?: string; // Per pagamenti pubblici, passa la sigla dell'utente
 }
 
 export function PayPalButton({ 
@@ -18,21 +18,33 @@ export function PayPalButton({
   amount, 
   onPaymentComplete, 
   onPaymentCancel,
-  className
+  className,
+  sigla
 }: PayPalButtonProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   // Processo di pagamento PayPal
   const handlePayPalPayment = async () => {
+    if (amount <= 0) {
+      toast({
+        title: "Errore",
+        description: "L'importo del pagamento deve essere maggiore di zero.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
     
     try {
       // Step 1: Creare l'ordine PayPal
       const createOrderResponse = await apiRequest<{ id: string }>("POST", "/api/paypal/create-order", {
         serviceId,
+        sigla, // Passiamo la sigla per i pagamenti pubblici
         amount: amount.toFixed(2),
-        currency: "EUR"
+        currency: "EUR",
+        isPublicPayment: serviceId === -1 // Indica se è un pagamento dalla pagina pubblica
       });
       
       if (!createOrderResponse.ok) {
@@ -46,15 +58,72 @@ export function PayPalButton({
       // Per semplicità, simuliamo un processo di pagamento
       
       // Apriamo una finestra popup per il pagamento (simulato)
-      window.open(
+      const paymentWindow = window.open(
         `https://www.sandbox.paypal.com/checkoutnow?token=${orderId}`,
         "paypal-checkout",
         "width=800,height=600"
       );
       
+      // Informiamo l'utente che sta avvenendo il pagamento
+      toast({
+        title: "Pagamento in corso",
+        description: "Completa il pagamento nella finestra PayPal appena aperta.",
+      });
+      
       // Step 3: Polling per verificare lo stato dell'ordine
       // In realtà questo sarebbe gestito dal callback PayPal
-      // Ma per semplicità, lo simuliamo con un timeout
+      // Ma per semplicità, lo simuliamo con un timer di polling
+      const checkOrderStatus = async () => {
+        try {
+          const statusResponse = await fetch(`/api/paypal/check-status/${orderId}`);
+          if (!statusResponse.ok) {
+            throw new Error("Errore durante la verifica dello stato dell'ordine");
+          }
+          
+          const statusData = await statusResponse.json();
+          
+          if (statusData.status === "COMPLETED") {
+            // Ordine completato, notifichiamo il completamento
+            toast({
+              title: "Pagamento completato",
+              description: "Il pagamento è stato elaborato con successo.",
+              variant: "success",
+            });
+            
+            // Invocare il callback per notificare il completamento
+            if (onPaymentComplete) {
+              onPaymentComplete(serviceId);
+            }
+            
+            setLoading(false);
+            return true; // Fine del polling
+          } else if (statusData.status === "CANCELED") {
+            // Ordine annullato
+            toast({
+              title: "Pagamento annullato",
+              description: "Il pagamento è stato annullato.",
+              variant: "default",
+            });
+            
+            if (onPaymentCancel) {
+              onPaymentCancel();
+            }
+            
+            setLoading(false);
+            return true; // Fine del polling
+          }
+          
+          // Se non è né completato né annullato, continuiamo il polling
+          return false;
+        } catch (error) {
+          console.error("Errore durante la verifica dello stato:", error);
+          return false; // Continuiamo il polling nonostante l'errore
+        }
+      };
+      
+      // Simuliamo il completamento dopo 3 secondi
+      // In una implementazione reale, utilizzeremmo un vero polling
+      // fino a quando l'utente non completa o annulla il pagamento
       setTimeout(async () => {
         try {
           // Simula la cattura dell'ordine (in un'implementazione reale questo 
@@ -65,17 +134,20 @@ export function PayPalButton({
             throw new Error("Errore durante la cattura del pagamento");
           }
           
-          const captureResult = await captureResponse.json();
+          // Verifichiamo che il pagamento sia andato a buon fine
+          const result = await checkOrderStatus();
           
-          toast({
-            title: "Pagamento completato",
-            description: "Il pagamento è stato elaborato con successo.",
-            variant: "success",
-          });
-          
-          // Invocare il callback per notificare il completamento
-          if (onPaymentComplete) {
-            onPaymentComplete(serviceId);
+          if (!result) {
+            // Se dopo la cattura lo stato non è ancora cambiato, forziamo il completamento
+            toast({
+              title: "Pagamento completato",
+              description: "Il pagamento è stato elaborato con successo.",
+              variant: "success",
+            });
+            
+            if (onPaymentComplete) {
+              onPaymentComplete(serviceId);
+            }
           }
         } catch (error) {
           console.error("Errore durante il completamento del pagamento:", error);
@@ -103,9 +175,10 @@ export function PayPalButton({
   return (
     <Button
       onClick={handlePayPalPayment}
-      disabled={loading}
+      disabled={loading || amount <= 0}
       className={`${className || ""} bg-[#0070ba] hover:bg-[#003087] text-white`}
       aria-label="Paga con PayPal"
+      size={serviceId === -1 ? "lg" : "sm"} // Pulsante più grande per la pagina pubblica
     >
       {loading ? (
         <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
