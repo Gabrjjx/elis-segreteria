@@ -89,12 +89,22 @@ export default function ServiceForm({ id }: ServiceFormProps) {
 
   // Detect type changes to auto-update the amount
   const watchType = form.watch("type");
+  const watchPieces = form.watch("pieces");
   
   useEffect(() => {
     if (watchType && !form.getFieldState("amount").isDirty) {
       form.setValue("amount", defaultPrices[watchType as keyof typeof defaultPrices]);
     }
   }, [watchType, form]);
+  
+  // Calcola automaticamente l'importo in base ai pezzi (solo per siglatura)
+  useEffect(() => {
+    if (watchType === ServiceType.SIGLATURA) {
+      const basePrice = defaultPrices[ServiceType.SIGLATURA];
+      const totalAmount = basePrice * watchPieces;
+      form.setValue("amount", totalAmount);
+    }
+  }, [watchType, watchPieces, form]);
 
   // Create service mutation
   const createMutation = useMutation({
@@ -322,10 +332,15 @@ export default function ServiceForm({ id }: ServiceFormProps) {
                             step="0.10"
                             {...field}
                             onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            readOnly={form.getValues("type") === ServiceType.SIGLATURA}
+                            className={form.getValues("type") === ServiceType.SIGLATURA ? "bg-gray-100 cursor-not-allowed" : ""}
                           />
                         </FormControl>
                         <FormDescription>
-                          Prezzo standard per {form.getValues("type")}: €{defaultPrices[form.getValues("type") as keyof typeof defaultPrices].toFixed(2)}
+                          {form.getValues("type") === ServiceType.SIGLATURA 
+                            ? `Calcolato automaticamente: ${watchPieces} pezzi × €${defaultPrices[ServiceType.SIGLATURA].toFixed(2)} = €${(watchPieces * defaultPrices[ServiceType.SIGLATURA]).toFixed(2)}`
+                            : `Prezzo standard per ${form.getValues("type")}: €${defaultPrices[form.getValues("type") as keyof typeof defaultPrices].toFixed(2)}`
+                          }
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
