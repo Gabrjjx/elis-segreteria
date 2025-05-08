@@ -112,8 +112,20 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   const { data: request, isLoading, isError } = useQuery({
     queryKey: ['/api/maintenance', requestId],
     queryFn: async () => {
-      const response = await apiRequest<MaintenanceRequest>(`/api/maintenance/${requestId}`);
-      return response;
+      console.log("Fetching maintenance request id:", requestId);
+      try {
+        // Usiamo fetch direttamente per debug
+        const response = await fetch(`/api/maintenance/${requestId}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log("Raw maintenance request data:", data);
+        return data;
+      } catch (error) {
+        console.error("Error fetching maintenance request:", error);
+        throw error;
+      }
     },
     enabled: isOpen && requestId > 0,
     refetchOnWindowFocus: false
@@ -348,7 +360,7 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   }
   
   // Debug temporaneo
-  console.log("DATI RICHIESTA:", {
+  console.log("DATI RICHIESTA COMPLETI:", request, {
     id: request.id,
     timestamp: request.timestamp,
     notes: request.notes || "NOTES MISSING",

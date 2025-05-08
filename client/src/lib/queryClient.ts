@@ -13,10 +13,13 @@ async function throwIfResNotOk(res: Response) {
 export async function apiRequest(
   url: string,
   options?: RequestInit,
-): Promise<Response> {
+): Promise<any> {
   // Aggiunta di un timeout per evitare richieste che rimangono bloccate
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), 15000); // 15 secondi di timeout
+  
+  // Debug
+  console.log("API Request:", url);
   
   // Assicuriamoci che le headers siano impostate correttamente
   const headers = {
@@ -35,7 +38,11 @@ export async function apiRequest(
   
   clearTimeout(id);
   await throwIfResNotOk(res);
-  return res;
+  
+  // Parse JSON and return the data directly
+  const data = await res.json();
+  console.log("API Response data:", data);
+  return data;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
