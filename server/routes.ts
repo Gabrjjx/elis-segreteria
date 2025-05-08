@@ -11,7 +11,7 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { getMaintenanceRequestsCSV, readGoogleSheet } from "./services/googleSheets";
+import { getMaintenanceRequestsCSV, readGoogleSheet, isSheetLoaded } from "./services/googleSheets";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -358,6 +358,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (status === MaintenanceRequestStatus.COMPLETED) {
         try {
+          // Verifichiamo prima se il foglio Google è già stato caricato
+          if (!isSheetLoaded()) {
+            console.log("Foglio Google non ancora caricato, lo carico prima di procedere");
+            await getMaintenanceRequestsCSV();
+          }
+          
           // Utilizziamo l'import già esistente invece di require
           const { findRequestRowInGoogleSheet, updateGoogleSheetStatus } = await import('./services/googleSheets');
           
@@ -443,10 +449,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Sincronizzazione Google Sheets avviata");
       
-      // Importa direttamente dal foglio Google Sheet, senza passare per il CSV
+      // Prima verifichiamo se i dati del foglio sono già caricati in memoria
+      let data;
+      if (isSheetLoaded()) {
+        console.log("Foglio Google già caricato in memoria, utilizzo dati esistenti");
+      } else {
+        console.log("Foglio Google non ancora caricato, caricamento in corso...");
+      }
+      
+      // Importa direttamente dal foglio Google Sheet
       try {
         // Leggi i dati dal foglio Google
-        const data = await readGoogleSheet();
+        data = await readGoogleSheet();
         
         if (!data || data.length < 2) {
           console.log("Dati insufficienti nel foglio Google");
