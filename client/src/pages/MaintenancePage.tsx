@@ -130,33 +130,6 @@ const getPriorityColor = (priority: MaintenanceRequestPriority): string => {
 };
 
 export default function MaintenancePage() {
-  const { toast } = useToast();
-  const { startLoading, stopLoading } = useLoading();
-  const queryClient = useQueryClient();
-  
-  // Stato per i filtri
-  const [filters, setFilters] = useState<MaintenanceFilters>({
-    query: "",
-    status: "all",  // Aggiornato per mostrare tutte le richieste, incluse quelle completate
-    priority: "all",
-    page: 1,
-    limit: 50  // Aumentato a 50 elementi per pagina per visualizzare più richieste contemporaneamente
-  });
-  
-  // Stato temporaneo per la ricerca
-  const [searchInput, setSearchInput] = useState("");
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
-  const [isStatusSyncDialogOpen, setIsStatusSyncDialogOpen] = useState(false);
-  const [csvData, setCsvData] = useState("");
-  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  
-  // Query per ottenere le richieste di manutenzione
-  const maintenanceQuery = useQuery({
-    queryKey: ['/api/maintenance', filters],
-    refetchOnWindowFocus: false
-  });
   
   // Mutazioni per le azioni
   const updateStatusMutation = useMutation({

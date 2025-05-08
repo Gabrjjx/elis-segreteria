@@ -85,6 +85,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       name: "Manutenzione",
       path: "/maintenance",
       icon: <Hammer className="h-5 w-5" />,
+      disabled: true, // Funzionalità temporaneamente sospesa
     },
     {
       name: "Report",
@@ -151,6 +152,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                ) : route.disabled ? (
+                  <div className={cn(
+                    "flex items-center px-4 py-2 text-gray-500 cursor-not-allowed",
+                  )}>
+                    {route.icon}
+                    <span className="ml-3">{route.name}</span>
+                    <span className="ml-2 text-xs bg-gray-600 px-1.5 py-0.5 rounded">Sospeso</span>
+                  </div>
                 ) : (
                   <a
                     href={route.path}
@@ -227,6 +236,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
                                 </a>
                               ))}
                             </div>
+                          </div>
+                        ) : route.disabled ? (
+                          <div className={cn(
+                            "flex items-center px-4 py-2 text-gray-500 cursor-not-allowed",
+                          )}>
+                            {route.icon}
+                            <span className="ml-3">{route.name}</span>
+                            <span className="ml-2 text-xs bg-gray-600 px-1.5 py-0.5 rounded">Sospeso</span>
                           </div>
                         ) : (
                           <a
@@ -348,17 +365,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 <span className="text-xs mt-1">Pagamenti</span>
               </a>
               
-              <a
-                href="/maintenance"
-                className={cn(
-                  "flex-1 flex flex-col items-center py-3",
-                  location === "/maintenance" ? "text-primary" : "text-gray-600"
-                )}
-                onClick={(e) => handleNavigation("/maintenance", e)}
+              <div
+                className="flex-1 flex flex-col items-center py-3 text-gray-400 cursor-not-allowed"
               >
                 <Hammer className="h-5 w-5" />
                 <span className="text-xs mt-1">Manutenzione</span>
-              </a>
+                <span className="text-[10px] mt-0.5 bg-gray-200 px-1 py-0.5 rounded-sm">Sospeso</span>
+              </div>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
