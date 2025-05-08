@@ -162,6 +162,22 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
   
   if (!isOpen) return null;
 
+  // Funzione per controllare la validità di una data
+  const safeDate = (dateString?: string | null): Date | null => {
+    if (!dateString) return null;
+    
+    try {
+      const date = new Date(dateString);
+      // Controlla se la data è valida
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+      return date;
+    } catch (e) {
+      return null;
+    }
+  };
+  
   // Funzioni di estrazione informazioni
   const extractOriginalDate = (request?: MaintenanceRequest) => {
     if (!request) return null;
@@ -259,8 +275,8 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
                 </div>
               </DialogTitle>
               <DialogDescription className="text-sm text-gray-500">
-                Inviata il {formatDate(new Date(request.timestamp))}
-                {request.completedAt && ` • Completata il ${formatDate(new Date(request.completedAt))}`}
+                Inviata il {safeDate(request.timestamp) ? formatDate(safeDate(request.timestamp)!) : 'Data non disponibile'}
+                {safeDate(request.completedAt) ? ` • Completata il ${formatDate(safeDate(request.completedAt)!)}` : ''}
               </DialogDescription>
             </DialogHeader>
             
