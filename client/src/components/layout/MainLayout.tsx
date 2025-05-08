@@ -126,9 +126,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
               <li key={route.path} className="py-1">
                 {route.dropdown ? (
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    <DropdownMenuTrigger className="w-full">
                       <div className={cn(
-                        "flex items-center px-4 py-2 hover:bg-gray-700 cursor-pointer",
+                        "flex items-center w-full px-4 py-2 hover:bg-gray-700 cursor-pointer",
                         location.startsWith(route.path) && "bg-primary-dark"
                       )}>
                         {route.icon}
@@ -136,13 +136,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
                         <ChevronDown className="ml-auto h-4 w-4" />
                       </div>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="bg-gray-700 text-white border-gray-600 w-48">
+                    <DropdownMenuContent align="start" className="bg-gray-800 text-white border-gray-700 w-56 rounded-md p-1 shadow-lg z-50">
                       {route.children?.map((child) => (
                         <DropdownMenuItem
                           key={child.path}
                           className={cn(
-                            "flex items-center hover:bg-gray-600 focus:bg-gray-600 cursor-pointer",
-                            location === child.path && "bg-gray-600"
+                            "flex items-center py-2 px-3 rounded-sm hover:bg-gray-700 focus:bg-gray-700 cursor-pointer",
+                            location === child.path && "bg-gray-700"
                           )}
                           onClick={(e) => handleNavigation(child.path, e)}
                         >
@@ -217,13 +217,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
                               <span className="ml-3">{route.name}</span>
                               <ChevronDown className="ml-auto h-4 w-4" />
                             </div>
-                            <div className="bg-gray-700 pl-8">
+                            <div className="bg-gray-700">
                               {route.children?.map((child) => (
                                 <a
                                   key={child.path}
                                   href={child.path}
                                   className={cn(
-                                    "flex items-center px-4 py-2 hover:bg-gray-600",
+                                    "flex items-center pl-10 pr-4 py-2 hover:bg-gray-600",
                                     location === child.path && "bg-gray-600"
                                   )}
                                   onClick={(e) => {
@@ -308,46 +308,46 @@ export default function MainLayout({ children }: MainLayoutProps) {
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button
+                  <div
                     className={cn(
-                      "flex-1 flex flex-col items-center py-3",
+                      "flex-1 flex flex-col items-center py-3 cursor-pointer",
                       location.includes("/services") && !location.includes("status=unpaid") ? "text-primary" : "text-gray-600"
                     )}
                   >
                     <PackageOpen className="h-5 w-5" />
                     <span className="text-xs mt-1">Servizi</span>
-                  </button>
+                  </div>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" side="top" sideOffset={8} className="w-44 rounded-xl mb-2">
+                <DropdownMenuContent align="center" side="top" sideOffset={8} className="w-48 rounded-xl mb-2 shadow-lg bg-white border border-gray-200">
                   <DropdownMenuItem 
                     onClick={(e) => handleNavigation("/services", e)}
-                    className="flex items-center cursor-pointer"
+                    className="flex items-center p-2.5 cursor-pointer"
                   >
-                    <PackageOpen className="h-4 w-4 mr-2" />
+                    <PackageOpen className="h-4 w-4 mr-2 text-primary" />
                     <span>Tutti i servizi</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <DropdownMenuSeparator className="my-1" />
                   <DropdownMenuItem 
                     onClick={(e) => handleNavigation("/services?type=siglatura", e)}
-                    className="flex items-center cursor-pointer"
+                    className="flex items-center p-2.5 cursor-pointer"
                   >
-                    <Tag className="h-4 w-4 mr-2" />
+                    <Tag className="h-4 w-4 mr-2 text-primary" />
                     <span>Siglatura</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <DropdownMenuSeparator className="my-1" />
                   <DropdownMenuItem
                     onClick={(e) => handleNavigation("/services?type=happy_hour", e)}
-                    className="flex items-center cursor-pointer"
+                    className="flex items-center p-2.5 cursor-pointer"
                   >
-                    <Beer className="h-4 w-4 mr-2" />
+                    <Beer className="h-4 w-4 mr-2 text-primary" />
                     <span>Happy Hour</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <DropdownMenuSeparator className="my-1" />
                   <DropdownMenuItem
                     onClick={(e) => handleNavigation("/services?type=riparazione", e)}
-                    className="flex items-center cursor-pointer"
+                    className="flex items-center p-2.5 cursor-pointer"
                   >
-                    <Drill className="h-4 w-4 mr-2" />
+                    <Drill className="h-4 w-4 mr-2 text-primary" />
                     <span>Riparazioni</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -375,38 +375,38 @@ export default function MainLayout({ children }: MainLayoutProps) {
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button
+                  <div
                     className={cn(
-                      "flex-1 flex flex-col items-center py-3",
+                      "flex-1 flex flex-col items-center py-3 cursor-pointer",
                       (location === "/reports" || location === "/settings" || location === "/google-auth") ? "text-primary" : "text-gray-600"
                     )}
                   >
                     <Settings className="h-5 w-5" />
                     <span className="text-xs mt-1">Altro</span>
-                  </button>
+                  </div>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" side="top" sideOffset={8} className="w-44 rounded-xl mb-2">
+                <DropdownMenuContent align="center" side="top" sideOffset={8} className="w-48 rounded-xl mb-2 shadow-lg bg-white border border-gray-200">
                   <DropdownMenuItem 
                     onClick={(e) => handleNavigation("/reports", e)}
-                    className="flex items-center cursor-pointer"
+                    className="flex items-center p-2.5 cursor-pointer"
                   >
-                    <FileBarChart className="h-4 w-4 mr-2" />
+                    <FileBarChart className="h-4 w-4 mr-2 text-primary" />
                     <span>Report</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <DropdownMenuSeparator className="my-1" />
                   <DropdownMenuItem 
                     onClick={(e) => handleNavigation("/settings", e)}
-                    className="flex items-center cursor-pointer"
+                    className="flex items-center p-2.5 cursor-pointer"
                   >
-                    <Settings className="h-4 w-4 mr-2" />
+                    <Settings className="h-4 w-4 mr-2 text-primary" />
                     <span>Impostazioni</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <DropdownMenuSeparator className="my-1" />
                   <DropdownMenuItem
                     onClick={(e) => handleNavigation("/google-auth", e)}
-                    className="flex items-center cursor-pointer"
+                    className="flex items-center p-2.5 cursor-pointer"
                   >
-                    <Cloud className="h-4 w-4 mr-2" />
+                    <Cloud className="h-4 w-4 mr-2 text-primary" />
                     <span>Google Auth</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
