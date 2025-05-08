@@ -11,6 +11,7 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { getMaintenanceRequestsCSV } from "./services/googleSheets";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -372,6 +373,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedRequest);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  // Synchronize maintenance requests from Google Sheets
+  app.post("/api/maintenance/sync-google-sheets", async (_req: Request, res: Response) => {
+    try {
+      // Controlla che le chiavi API Google siano configurate
+      if (!process.env.GOOGLE_API_KEY || !process.env.GOOGLE_SHEET_ID) {
+        return res.status(400).json({
+          message: "Google API key and/or Sheet ID is missing. Please check your environment configuration."
+        });
+      }
+      
+      // Recupera i dati dal foglio Google
+      const csvData = await getMaintenanceRequestsCSV();
+      
+      // Importa i dati nel sistema
+      if (!csvData) {
+        return res.status(400).json({ message: "No data found in Google Sheet" });
+      }
+      
+      const result = await storage.importMaintenanceRequestsFromCSV(csvData);
+      
+      res.status(200).json({
+        message: "Maintenance requests synchronized successfully",
+        imported: result.success,
+        failed: result.failed,
+        total: result.success + result.failed
+      });
+    } catch (error) {
+      console.error("Error synchronizing from Google Sheets:", error);
+      res.status(500).json({ 
+        message: "Error synchronizing from Google Sheets", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   });
 
