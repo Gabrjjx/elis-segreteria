@@ -16,7 +16,7 @@ import {
   maintenanceRequests
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, like, gte, lte, desc, count, sum, or } from "drizzle-orm";
+import { eq, like, gte, lte, desc, count, sum, or, and } from "drizzle-orm";
 
 // Storage interface for CRUD operations
 export interface IStorage {
@@ -616,56 +616,84 @@ export class DatabaseStorage implements IStorage {
       return filteredQuery;
     };
     
+    // Debugging temporaneo - stampare i parametri di filtro
+    console.log("Filter startDate:", dateFilter?.startDate);
+    console.log("Filter endDate:", dateFilter?.endDate);
+    
+    // Definiamo le condizioni base per i filtri di data
+    const dateConditions = [];
+    if (dateFilter?.startDate) {
+      dateConditions.push(gte(services.date, dateFilter.startDate));
+    }
+    if (dateFilter?.endDate) {
+      dateConditions.push(lte(services.date, dateFilter.endDate));
+    }
+    
+    // Funzione per combinare condizioni di filtro in modo corretto
+    const getFilter = (baseCondition: any) => {
+      // Se non ci sono filtri di data, restituisci solo la condizione base
+      if (dateConditions.length === 0) {
+        return baseCondition;
+      }
+      
+      // Altrimenti, combina la condizione base con filtri di data usando AND
+      if (!baseCondition) {
+        // Solo filtri di data
+        return and(...dateConditions);
+      }
+      
+      return and(baseCondition, ...dateConditions);
+    };
+    
     // Get total services count
     let totalQuery = db.select({ count: count() }).from(services);
-    totalQuery = applyDateFilter(totalQuery);
+    if (dateConditions.length > 0) {
+      totalQuery = totalQuery.where(and(...dateConditions));
+    }
     const [{ count: totalServices }] = await totalQuery;
     
-    // Get pending payments count
-    let pendingQuery = db
+    // Get pending payments count 
+    const pendingFilter = getFilter(eq(services.status, PaymentStatus.UNPAID));
+    const [{ count: pendingPayments }] = await db
       .select({ count: count() })
       .from(services)
-      .where(eq(services.status, PaymentStatus.UNPAID));
-    pendingQuery = applyDateFilter(pendingQuery);
-    const [{ count: pendingPayments }] = await pendingQuery;
+      .where(pendingFilter);
     
     // Get service type counts
-    let siglaturaQuery = db
+    const siglaturaFilter = getFilter(eq(services.type, ServiceType.SIGLATURA));
+    const [{ count: siglaturaCount }] = await db
       .select({ count: count() })
       .from(services)
-      .where(eq(services.type, ServiceType.SIGLATURA));
-    siglaturaQuery = applyDateFilter(siglaturaQuery);
-    const [{ count: siglaturaCount }] = await siglaturaQuery;
+      .where(siglaturaFilter);
     
-    let happyHourQuery = db
+    const happyHourFilter = getFilter(eq(services.type, ServiceType.HAPPY_HOUR));
+    const [{ count: happyHourCount }] = await db
       .select({ count: count() })
       .from(services)
-      .where(eq(services.type, ServiceType.HAPPY_HOUR));
-    happyHourQuery = applyDateFilter(happyHourQuery);
-    const [{ count: happyHourCount }] = await happyHourQuery;
+      .where(happyHourFilter);
     
-    let repairQuery = db
+    const repairFilter = getFilter(eq(services.type, ServiceType.RIPARAZIONE));
+    const [{ count: repairCount }] = await db
       .select({ count: count() })
       .from(services)
-      .where(eq(services.type, ServiceType.RIPARAZIONE));
-    repairQuery = applyDateFilter(repairQuery);
-    const [{ count: repairCount }] = await repairQuery;
+      .where(repairFilter);
     
     // Get total amount
     let totalAmountQuery = db
       .select({ sum: sum(services.amount) })
       .from(services);
-    totalAmountQuery = applyDateFilter(totalAmountQuery);
+    if (dateConditions.length > 0) {
+      totalAmountQuery = totalAmountQuery.where(and(...dateConditions));
+    }
     const totalResult = await totalAmountQuery;
     const totalAmount = totalResult[0]?.sum || 0;
     
     // Get pending amount
-    let pendingAmountQuery = db
+    const pendingAmountFilter = getFilter(eq(services.status, PaymentStatus.UNPAID));
+    const pendingResult = await db
       .select({ sum: sum(services.amount) })
       .from(services)
-      .where(eq(services.status, PaymentStatus.UNPAID));
-    pendingAmountQuery = applyDateFilter(pendingAmountQuery);
-    const pendingResult = await pendingAmountQuery;
+      .where(pendingAmountFilter);
     const pendingAmount = pendingResult[0]?.sum || 0;
     
     return {
