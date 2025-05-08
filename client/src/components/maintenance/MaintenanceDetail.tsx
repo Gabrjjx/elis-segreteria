@@ -220,6 +220,25 @@ export default function MaintenanceDetail({ requestId, isOpen, onClose }: Mainte
                 <p className="whitespace-pre-line">{request.description}</p>
               </div>
               
+              {request.notes && (
+                <div className="md:col-span-2">
+                  <h3 className="font-medium text-gray-700">Note</h3>
+                  <p className="whitespace-pre-line text-sm">{request.notes}</p>
+                </div>
+              )}
+              
+              {/* Estrazione della data originale dalle note se la descrizione o le note contengono una data in formato DD/MM/YYYY */}
+              {(request.notes && request.notes.match(/data:\s*(\d{2}\/\d{2}\/\d{4}\s*\d{1,2}\.\d{2}\.\d{2})/)) ? (
+                <div className="md:col-span-2 mt-2">
+                  <div className="bg-blue-50 p-3 rounded-md">
+                    <h3 className="font-medium text-blue-700">Data originale dal Google Sheet</h3>
+                    <p className="text-blue-800 font-semibold">
+                      {request.notes.match(/data:\s*(\d{2}\/\d{2}\/\d{4}\s*\d{1,2}\.\d{2}\.\d{2})/)?.[1]}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+              
               {request.attachmentUrl && (
                 <div className="md:col-span-2">
                   <h3 className="font-medium text-gray-700">Allegato</h3>
