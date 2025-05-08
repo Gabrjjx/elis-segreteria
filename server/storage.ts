@@ -33,7 +33,7 @@ export interface IStorage {
   deleteService(id: number): Promise<boolean>;
   
   // Dashboard operations
-  getServiceMetrics(): Promise<{
+  getServiceMetrics(dateFilter?: { startDate?: Date, endDate?: Date }): Promise<{
     totalServices: number,
     pendingPayments: number,
     siglaturaCount: number,
@@ -42,8 +42,8 @@ export interface IStorage {
     totalAmount: number,
     pendingAmount: number
   }>;
-  getPendingPayments(): Promise<Service[]>;
-  getRecentServices(limit: number): Promise<Service[]>;
+  getPendingPayments(dateFilter?: { startDate?: Date, endDate?: Date }): Promise<Service[]>;
+  getRecentServices(limit: number, dateFilter?: { startDate?: Date, endDate?: Date }): Promise<Service[]>;
   
   // Maintenance request operations
   getMaintenanceRequests(params: MaintenanceRequestSearch): Promise<{ requests: MaintenanceRequest[], total: number }>;
@@ -595,7 +595,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Dashboard operations
-  async getServiceMetrics(): Promise<{
+  async getServiceMetrics(dateFilter?: { startDate?: Date, endDate?: Date }): Promise<{
     totalServices: number;
     pendingPayments: number;
     siglaturaCount: number;
@@ -604,44 +604,68 @@ export class DatabaseStorage implements IStorage {
     totalAmount: number;
     pendingAmount: number;
   }> {
+    // Funzione per applicare i filtri di data
+    const applyDateFilter = (query: any) => {
+      let filteredQuery = query;
+      if (dateFilter?.startDate) {
+        filteredQuery = filteredQuery.where(gte(services.date, dateFilter.startDate));
+      }
+      if (dateFilter?.endDate) {
+        filteredQuery = filteredQuery.where(lte(services.date, dateFilter.endDate));
+      }
+      return filteredQuery;
+    };
+    
     // Get total services count
-    const [{ count: totalServices }] = await db
-      .select({ count: count() })
-      .from(services);
+    let totalQuery = db.select({ count: count() }).from(services);
+    totalQuery = applyDateFilter(totalQuery);
+    const [{ count: totalServices }] = await totalQuery;
     
     // Get pending payments count
-    const [{ count: pendingPayments }] = await db
+    let pendingQuery = db
       .select({ count: count() })
       .from(services)
       .where(eq(services.status, PaymentStatus.UNPAID));
+    pendingQuery = applyDateFilter(pendingQuery);
+    const [{ count: pendingPayments }] = await pendingQuery;
     
     // Get service type counts
-    const [{ count: siglaturaCount }] = await db
+    let siglaturaQuery = db
       .select({ count: count() })
       .from(services)
       .where(eq(services.type, ServiceType.SIGLATURA));
+    siglaturaQuery = applyDateFilter(siglaturaQuery);
+    const [{ count: siglaturaCount }] = await siglaturaQuery;
     
-    const [{ count: happyHourCount }] = await db
+    let happyHourQuery = db
       .select({ count: count() })
       .from(services)
       .where(eq(services.type, ServiceType.HAPPY_HOUR));
+    happyHourQuery = applyDateFilter(happyHourQuery);
+    const [{ count: happyHourCount }] = await happyHourQuery;
     
-    const [{ count: repairCount }] = await db
+    let repairQuery = db
       .select({ count: count() })
       .from(services)
       .where(eq(services.type, ServiceType.RIPARAZIONE));
+    repairQuery = applyDateFilter(repairQuery);
+    const [{ count: repairCount }] = await repairQuery;
     
     // Get total amount
-    const totalResult = await db
+    let totalAmountQuery = db
       .select({ sum: sum(services.amount) })
       .from(services);
+    totalAmountQuery = applyDateFilter(totalAmountQuery);
+    const totalResult = await totalAmountQuery;
     const totalAmount = totalResult[0]?.sum || 0;
     
     // Get pending amount
-    const pendingResult = await db
+    let pendingAmountQuery = db
       .select({ sum: sum(services.amount) })
       .from(services)
       .where(eq(services.status, PaymentStatus.UNPAID));
+    pendingAmountQuery = applyDateFilter(pendingAmountQuery);
+    const pendingResult = await pendingAmountQuery;
     const pendingAmount = pendingResult[0]?.sum || 0;
     
     return {
@@ -655,18 +679,37 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getPendingPayments(): Promise<Service[]> {
-    return db
+  async getPendingPayments(dateFilter?: { startDate?: Date, endDate?: Date }): Promise<Service[]> {
+    let query = db
       .select()
       .from(services)
-      .where(eq(services.status, PaymentStatus.UNPAID))
-      .orderBy(desc(services.date));
+      .where(eq(services.status, PaymentStatus.UNPAID));
+    
+    // Applicare i filtri di data se presenti
+    if (dateFilter?.startDate) {
+      query = query.where(gte(services.date, dateFilter.startDate));
+    }
+    if (dateFilter?.endDate) {
+      query = query.where(lte(services.date, dateFilter.endDate));
+    }
+    
+    return query.orderBy(desc(services.date));
   }
 
-  async getRecentServices(limit: number): Promise<Service[]> {
-    return db
+  async getRecentServices(limit: number, dateFilter?: { startDate?: Date, endDate?: Date }): Promise<Service[]> {
+    let query = db
       .select()
-      .from(services)
+      .from(services);
+    
+    // Applicare i filtri di data se presenti
+    if (dateFilter?.startDate) {
+      query = query.where(gte(services.date, dateFilter.startDate));
+    }
+    if (dateFilter?.endDate) {
+      query = query.where(lte(services.date, dateFilter.endDate));
+    }
+    
+    return query
       .orderBy(desc(services.date))
       .limit(limit);
   }
