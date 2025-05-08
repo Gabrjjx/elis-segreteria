@@ -23,6 +23,20 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
 
+  // Function to handle navigation with search params
+  const handleNavigation = (path: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    
+    // Extract base path and search params
+    const [basePath, searchParams] = path.split('?');
+    
+    // Navigate to path
+    window.history.pushState({}, '', path);
+    
+    // Force rerender
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
   const routes = [
     {
       name: "Dashboard",
@@ -73,17 +87,19 @@ export default function MainLayout({ children }: MainLayoutProps) {
           <ul>
             {routes.map((route) => (
               <li key={route.path} className="py-1">
-                <Link href={route.path}>
-                  <a
-                    className={cn(
-                      "flex items-center px-4 py-2 hover:bg-gray-700",
-                      location === route.path && "bg-primary-dark"
-                    )}
-                  >
-                    {route.icon}
-                    <span className="ml-3">{route.name}</span>
-                  </a>
-                </Link>
+                <a
+                  href={route.path}
+                  className={cn(
+                    "flex items-center px-4 py-2 hover:bg-gray-700",
+                    (location === route.path || 
+                     (route.path.includes('?') && location === route.path.split('?')[0])) && 
+                    "bg-primary-dark"
+                  )}
+                  onClick={(e) => handleNavigation(route.path, e)}
+                >
+                  {route.icon}
+                  <span className="ml-3">{route.name}</span>
+                </a>
               </li>
             ))}
           </ul>
@@ -116,18 +132,22 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   <ul>
                     {routes.map((route) => (
                       <li key={route.path} className="py-1">
-                        <Link href={route.path}>
-                          <a
-                            className={cn(
-                              "flex items-center px-4 py-2 hover:bg-gray-700",
-                              location === route.path && "bg-primary-dark"
-                            )}
-                            onClick={() => setOpen(false)}
-                          >
-                            {route.icon}
-                            <span className="ml-3">{route.name}</span>
-                          </a>
-                        </Link>
+                        <a
+                          href={route.path}
+                          className={cn(
+                            "flex items-center px-4 py-2 hover:bg-gray-700",
+                            (location === route.path || 
+                             (route.path.includes('?') && location === route.path.split('?')[0])) && 
+                            "bg-primary-dark"
+                          )}
+                          onClick={(e) => {
+                            handleNavigation(route.path, e);
+                            setOpen(false);
+                          }}
+                        >
+                          {route.icon}
+                          <span className="ml-3">{route.name}</span>
+                        </a>
                       </li>
                     ))}
                   </ul>
@@ -159,42 +179,53 @@ export default function MainLayout({ children }: MainLayoutProps) {
           {/* Mobile Navigation */}
           <nav className="md:hidden bg-white border-t border-gray-200">
             <div className="flex justify-between">
-              <Link href="/">
-                <a className={cn(
+              <a 
+                href="/"
+                className={cn(
                   "flex-1 flex flex-col items-center py-2",
                   location === "/" ? "text-primary" : "text-gray-600"
-                )}>
-                  <LayoutDashboard className="h-5 w-5" />
-                  <span className="text-xs mt-1">Dashboard</span>
-                </a>
-              </Link>
-              <Link href="/services?type=siglatura">
-                <a className={cn(
+                )}
+                onClick={(e) => handleNavigation("/", e)}
+              >
+                <LayoutDashboard className="h-5 w-5" />
+                <span className="text-xs mt-1">Dashboard</span>
+              </a>
+              
+              <a
+                href="/services?type=siglatura"
+                className={cn(
                   "flex-1 flex flex-col items-center py-2",
                   location === "/services?type=siglatura" ? "text-primary" : "text-gray-600"
-                )}>
-                  <Tag className="h-5 w-5" />
-                  <span className="text-xs mt-1">Siglatura</span>
-                </a>
-              </Link>
-              <Link href="/services?type=happy_hour">
-                <a className={cn(
+                )}
+                onClick={(e) => handleNavigation("/services?type=siglatura", e)}
+              >
+                <Tag className="h-5 w-5" />
+                <span className="text-xs mt-1">Siglatura</span>
+              </a>
+              
+              <a
+                href="/services?type=happy_hour"
+                className={cn(
                   "flex-1 flex flex-col items-center py-2",
                   location === "/services?type=happy_hour" ? "text-primary" : "text-gray-600"
-                )}>
-                  <Beer className="h-5 w-5" />
-                  <span className="text-xs mt-1">Happy Hour</span>
-                </a>
-              </Link>
-              <Link href="/services?type=riparazione">
-                <a className={cn(
+                )}
+                onClick={(e) => handleNavigation("/services?type=happy_hour", e)}
+              >
+                <Beer className="h-5 w-5" />
+                <span className="text-xs mt-1">Happy Hour</span>
+              </a>
+              
+              <a
+                href="/services?type=riparazione"
+                className={cn(
                   "flex-1 flex flex-col items-center py-2",
-                  location.startsWith("/services?type=riparazione") ? "text-primary" : "text-gray-600"
-                )}>
-                  <Drill className="h-5 w-5" />
-                  <span className="text-xs mt-1">Altro</span>
-                </a>
-              </Link>
+                  location === "/services?type=riparazione" ? "text-primary" : "text-gray-600"
+                )}
+                onClick={(e) => handleNavigation("/services?type=riparazione", e)}
+              >
+                <Drill className="h-5 w-5" />
+                <span className="text-xs mt-1">Altro</span>
+              </a>
             </div>
           </nav>
         </header>
