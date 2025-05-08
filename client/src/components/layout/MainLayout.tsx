@@ -78,7 +78,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     },
     {
       name: "Pagamenti",
-      path: "/services?status=unpaid",
+      path: "/payments",
       icon: <Receipt className="h-5 w-5" />,
     },
     {

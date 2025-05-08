@@ -22,6 +22,7 @@ import { Suspense, lazy } from "react";
 const LazyDashboard = lazy(() => import("@/pages/Dashboard"));
 const LazyServicesPage = lazy(() => import("@/pages/ServicesPage"));
 const LazyServiceForm = lazy(() => import("@/pages/ServiceForm"));
+const LazyPaymentsPage = lazy(() => import("@/pages/PaymentsPage"));
 const LazyReportsPage = lazy(() => import("@/pages/ReportsPage"));
 const LazySettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const LazyMaintenancePage = lazy(() => import("@/pages/MaintenancePage"));
@@ -44,6 +45,7 @@ function Router() {
           <Route path="/services/:id/edit">
             {params => <ServiceForm id={params.id} />}
           </Route>
+          <Route path="/payments" component={LazyPaymentsPage} />
           <Route path="/reports" component={LazyReportsPage} />
           <Route path="/maintenance" component={LazyMaintenancePage} />
           <Route path="/settings" component={LazySettingsPage} />
