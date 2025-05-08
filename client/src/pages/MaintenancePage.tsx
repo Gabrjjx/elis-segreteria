@@ -250,8 +250,13 @@ export default function MaintenancePage() {
   
   const syncGoogleSheetsMutation = useMutation({
     mutationFn: async () => {
+      // Aggiunge Content-Type JSON per evitare errori con il metodo
       return apiRequest('/api/maintenance/sync-google-sheets', {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
       });
     },
     onSuccess: (data: any) => {

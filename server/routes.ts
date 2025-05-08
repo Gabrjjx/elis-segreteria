@@ -386,15 +386,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      console.log("Sincronizzazione Google Sheets avviata");
+      
       // Recupera i dati dal foglio Google
       const csvData = await getMaintenanceRequestsCSV();
       
       // Importa i dati nel sistema
       if (!csvData) {
+        console.log("Nessun dato trovato nel foglio Google");
         return res.status(400).json({ message: "No data found in Google Sheet" });
       }
       
+      console.log("Dati CSV recuperati, lunghezza:", csvData.length);
+      
       const result = await storage.importMaintenanceRequestsFromCSV(csvData);
+      
+      console.log("Risultato importazione:", result);
       
       res.status(200).json({
         message: "Maintenance requests synchronized successfully",
