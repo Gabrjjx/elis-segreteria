@@ -6,8 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Search, Upload, UserPlus, Trash2 } from "lucide-react";
+import { Search, Upload, UserPlus, Trash2, Pencil } from "lucide-react";
 
 interface Student {
   id: number;
@@ -36,6 +37,11 @@ export default function StudentsPage() {
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [isImportingCsv, setIsImportingCsv] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // State for editing student
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Fetch students
   useEffect(() => {
@@ -188,6 +194,64 @@ export default function StudentsPage() {
       });
     } finally {
       setIsImportingCsv(false);
+    }
+  };
+  
+  const handleEditClick = (student: Student) => {
+    setEditingStudent(student);
+    setEditDialogOpen(true);
+  };
+  
+  const handleUpdateStudent = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+    
+    setIsEditing(true);
+    
+    try {
+      const formData = new FormData(e.currentTarget);
+      const firstName = formData.get("edit-firstName") as string;
+      const lastName = formData.get("edit-lastName") as string;
+      const sigla = formData.get("edit-sigla") as string;
+      
+      if (!firstName || !lastName || !sigla) {
+        toast({
+          title: "Errore",
+          description: "Tutti i campi sono obbligatori",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const response = await fetch(`/api/students/${editingStudent.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ firstName, lastName, sigla }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      toast({
+        title: "Studente aggiornato",
+        description: "I dati dello studente sono stati aggiornati con successo",
+      });
+      
+      setEditDialogOpen(false);
+      setEditingStudent(null);
+      fetchStudents();
+    } catch (err) {
+      console.error('Error updating student:', err);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'aggiornamento dello studente",
+        variant: "destructive",
+      });
+    } finally {
+      setIsEditing(false);
     }
   };
   
@@ -344,14 +408,24 @@ export default function StudentsPage() {
                       <TableCell>{student.firstName}</TableCell>
                       <TableCell>{student.lastName}</TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleDeleteStudent(student.id)}
-                          disabled={isDeleting}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
+                        <div className="flex justify-end space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleEditClick(student)}
+                            className="hover:text-blue-500"
+                          >
+                            <Pencil className="h-4 w-4 text-blue-500" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleDeleteStudent(student.id)}
+                            disabled={isDeleting}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -391,15 +465,25 @@ export default function StudentsPage() {
                         {student.firstName} {student.lastName}
                       </div>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      onClick={() => handleDeleteStudent(student.id)}
-                      disabled={isDeleting}
-                      className="h-12 w-12 rounded-full border-red-200 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2 className="h-6 w-6 text-red-500" />
-                    </Button>
+                    <div className="flex space-x-3">
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => handleEditClick(student)}
+                        className="h-12 w-12 rounded-full border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                      >
+                        <Pencil className="h-6 w-6 text-blue-500" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => handleDeleteStudent(student.id)}
+                        disabled={isDeleting}
+                        className="h-12 w-12 rounded-full border-red-200 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 className="h-6 w-6 text-red-500" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -472,6 +556,62 @@ export default function StudentsPage() {
           )}
         </CardFooter>
       </Card>
+      
+      {/* Edit Student Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifica Studente</DialogTitle>
+            <DialogDescription>
+              Aggiorna i dettagli dello studente
+            </DialogDescription>
+          </DialogHeader>
+          {editingStudent && (
+            <form id="editStudentForm" onSubmit={handleUpdateStudent} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-firstName">Nome</Label>
+                  <Input 
+                    id="edit-firstName" 
+                    name="edit-firstName" 
+                    placeholder="Nome" 
+                    value={editingStudent.firstName}
+                    onChange={(e) => setEditingStudent({...editingStudent, firstName: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lastName">Cognome</Label>
+                  <Input 
+                    id="edit-lastName" 
+                    name="edit-lastName" 
+                    placeholder="Cognome" 
+                    value={editingStudent.lastName}
+                    onChange={(e) => setEditingStudent({...editingStudent, lastName: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-sigla">Sigla</Label>
+                <Input 
+                  id="edit-sigla" 
+                  name="edit-sigla" 
+                  placeholder="Sigla" 
+                  value={editingStudent.sigla}
+                  onChange={(e) => setEditingStudent({...editingStudent, sigla: e.target.value})}
+                  required
+                />
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={isEditing}>
+                  {isEditing ? "Salvataggio in corso..." : "Salva Modifiche"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
