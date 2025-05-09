@@ -53,7 +53,7 @@ export default function WelcomePage() {
             
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
-                ELIS Segreteria
+                Segreteria Elis College
               </span>
             </h1>
             
