@@ -1,6 +1,6 @@
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { HammerSickle } from "@/components/ui/hammer-sickle";
+import { Loader2 } from "lucide-react";
 
 export function GlobalLoading() {
   const isFetching = useIsFetching();
@@ -28,10 +28,8 @@ export function GlobalLoading() {
   
   return (
     <div className="fixed bottom-4 right-4 z-50 pointer-events-none">
-      <div className="bg-white p-3 rounded-lg shadow-lg flex items-center space-x-3">
-        <div className="animate-spin">
-          <HammerSickle width={24} height={24} />
-        </div>
+      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg flex items-center space-x-3">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
         <p className="text-sm font-medium text-primary">Caricamento...</p>
       </div>
     </div>
