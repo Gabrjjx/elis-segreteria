@@ -15,10 +15,10 @@ export default function WelcomePage() {
   const handleEnter = () => {
     setLoading(true);
     
-    // Simuliamo un breve caricamento per una transizione fluida
+    // Passiamo direttamente alla dashboard, con un tempo di caricamento ridotto
     setTimeout(() => {
       setLocation("/");
-    }, 800);
+    }, 300);
   };
   
   return (

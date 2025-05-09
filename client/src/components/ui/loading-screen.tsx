@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { HammerSickle } from './hammer-sickle';
+import { Loader2 } from 'lucide-react';
 
 interface LoadingScreenProps {
   fullScreen?: boolean;
@@ -21,9 +21,7 @@ export function LoadingScreen({
 
   return (
     <div className={containerClasses}>
-      <div className="relative animate-spin">
-        <HammerSickle width={60} height={60} className="text-primary" />
-      </div>
+      <Loader2 className="h-16 w-16 animate-spin text-primary" />
       {text && (
         <p className="text-sm font-medium text-muted-foreground animate-pulse">{text}</p>
       )}
