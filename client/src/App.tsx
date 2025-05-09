@@ -5,10 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LoadingProvider } from "@/contexts/loading-context";
-import NavigationProgress from "@/components/navigation-progress";
-import { GlobalLoading } from "@/components/global-loading";
-import { LoadingScreen } from "@/components/ui/loading-screen";
-import { HammerSickle } from "@/components/ui/hammer-sickle";
 import MainLayout from "@/components/layout/MainLayout";
 import Dashboard from "@/pages/Dashboard";
 import ServicesPage from "@/pages/ServicesPage";
@@ -33,16 +29,7 @@ const LazyPublicPaymentPage = lazy(() => import("@/pages/PublicPaymentPage"));
 const LazyQrScannerPage = lazy(() => import("@/pages/QrScannerPage"));
 
 function LoadingFallback() {
-  return (
-    <div className="flex items-center justify-center p-8">
-      <div className="flex items-center space-x-4">
-        <div className="animate-spin">
-          <HammerSickle width={32} height={32} />
-        </div>
-        <p className="text-base font-medium text-primary">Caricamento pagina...</p>
-      </div>
-    </div>
-  );
+  return null; // Nessun indicatore di caricamento
 }
 
 // Layout for public pages without navigation menu
@@ -99,8 +86,6 @@ function App() {
       <ThemeProvider defaultTheme="light" storageKey="elis-theme">
         <LoadingProvider>
           <TooltipProvider>
-            <NavigationProgress />
-            <GlobalLoading />
             <Toaster />
             <Router />
           </TooltipProvider>
