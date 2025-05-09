@@ -15,15 +15,8 @@ export default function WelcomePage() {
   const handleEnter = () => {
     setLoading(true);
     
-    // Passiamo direttamente alla dashboard
-    try {
-      // Utilizzo window.location per una navigazione diretta e più affidabile
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Errore durante la navigazione:", error);
-      // Come fallback, usiamo setLocation
-      setLocation("/");
-    }
+    // Passiamo alla dashboard utilizzando l'URL diretto
+    window.location.href = "/dashboard";
   };
   
   return (
