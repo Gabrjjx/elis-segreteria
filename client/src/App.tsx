@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LoadingProvider } from "@/contexts/loading-context";
+import { LanguageProvider } from "@/contexts/language-context";
 import { HammerSickle } from "@/components/ui/hammer-sickle";
 import MainLayout from "@/components/layout/MainLayout";
 import Dashboard from "@/pages/Dashboard";
@@ -148,14 +149,16 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="elis-theme">
-        <LoadingProvider>
-          <TooltipProvider>
-            <ApiLoadingIndicator />
-            <PageLoadingIndicator />
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </LoadingProvider>
+        <LanguageProvider>
+          <LoadingProvider>
+            <TooltipProvider>
+              <ApiLoadingIndicator />
+              <PageLoadingIndicator />
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </LoadingProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

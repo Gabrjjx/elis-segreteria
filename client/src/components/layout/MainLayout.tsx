@@ -31,6 +31,8 @@ import {
 } from "lucide-react";
 import AiSearchDialog from "@/components/search/AiSearchDialog";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { LanguageToggle } from "@/components/ui/language-toggle";
+import { useLanguage } from "@/contexts/language-context";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -39,6 +41,7 @@ interface MainLayoutProps {
 export default function MainLayout({ children }: MainLayoutProps) {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
+  const { t } = useLanguage();
 
   // Function to handle navigation with search params
   const handleNavigation = (path: string, event: React.MouseEvent) => {
@@ -124,10 +127,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Sidebar (desktop) - Modern Style */}
-      <aside className="w-[256px] bg-white border-r border-gray-200 flex-shrink-0 hidden md:flex flex-col">
+      <aside className="w-[256px] bg-background border-r border-border flex-shrink-0 hidden md:flex flex-col dark:bg-sidebar-bg">
         <div className="p-4 flex items-center">
           <LayoutDashboard className="mr-2 h-6 w-6 text-primary" />
-          <h1 className="text-xl font-medium text-gray-800">ELIS Segreteria</h1>
+          <h1 className="text-xl font-medium text-foreground">ELIS Segreteria</h1>
         </div>
         <nav className="flex-1 py-4">
           <div className="space-y-0.5">
@@ -207,7 +210,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-h-screen">
         {/* Top Navigation */}
-        <header className="bg-white shadow-sm z-10">
+        <header className="bg-background dark:bg-nav-bg shadow-sm z-10 border-b border-border">
           <div className="px-4 py-2 flex items-center justify-between">
             {/* Mobile menu trigger */}
             <Sheet open={open} onOpenChange={setOpen}>
@@ -321,6 +324,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
             </div>
 
             <div className="flex items-center">
+              <div className="relative mx-2">
+                <LanguageToggle />
+              </div>
               <div className="relative mx-2">
                 <ThemeToggle />
               </div>
@@ -492,11 +498,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   
                   <DropdownMenuSeparator className="my-1" />
                   
-                  {/* Tema */}
+                  {/* Preferenze */}
                   <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Tema
+                    Preferenze
                   </div>
-                  <div className="p-3 flex justify-center">
+                  <div className="p-3 flex justify-center gap-3">
+                    <LanguageToggle />
                     <ThemeToggle />
                   </div>
                 </DropdownMenuContent>
