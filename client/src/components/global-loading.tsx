@@ -1,6 +1,6 @@
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
-import { LoadingScreen } from "@/components/ui/loading-screen";
 import { useEffect, useState } from "react";
+import { HammerSickle } from "@/components/ui/hammer-sickle";
 
 export function GlobalLoading() {
   const isFetching = useIsFetching();
@@ -28,8 +28,13 @@ export function GlobalLoading() {
   
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 pointer-events-none">
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <LoadingScreen text="Caricamento dati in corso..." />
+      <div className="bg-white p-8 rounded-xl shadow-2xl">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin">
+            <HammerSickle width={70} height={70} />
+          </div>
+          <p className="text-lg font-medium text-primary animate-pulse">Caricamento dati in corso...</p>
+        </div>
       </div>
     </div>
   );
