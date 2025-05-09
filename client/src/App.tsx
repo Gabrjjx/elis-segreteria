@@ -49,7 +49,7 @@ function Router() {
     <Suspense fallback={<LoadingFallback />}>
       <Switch>
         {/* Pagina di benvenuto come home page principale */}
-        <Route path="/" exact>
+        <Route path="/">
           <PublicLayout>
             <LazyWelcomePage />
           </PublicLayout>

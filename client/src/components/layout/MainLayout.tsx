@@ -57,7 +57,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const routes = [
     {
       name: "Dashboard",
-      path: "/",
+      path: "/dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
     {
@@ -130,7 +130,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <aside className="w-[256px] bg-background border-r border-border flex-shrink-0 hidden md:flex flex-col dark:bg-sidebar-bg">
         <div className="p-4 flex items-center">
           <LayoutDashboard className="mr-2 h-6 w-6 text-primary" />
-          <h1 className="text-xl font-medium text-foreground">ELIS Segreteria</h1>
+          <h1 className="text-xl font-medium text-foreground">Segreteria Elis College</h1>
         </div>
         <nav className="flex-1 py-4">
           <div className="space-y-0.5">
@@ -227,7 +227,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               <SheetContent side="left" className="p-0 bg-white text-gray-800 border-r">
                 <div className="p-4 flex items-center border-b border-gray-100">
                   <LayoutDashboard className="mr-2 h-6 w-6 text-primary" />
-                  <h1 className="text-xl font-medium">ELIS Segreteria</h1>
+                  <h1 className="text-xl font-medium">Segreteria Elis College</h1>
                 </div>
                 <div className="p-3 border-b border-gray-100">
                   <AiSearchDialog />
@@ -316,7 +316,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
             <div className="flex items-center flex-1 md:ml-4">
               <h2 className="text-xl font-medium mr-4">
-                {routes.find((route) => route.path === location)?.name || "Dashboard"}
+                {routes.find((route) => route.path === location || (route.path === "/dashboard" && location === "/"))?.name || "Dashboard"}
               </h2>
               <div className="hidden md:block flex-1 max-w-xl">
                 <AiSearchDialog />
@@ -349,14 +349,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
             {/* Main tab navigation with larger buttons */}
             <div className="flex items-center h-16">
               <a 
-                href="/"
+                href="/dashboard"
                 className={cn(
                   "flex-1 flex flex-col items-center justify-center h-full",
-                  location === "/" 
+                  location === "/" || location === "/dashboard"
                     ? "text-primary border-t-2 border-primary bg-blue-50" 
                     : "text-gray-600"
                 )}
-                onClick={(e) => handleNavigation("/", e)}
+                onClick={(e) => handleNavigation("/dashboard", e)}
               >
                 <LayoutDashboard className="h-6 w-6 mb-1" />
                 <span className="text-xs font-medium">Dashboard</span>
