@@ -26,9 +26,11 @@ import {
   AlertCircle,
   Cloud,
   KeySquare,
-  Search
+  Search,
+  Globe
 } from "lucide-react";
 import AiSearchDialog from "@/components/search/AiSearchDialog";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -320,6 +322,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
             <div className="flex items-center">
               <div className="relative mx-2">
+                <ThemeToggle />
+              </div>
+              <div className="relative mx-2">
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Bell className="h-5 w-5" />
                   <span className="sr-only">Notifications</span>
@@ -484,6 +489,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     <Cloud className="h-5 w-5 mr-3 text-primary" />
                     <span className="font-medium">Google Auth</span>
                   </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator className="my-1" />
+                  
+                  {/* Tema */}
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Tema
+                  </div>
+                  <div className="p-3 flex justify-center">
+                    <ThemeToggle />
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
