@@ -8,6 +8,7 @@ import { LoadingProvider } from "@/contexts/loading-context";
 import NavigationProgress from "@/components/navigation-progress";
 import { GlobalLoading } from "@/components/global-loading";
 import { LoadingScreen } from "@/components/ui/loading-screen";
+import { HammerSickle } from "@/components/ui/hammer-sickle";
 import MainLayout from "@/components/layout/MainLayout";
 import Dashboard from "@/pages/Dashboard";
 import ServicesPage from "@/pages/ServicesPage";
@@ -32,7 +33,16 @@ const LazyPublicPaymentPage = lazy(() => import("@/pages/PublicPaymentPage"));
 const LazyQrScannerPage = lazy(() => import("@/pages/QrScannerPage"));
 
 function LoadingFallback() {
-  return <LoadingScreen text="Caricamento pagina..." />;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+      <div className="flex flex-col items-center rounded-xl bg-white p-8 shadow-xl">
+        <div className="animate-spin">
+          <HammerSickle width={80} height={80} />
+        </div>
+        <p className="mt-4 text-lg font-bold text-primary">Caricamento pagina...</p>
+      </div>
+    </div>
+  );
 }
 
 // Layout for public pages without navigation menu

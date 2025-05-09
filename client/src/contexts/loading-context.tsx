@@ -1,12 +1,19 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from "react";
 
 interface LoadingContextType {
   isLoading: boolean;
-  startLoading: () => void;
-  stopLoading: () => void;
+  setLoading: (loading: boolean) => void;
 }
 
 const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
+
+export function useLoading() {
+  const context = useContext(LoadingContext);
+  if (!context) {
+    throw new Error("useLoading must be used within a LoadingProvider");
+  }
+  return context;
+}
 
 interface LoadingProviderProps {
   children: ReactNode;
@@ -14,36 +21,14 @@ interface LoadingProviderProps {
 
 export function LoadingProvider({ children }: LoadingProviderProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingTimeoutId, setLoadingTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
-  const startLoading = () => {
-    if (loadingTimeoutId) {
-      clearTimeout(loadingTimeoutId);
-      setLoadingTimeoutId(null);
-    }
-    setIsLoading(true);
-  };
-
-  const stopLoading = () => {
-    // Aggiungiamo un piccolo delay per evitare flickering
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-    }, 300);
-    
-    setLoadingTimeoutId(timeoutId);
+  const setLoading = (loading: boolean) => {
+    setIsLoading(loading);
   };
 
   return (
-    <LoadingContext.Provider value={{ isLoading, startLoading, stopLoading }}>
+    <LoadingContext.Provider value={{ isLoading, setLoading }}>
       {children}
     </LoadingContext.Provider>
   );
-}
-
-export function useLoading() {
-  const context = useContext(LoadingContext);
-  if (context === undefined) {
-    throw new Error('useLoading must be used within a LoadingProvider');
-  }
-  return context;
 }
