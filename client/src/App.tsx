@@ -34,12 +34,12 @@ const LazyQrScannerPage = lazy(() => import("@/pages/QrScannerPage"));
 
 function LoadingFallback() {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-      <div className="flex flex-col items-center rounded-xl bg-white p-8 shadow-xl">
+    <div className="flex items-center justify-center p-8">
+      <div className="flex items-center space-x-4">
         <div className="animate-spin">
-          <HammerSickle width={80} height={80} />
+          <HammerSickle width={32} height={32} />
         </div>
-        <p className="mt-4 text-lg font-bold text-primary">Caricamento pagina...</p>
+        <p className="text-base font-medium text-primary">Caricamento pagina...</p>
       </div>
     </div>
   );

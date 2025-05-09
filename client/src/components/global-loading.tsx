@@ -27,14 +27,12 @@ export function GlobalLoading() {
   if (!isVisible) return null;
   
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 pointer-events-none">
-      <div className="bg-white p-8 rounded-xl shadow-2xl">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin">
-            <HammerSickle width={70} height={70} />
-          </div>
-          <p className="text-lg font-medium text-primary animate-pulse">Caricamento dati in corso...</p>
+    <div className="fixed bottom-4 right-4 z-50 pointer-events-none">
+      <div className="bg-white p-3 rounded-lg shadow-lg flex items-center space-x-3">
+        <div className="animate-spin">
+          <HammerSickle width={24} height={24} />
         </div>
+        <p className="text-sm font-medium text-primary">Caricamento...</p>
       </div>
     </div>
   );
