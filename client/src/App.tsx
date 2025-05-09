@@ -1,10 +1,11 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LoadingProvider } from "@/contexts/loading-context";
+import { HammerSickle } from "@/components/ui/hammer-sickle";
 import MainLayout from "@/components/layout/MainLayout";
 import Dashboard from "@/pages/Dashboard";
 import ServicesPage from "@/pages/ServicesPage";
@@ -13,7 +14,7 @@ import ReportsPage from "@/pages/ReportsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import MaintenancePage from "@/pages/MaintenancePage";
 import NotFound from "@/pages/not-found";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useState, useEffect } from "react";
 
 // Utilizzo React.lazy per caricare i componenti in modo asincrono
 const LazyDashboard = lazy(() => import("@/pages/Dashboard"));
@@ -80,12 +81,77 @@ function Router() {
   );
 }
 
+// Indicatore discreto per le chiamate API
+function ApiLoadingIndicator() {
+  const isFetching = useIsFetching();
+  const isMutating = useIsMutating();
+  const [isVisible, setIsVisible] = useState(false);
+  
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    
+    if (isFetching || isMutating) {
+      timeout = setTimeout(() => {
+        setIsVisible(true);
+      }, 300); // Mostra dopo un piccolo ritardo per evitare flash
+    } else {
+      setIsVisible(false);
+    }
+    
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [isFetching, isMutating]);
+  
+  if (!isVisible) return null;
+  
+  return (
+    <div className="fixed bottom-2 right-2 z-40 pointer-events-none">
+      <div className="bg-white/80 p-1.5 rounded-full shadow-sm flex items-center gap-1.5">
+        <div className="animate-spin">
+          <HammerSickle width={16} height={16} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Indicatore discreto per il cambio pagina
+function PageLoadingIndicator() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [location] = useLocation();
+  
+  useEffect(() => {
+    setIsLoading(true);
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(timeout);
+  }, [location]);
+  
+  if (!isLoading) return null;
+  
+  return (
+    <div className="fixed top-2 left-1/2 transform -translate-x-1/2 z-40 pointer-events-none">
+      <div className="bg-white/80 py-1 px-3 rounded-full shadow-sm flex items-center gap-2">
+        <div className="animate-spin">
+          <HammerSickle width={16} height={16} />
+        </div>
+        <span className="text-xs font-medium">Caricamento</span>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="elis-theme">
         <LoadingProvider>
           <TooltipProvider>
+            <ApiLoadingIndicator />
+            <PageLoadingIndicator />
             <Toaster />
             <Router />
           </TooltipProvider>
