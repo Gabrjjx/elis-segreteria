@@ -514,6 +514,19 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
         {/* Page Content */}
         <div className="p-4 pb-24 md:p-6 md:pb-6 flex-1 bg-gray-50">{children}</div>
+        
+        {/* Footer */}
+        <footer className="border-t py-2 mt-auto">
+          <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              &copy;GabHub - Segreteria Elis College
+            </p>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <LanguageToggle />
+            </div>
+          </div>
+        </footer>
       </main>
     </div>
   );

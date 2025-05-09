@@ -48,8 +48,8 @@ function Router() {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Switch>
-        {/* Pagina di benvenuto */}
-        <Route path="/welcome">
+        {/* Pagina di benvenuto come home page principale */}
+        <Route path="/" exact>
           <PublicLayout>
             <LazyWelcomePage />
           </PublicLayout>
@@ -66,7 +66,7 @@ function Router() {
         <Route>
           <MainLayout>
             <Switch>
-              <Route path="/" component={LazyDashboard} />
+              <Route path="/dashboard" component={LazyDashboard} />
               <Route path="/services" component={LazyServicesPage} />
               <Route path="/services/new">
                 <LazyServiceForm />
