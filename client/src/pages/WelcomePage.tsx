@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageToggle } from "@/components/ui/language-toggle";
 import { useLanguage } from "@/contexts/language-context";
-import { HammerSickle } from "@/components/ui/hammer-sickle";
+import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function WelcomePage() {
@@ -41,7 +41,16 @@ export default function WelcomePage() {
             className="mb-6"
           >
             <div className="flex justify-center mb-4">
-              <HammerSickle width={80} height={80} className="text-primary" />
+              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                <svg 
+                  className="w-12 h-12 text-primary" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
             </div>
             
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
@@ -127,9 +136,7 @@ export default function WelcomePage() {
             >
               {loading ? (
                 <div className="flex items-center">
-                  <div className="animate-spin mr-2">
-                    <HammerSickle width={20} height={20} />
-                  </div>
+                  <Loader2 className="animate-spin mr-2 h-5 w-5" />
                   {t('loading')}
                 </div>
               ) : (

@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LoadingProvider } from "@/contexts/loading-context";
 import { LanguageProvider } from "@/contexts/language-context";
-import { HammerSickle } from "@/components/ui/hammer-sickle";
+import { Loader2 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import Dashboard from "@/pages/Dashboard";
 import ServicesPage from "@/pages/ServicesPage";
@@ -116,10 +116,8 @@ function ApiLoadingIndicator() {
   
   return (
     <div className="fixed bottom-2 right-2 z-40 pointer-events-none">
-      <div className="bg-white/80 p-1.5 rounded-full shadow-sm flex items-center gap-1.5">
-        <div className="animate-spin">
-          <HammerSickle width={16} height={16} />
-        </div>
+      <div className="bg-white/80 dark:bg-gray-800/80 p-1.5 rounded-full shadow-sm flex items-center gap-1.5">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
       </div>
     </div>
   );
@@ -143,10 +141,8 @@ function PageLoadingIndicator() {
   
   return (
     <div className="fixed top-2 left-1/2 transform -translate-x-1/2 z-40 pointer-events-none">
-      <div className="bg-white/80 py-1 px-3 rounded-full shadow-sm flex items-center gap-2">
-        <div className="animate-spin">
-          <HammerSickle width={16} height={16} />
-        </div>
+      <div className="bg-white/80 dark:bg-gray-800/80 py-1 px-3 rounded-full shadow-sm flex items-center gap-2">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
         <span className="text-xs font-medium">Caricamento</span>
       </div>
     </div>
