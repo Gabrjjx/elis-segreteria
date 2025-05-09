@@ -11,41 +11,30 @@ export function HammerSickle({ width = 40, height = 40, className = "" }: Hammer
     <svg
       width={width}
       height={height}
-      viewBox="0 0 100 100"
+      viewBox="0 0 600 600"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
       <g>
-        {/* Falce */}
-        <path
-          d="M17 82C27 72 40 66 50 65C60 64 68 66 75 70L65 80C60 75 55 73 50 74C45 75 37 78 30 85L17 82Z"
-          fill="#E32922"
-          stroke="#000000"
-          strokeWidth="2"
+        {/* Martello */}
+        <path 
+          d="M220 95L160 155L160 365L220 425L260 385L260 135L220 95Z" 
+          fill="#FFD700" 
         />
-        <path
-          d="M75 70L65 60L55 50L45 40L35 30L25 20L15 15L10 20L15 30L25 40L35 50L45 60L55 70L65 80L75 70Z"
-          fill="#E32922"
-          stroke="#000000"
-          strokeWidth="2"
+        <path 
+          d="M160 155L60 155L20 195L20 325L60 365L160 365Z" 
+          fill="#FFD700" 
         />
         
-        {/* Martello */}
-        <rect
-          x="65"
-          y="15"
-          width="20"
-          height="12"
-          fill="#E32922"
-          stroke="#000000"
-          strokeWidth="2"
+        {/* Falce */}
+        <path 
+          d="M580 525C480 625 360 580 300 500C240 420 240 320 300 260L340 300C300 340 300 400 340 440C380 480 460 470 540 390L580 525Z" 
+          fill="#FFD700" 
         />
-        <path
-          d="M75 20L75 70"
-          stroke="#000000"
-          strokeWidth="4"
-          fill="#E32922"
+        <path 
+          d="M300 260L340 220L380 180L420 140L460 100L500 60L540 40L580 80L540 120L500 160L460 200L420 240L380 280L340 300L300 260Z" 
+          fill="#FFD700" 
         />
       </g>
     </svg>
