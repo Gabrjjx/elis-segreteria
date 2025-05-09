@@ -45,6 +45,7 @@ const translations: Record<Language, Record<string, string>> = {
     'export': 'Esporta',
     'import': 'Importa',
     'sync': 'Sincronizza',
+    'enter_system': 'Entra nel Sistema',
     
     // Form
     'name': 'Nome',
@@ -66,6 +67,7 @@ const translations: Record<Language, Record<string, string>> = {
     'confirm_delete': 'Sei sicuro di voler eliminare questo elemento?',
     'yes': 'Sì',
     'no': 'No',
+    'all_rights_reserved': 'Tutti i diritti riservati',
     
     // Tema
     'theme': 'Tema',
@@ -76,6 +78,15 @@ const translations: Record<Language, Record<string, string>> = {
     // Lingua
     'language': 'Lingua',
     'change_language': 'Cambia lingua',
+    
+    // Pagina di benvenuto
+    'welcome_message': 'Benvenuto nel sistema amministrativo della Segreteria ELIS. Gestisci servizi, pagamenti e monitoraggio in modo semplice ed efficiente.',
+    'services_management': 'Gestione Servizi',
+    'services_description': 'Siglatura, Happy Hour e riparazioni integrate in un unico sistema facile da usare.',
+    'payments_management': 'Gestione Pagamenti',
+    'payments_description': 'Monitoraggio semplificato dei pagamenti con integrazione PayPal per transazioni veloci e sicure.',
+    'reports_management': 'Reportistica',
+    'reports_description': 'Dati e statistiche dettagliate per una visione chiara delle attività della segreteria.'
   },
   en: {
     // Navbar
@@ -110,6 +121,7 @@ const translations: Record<Language, Record<string, string>> = {
     'export': 'Export',
     'import': 'Import',
     'sync': 'Sync',
+    'enter_system': 'Enter System',
     
     // Form
     'name': 'Name',
@@ -131,6 +143,7 @@ const translations: Record<Language, Record<string, string>> = {
     'confirm_delete': 'Are you sure you want to delete this item?',
     'yes': 'Yes',
     'no': 'No',
+    'all_rights_reserved': 'All rights reserved',
     
     // Theme
     'theme': 'Theme',
@@ -141,6 +154,15 @@ const translations: Record<Language, Record<string, string>> = {
     // Language
     'language': 'Language',
     'change_language': 'Change language',
+    
+    // Welcome page
+    'welcome_message': 'Welcome to the ELIS Secretariat administrative system. Manage services, payments and monitoring in a simple and efficient way.',
+    'services_management': 'Services Management',
+    'services_description': 'Labeling, Happy Hour and repairs integrated in a single easy-to-use system.',
+    'payments_management': 'Payments Management',
+    'payments_description': 'Simplified payment monitoring with PayPal integration for fast and secure transactions.',
+    'reports_management': 'Reporting',
+    'reports_description': 'Detailed data and statistics for a clear view of secretariat activities.'
   }
 };
 

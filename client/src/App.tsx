@@ -29,6 +29,7 @@ const LazyStudentsPage = lazy(() => import("@/pages/StudentsPage"));
 const LazyGoogleAuthPage = lazy(() => import("@/pages/GoogleAuthPage"));
 const LazyPublicPaymentPage = lazy(() => import("@/pages/PublicPaymentPage"));
 const LazyQrScannerPage = lazy(() => import("@/pages/QrScannerPage"));
+const LazyWelcomePage = lazy(() => import("@/pages/WelcomePage"));
 
 function LoadingFallback() {
   return null; // Nessun indicatore di caricamento
@@ -37,7 +38,7 @@ function LoadingFallback() {
 // Layout for public pages without navigation menu
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       {children}
     </div>
   );
@@ -47,6 +48,13 @@ function Router() {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Switch>
+        {/* Pagina di benvenuto */}
+        <Route path="/welcome">
+          <PublicLayout>
+            <LazyWelcomePage />
+          </PublicLayout>
+        </Route>
+        
         {/* Rotta pubblica per i pagamenti */}
         <Route path="/pay">
           <PublicLayout>
