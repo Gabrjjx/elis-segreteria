@@ -150,7 +150,7 @@ export default function WelcomePage() {
       {/* Footer */}
       <footer className="py-4 border-t border-border">
         <div className="container mx-auto text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} ELIS - {t('all_rights_reserved')}</p>
+          <p>&copy;GabHub - Segreteria Elis College</p>
         </div>
       </footer>
     </div>
