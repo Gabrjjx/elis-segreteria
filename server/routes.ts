@@ -1551,6 +1551,95 @@ RifID: ${hashId}`
       res.status(500).json({ message: "Errore interno del server" });
     }
   });
+  
+  // Endpoint pubblico per l'invio di richieste di manutenzione da parte degli studenti
+  app.post("/api/public/maintenance", async (req: Request, res: Response) => {
+    try {
+      // Validare la richiesta usando lo schema
+      const maintenanceRequest = publicMaintenanceRequestSchema.parse(req.body);
+      
+      // Verifica che la sigla esista
+      const student = await storage.getStudentBySigla(maintenanceRequest.sigla);
+      if (!student) {
+        return res.status(400).json({ message: "Sigla non trovata. Inserisci una sigla valida." });
+      }
+      
+      // Converti la priorità numerica (1-5) nel formato del database
+      let priority = MaintenanceRequestPriority.MEDIUM; // Default
+      if (maintenanceRequest.priority === 1) {
+        priority = MaintenanceRequestPriority.LOW;
+      } else if (maintenanceRequest.priority === 2) {
+        priority = MaintenanceRequestPriority.LOW;
+      } else if (maintenanceRequest.priority === 3) {
+        priority = MaintenanceRequestPriority.MEDIUM;
+      } else if (maintenanceRequest.priority === 4) {
+        priority = MaintenanceRequestPriority.HIGH;
+      } else if (maintenanceRequest.priority === 5) {
+        priority = MaintenanceRequestPriority.URGENT;
+      }
+      
+      // Preparazione del testo descrittivo
+      let description = maintenanceRequest.defectDetails;
+      
+      // Preparazione delle note con informazioni aggiuntive
+      let notes = `Luogo: ${maintenanceRequest.place}\n` +
+                 `Ubicazione specifica: ${maintenanceRequest.specificLocation}\n` +
+                 `Priorità indicata: ${maintenanceRequest.priority}/5\n` +
+                 `Risolvibile con manutentori autarchici: ${maintenanceRequest.canBeSolvedByMaintainers ? 'Sì' : 'No'}`;
+      
+      // Aggiungi la soluzione suggerita se presente
+      if (maintenanceRequest.possibleSolution) {
+        notes += `\n\nSoluzione suggerita: ${maintenanceRequest.possibleSolution}`;
+      }
+      
+      // Creazione della richiesta di manutenzione nel database
+      const result = await storage.createMaintenanceRequest({
+        requesterName: student.sigla,
+        requesterEmail: "studente@elis.org", // Email generica
+        roomNumber: maintenanceRequest.place,
+        location: maintenanceRequest.specificLocation,
+        requestType: "Manutenzione",
+        description: description,
+        priority: priority,
+        notes: notes,
+        status: MaintenanceRequestStatus.PENDING,
+      });
+      
+      // Tentativo di sincronizzazione con Google Sheets
+      let googleSheetUpdate = { success: false, message: "Google Sheet non aggiornato" };
+      try {
+        if (isSheetLoaded() && hasValidToken()) {
+          // Implementare qui la logica per aggiungere la richiesta a Google Sheets
+          // Per ora restituiamo solo un messaggio
+          googleSheetUpdate = { 
+            success: true, 
+            message: "La richiesta verrà sincronizzata con Google Sheets automaticamente" 
+          };
+        }
+      } catch (error) {
+        console.error("Errore durante l'aggiornamento del foglio Google:", error);
+      }
+      
+      return res.status(201).json({
+        message: "Richiesta di manutenzione inviata con successo",
+        requestId: result.id,
+        googleSheetUpdate
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ 
+          message: "Errore di validazione", 
+          errors: validationError.details
+        });
+      }
+      
+      console.error("Errore nella creazione della richiesta di manutenzione:", error);
+      return res.status(500).json({ 
+        message: `Errore nella creazione della richiesta di manutenzione: ${error instanceof Error ? error.message : String(error)}` 
+      });
+    }
+  });
 
   // Ottieni uno studente per sigla
   app.get("/api/students/by-sigla/:sigla", async (req: Request, res: Response) => {

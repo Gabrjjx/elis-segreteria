@@ -30,6 +30,7 @@ const LazyGoogleAuthPage = lazy(() => import("@/pages/GoogleAuthPage"));
 const LazyPublicPaymentPage = lazy(() => import("@/pages/PublicPaymentPage"));
 const LazyQrScannerPage = lazy(() => import("@/pages/QrScannerPage"));
 const LazyWelcomePage = lazy(() => import("@/pages/WelcomePage"));
+const LazyPublicMaintenanceRequest = lazy(() => import("@/pages/PublicMaintenanceRequest"));
 
 function LoadingFallback() {
   return null; // Nessun indicatore di caricamento
@@ -59,6 +60,13 @@ function Router() {
         <Route path="/pay">
           <PublicLayout>
             <LazyPublicPaymentPage />
+          </PublicLayout>
+        </Route>
+        
+        {/* Rotta pubblica per la segnalazione di manutenzione */}
+        <Route path="/maintenance-request">
+          <PublicLayout>
+            <LazyPublicMaintenanceRequest />
           </PublicLayout>
         </Route>
         
