@@ -1592,8 +1592,12 @@ RifID: ${hashId}`
         notes += `\n\nSoluzione suggerita: ${maintenanceRequest.possibleSolution}`;
       }
       
-      // Creazione della richiesta di manutenzione nel database
-      const result = await storage.createMaintenanceRequest({
+      // Debug
+      console.log("MANUTENZIONE - Dati richiesta:", maintenanceRequest);
+      console.log("MANUTENZIONE - Dati studente:", student);
+      
+      // Prepara l'oggetto con i dati per la nuova richiesta
+      const requestData = {
         // Campi originali
         requesterName: student.firstName + " " + student.lastName,
         requesterEmail: "studente@elis.org", // Email generica
@@ -1612,7 +1616,13 @@ RifID: ${hashId}`
         priority: priority,
         notes: notes,
         status: MaintenanceRequestStatus.PENDING,
-      });
+      };
+      
+      // Debug
+      console.log("MANUTENZIONE - Dati inviati:", requestData);
+      
+      // Creazione della richiesta di manutenzione nel database
+      const result = await storage.createMaintenanceRequest(requestData);
       
       // Tentativo di sincronizzazione con Google Sheets
       let googleSheetUpdate = { success: false, message: "Google Sheet non aggiornato" };
