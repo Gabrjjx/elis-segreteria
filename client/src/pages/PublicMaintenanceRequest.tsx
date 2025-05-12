@@ -37,13 +37,6 @@ export default function PublicMaintenanceRequest() {
             <p>
               &copy; {new Date().getFullYear()} ELIS College. Tutti i diritti riservati.
             </p>
-            <p className="mt-1">
-              <Link href="/">
-                <span className="text-primary hover:underline cursor-pointer">
-                  Torna alla homepage
-                </span>
-              </Link>
-            </p>
           </footer>
         </div>
       </div>

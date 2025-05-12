@@ -158,6 +158,24 @@ export default function MaintenancePage() {
         return "Sconosciuta";
     }
   };
+  
+  // Aggiungi una funzione per il colore del bordo in base allo stato
+  const getStatusBorderColor = (status: string) => {
+    switch (status) {
+      case MaintenanceRequestStatus.PENDING:
+        return "border-yellow-400";
+      case MaintenanceRequestStatus.IN_PROGRESS:
+        return "border-blue-500";
+      case MaintenanceRequestStatus.COMPLETED:
+        return "border-green-500";
+      case MaintenanceRequestStatus.REJECTED:
+        return "border-red-500";
+      case MaintenanceRequestStatus.CANCELLED:
+        return "border-gray-400";
+      default:
+        return "border-gray-200";
+    }
+  };
 
   return (
     <div className="container mx-auto py-4">
@@ -228,7 +246,57 @@ export default function MaintenancePage() {
             </Card>
           ) : (
             <>
-              <div className="rounded-md border overflow-hidden">
+              {/* Vista mobile come card */}
+              <div className="lg:hidden space-y-4">
+                {data && data.requests.length > 0 ? (
+                  data.requests.map((request) => (
+                    <Card 
+                      key={request.id} 
+                      className={`cursor-pointer hover:shadow-md transition-shadow duration-200 border-l-4 ${getStatusBorderColor(request.status)}`}
+                      onClick={() => openRequestDetail(request)}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-base">
+                            Richiesta #{request.id}
+                          </CardTitle>
+                          <Badge className={`${getPriorityColor(request.priority)} text-white`}>
+                            {getPriorityLabel(request.priority)}
+                          </Badge>
+                        </div>
+                        <CardDescription className="flex justify-between">
+                          <span>Sigla: {request.sigla || "N/D"}</span>
+                          <span>{formatDateTime(request.timestamp)}</span>
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="pb-2 pt-0">
+                        <p className="font-medium text-sm text-gray-700 mb-1">Luogo: {request.place || "N/D"}</p>
+                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">{request.defectDetails || "N/D"}</p>
+                        <div className="flex justify-between items-center mt-2">
+                          <Badge className={`${getStatusColor(request.status)} text-white`}>
+                            {getStatusLabel(request.status)}
+                          </Badge>
+                          <Button variant="outline" size="sm" onClick={(e) => {
+                            e.stopPropagation();
+                            openRequestDetail(request);
+                          }}>
+                            Dettagli
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <Card className="border-dashed border-2 border-gray-200">
+                    <CardContent className="text-center py-6">
+                      <p className="text-gray-500">Nessuna richiesta di manutenzione trovata</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Vista desktop come tabella */}
+              <div className="hidden lg:block rounded-md border overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -245,8 +313,12 @@ export default function MaintenancePage() {
                   <TableBody>
                     {data && data.requests.length > 0 ? (
                       data.requests.map((request) => (
-                        <TableRow key={request.id} onClick={() => openRequestDetail(request)} className="cursor-pointer hover:bg-slate-50">
-                          <TableCell>{request.id}</TableCell>
+                        <TableRow 
+                          key={request.id} 
+                          onClick={() => openRequestDetail(request)} 
+                          className={`cursor-pointer hover:bg-slate-50 border-l-4 ${getStatusBorderColor(request.status)}`}
+                        >
+                          <TableCell className="font-medium">{request.id}</TableCell>
                           <TableCell>{request.sigla || "N/D"}</TableCell>
                           <TableCell>{request.place || "N/D"}</TableCell>
                           <TableCell className="max-w-[200px] truncate">{request.defectDetails || "N/D"}</TableCell>
