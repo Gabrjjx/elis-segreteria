@@ -92,7 +92,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
       name: "Manutenzione",
       path: "/maintenance",
       icon: <Hammer className="h-5 w-5" />,
-      disabled: true, // Funzionalità temporaneamente sospesa
     },
     {
       name: "Studenti",

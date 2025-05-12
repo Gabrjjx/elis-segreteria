@@ -1,7 +1,8 @@
-import React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
+import { MaintenanceRequest, MaintenanceRequestPriority, MaintenanceRequestStatus } from "@shared/schema";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,462 +11,239 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
-import { formatDate } from "@/lib/utils";
-
-type MaintenanceRequestStatus = "pending" | "in_progress" | "completed" | "rejected";
-type MaintenanceRequestPriority = "low" | "medium" | "high" | "urgent";
-
-interface MaintenanceRequest {
-  id: number;
-  timestamp: string;
-  requesterName: string;
-  requesterEmail: string;
-  roomNumber: string;
-  requestType: string;
-  description: string;
-  location: string;
-  status: MaintenanceRequestStatus;
-  priority: MaintenanceRequestPriority;
-  notes: string | null;
-  assignedTo: string | null;
-  completedAt: string | null;
-  attachmentUrl: string | null;
-}
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { formatDateTime } from "@/lib/utils";
 
 interface MaintenanceDetailProps {
-  requestId: number;
   isOpen: boolean;
   onClose: () => void;
+  request: MaintenanceRequest;
+  onStatusChange: () => void;
 }
 
-const getStatusLabel = (status: MaintenanceRequestStatus): string => {
-  switch (status) {
-    case "pending":
-      return "In attesa";
-    case "in_progress":
-      return "In lavorazione";
-    case "completed":
-      return "Completata";
-    case "rejected":
-      return "Rifiutata";
-    default:
-      return status;
-  }
-};
-
-const getStatusColor = (status: MaintenanceRequestStatus): string => {
-  switch (status) {
-    case "pending":
-      return "bg-yellow-500";
-    case "in_progress":
-      return "bg-blue-500";
-    case "completed":
-      return "bg-green-500";
-    case "rejected":
-      return "bg-red-500";
-    default:
-      return "bg-gray-500";
-  }
-};
-
-const getPriorityLabel = (priority: MaintenanceRequestPriority): string => {
-  switch (priority) {
-    case "low":
-      return "Bassa";
-    case "medium":
-      return "Media";
-    case "high":
-      return "Alta";
-    case "urgent":
-      return "Urgente";
-    default:
-      return priority;
-  }
-};
-
-const getPriorityColor = (priority: MaintenanceRequestPriority): string => {
-  switch (priority) {
-    case "low":
-      return "bg-green-500";
-    case "medium":
-      return "bg-blue-500";
-    case "high":
-      return "bg-orange-500";
-    case "urgent":
-      return "bg-red-500";
-    default:
-      return "bg-gray-500";
-  }
-};
-
-export default function MaintenanceDetail({ requestId, isOpen, onClose }: MaintenanceDetailProps) {
+export default function MaintenanceDetail({
+  isOpen,
+  onClose,
+  request,
+  onStatusChange,
+}: MaintenanceDetailProps) {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(request.status);
+  const [currentPriority, setCurrentPriority] = useState(request.priority);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [notes, setNotes] = React.useState("");
-  const [assignee, setAssignee] = React.useState("");
-  
-  // Query per ottenere i dettagli della richiesta
-  const { data: request, isLoading, isError } = useQuery({
-    queryKey: ['/api/maintenance', requestId],
-    queryFn: async () => {
-      console.log("Fetching maintenance request id:", requestId);
-      try {
-        // Usiamo fetch direttamente per debug
-        const response = await fetch(`/api/maintenance/${requestId}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log("Raw maintenance request data:", data);
-        // Logging completo per debug
-        console.log("DATI RICHIESTA COMPLETI:", {
-          ...data,
-          originalRequest: request  // Confronto con i dati precedenti per debug
-        });
-        return data;
-      } catch (error) {
-        console.error("Error fetching maintenance request:", error);
-        throw error;
-      }
-    },
-    enabled: isOpen && requestId > 0,
-    refetchOnWindowFocus: false
-  });
-  
-  // Reset dei campi quando cambia la richiesta
-  React.useEffect(() => {
-    if (request) {
-      setNotes(request.notes || "");
-      setAssignee(request.assignedTo || "");
+
+  // Funzioni helper per formattazione
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case MaintenanceRequestStatus.PENDING:
+        return "bg-orange-500";
+      case MaintenanceRequestStatus.IN_PROGRESS:
+        return "bg-blue-500";
+      case MaintenanceRequestStatus.COMPLETED:
+        return "bg-green-500";
+      case MaintenanceRequestStatus.CANCELLED:
+        return "bg-gray-500";
+      default:
+        return "bg-gray-500";
     }
-  }, [request]);
-  
-  // Mutazione per aggiornare la richiesta
-  const updateMutation = useMutation({
-    mutationFn: async (updates: Partial<MaintenanceRequest>) => {
-      return apiRequest(`/api/maintenance/${requestId}`, {
-        method: 'PUT',
-        body: JSON.stringify(updates)
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/maintenance'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/maintenance', requestId] });
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case MaintenanceRequestStatus.PENDING:
+        return "In attesa";
+      case MaintenanceRequestStatus.IN_PROGRESS:
+        return "In corso";
+      case MaintenanceRequestStatus.COMPLETED:
+        return "Completata";
+      case MaintenanceRequestStatus.CANCELLED:
+        return "Annullata";
+      default:
+        return "Sconosciuto";
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case MaintenanceRequestPriority.LOW:
+        return "bg-blue-500";
+      case MaintenanceRequestPriority.MEDIUM:
+        return "bg-yellow-500";
+      case MaintenanceRequestPriority.HIGH:
+        return "bg-orange-500";
+      case MaintenanceRequestPriority.URGENT:
+        return "bg-red-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const getPriorityLabel = (priority: string) => {
+    switch (priority) {
+      case MaintenanceRequestPriority.LOW:
+        return "Bassa";
+      case MaintenanceRequestPriority.MEDIUM:
+        return "Media";
+      case MaintenanceRequestPriority.HIGH:
+        return "Alta";
+      case MaintenanceRequestPriority.URGENT:
+        return "Urgente";
+      default:
+        return "Sconosciuta";
+    }
+  };
+
+  // Funzioni per il cambio dello stato
+  const handleStatusChange = async (status: string) => {
+    setCurrentStatus(status);
+  };
+
+  const handlePriorityChange = async (priority: string) => {
+    setCurrentPriority(priority);
+  };
+
+  const saveChanges = async () => {
+    setIsUpdating(true);
+    try {
+      // Prima aggiorniamo lo stato se è cambiato
+      if (currentStatus !== request.status) {
+        await apiRequest("PATCH", `/api/maintenance/${request.id}/status`, {
+          status: currentStatus,
+        });
+      }
+
+      // Poi aggiorniamo la priorità se è cambiata
+      if (currentPriority !== request.priority) {
+        await apiRequest("PATCH", `/api/maintenance/${request.id}/priority`, {
+          priority: currentPriority,
+        });
+      }
+
       toast({
         title: "Richiesta aggiornata",
-        description: "La richiesta di manutenzione è stata aggiornata con successo",
+        description: "Le modifiche sono state salvate con successo",
       });
+      onStatusChange();
       onClose();
-    },
-    onError: () => {
+    } catch (error) {
+      console.error("Errore nell'aggiornamento della richiesta:", error);
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante l'aggiornamento della richiesta",
-        variant: "destructive"
+        description: "Si è verificato un errore nell'aggiornamento della richiesta",
+        variant: "destructive",
       });
+    } finally {
+      setIsUpdating(false);
     }
-  });
-  
-  const handleSave = () => {
-    updateMutation.mutate({
-      notes,
-      assignedTo: assignee
-    });
   };
-  
-  if (!isOpen) return null;
 
-  // Funzione per controllare la validità di una data e formattarla correttamente
-  const safeDate = (dateString?: string | null): Date | null => {
-    if (!dateString) return null;
-    
-    try {
-      // Prova a interpretare il formato italiano (DD/MM/YYYY HH.MM.SS)
-      if (dateString.includes('/') && dateString.includes('.')) {
-        const parts = dateString.split(' ');
-        if (parts.length === 2) {
-          const dateParts = parts[0].split('/');
-          const timeParts = parts[1].split('.');
-          
-          if (dateParts.length === 3 && timeParts.length >= 2) {
-            const day = parseInt(dateParts[0], 10);
-            const month = parseInt(dateParts[1], 10) - 1; // I mesi in JS sono 0-based
-            const year = parseInt(dateParts[2], 10);
-            const hour = parseInt(timeParts[0], 10);
-            const minute = parseInt(timeParts[1], 10);
-            const second = timeParts.length > 2 ? parseInt(timeParts[2], 10) : 0;
-            
-            const date = new Date(year, month, day, hour, minute, second);
-            if (!isNaN(date.getTime())) {
-              return date;
-            }
-          }
-        }
-      }
-      
-      // Formato standard
-      const date = new Date(dateString);
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-      
-      return null;
-    } catch (e) {
-      console.error("Errore nel parsing della data:", e);
-      return null;
-    }
-  };
-  
-  // Funzioni di estrazione informazioni
-  const extractOriginalDate = (request?: MaintenanceRequest) => {
-    if (!request) return null;
-    
-    // Cerca la data nel campo notes
-    if (request.notes) {
-      const dataMatch = request.notes.match(/Data:\s*([^\n]+)/);
-      if (dataMatch && dataMatch[1]) {
-        return dataMatch[1].trim();
-      }
-    }
-    
-    // Fallback: formatta il timestamp
-    if (request.timestamp) {
-      try {
-        const date = new Date(request.timestamp);
-        if (!isNaN(date.getTime())) {
-          // Formato italiano: DD/MM/YYYY HH.MM.SS
-          const day = date.getDate().toString().padStart(2, '0');
-          const month = (date.getMonth() + 1).toString().padStart(2, '0');
-          const year = date.getFullYear();
-          const hours = date.getHours().toString().padStart(2, '0');
-          const minutes = date.getMinutes().toString().padStart(2, '0');
-          const seconds = date.getSeconds().toString().padStart(2, '0');
-          return `${day}/${month}/${year} ${hours}.${minutes}.${seconds}`;
-        }
-      } catch (e) {
-        console.error("Errore nella formattazione della data:", e);
-      }
-    }
-    
-    return null;
-  };
-  
-  const extractUbicazione = (request?: MaintenanceRequest) => {
-    if (!request) return null;
-    
-    // Cerca l'ubicazione nel campo notes
-    if (request.notes) {
-      const ubicazioneMatch = request.notes.match(/Ubicazione specifica:\s*([^\n]+)/);
-      if (ubicazioneMatch && ubicazioneMatch[1]) {
-        return ubicazioneMatch[1].trim();
-      }
-    }
-    
-    // Fallback: usa roomNumber e location
-    if (request.roomNumber && request.location) {
-      if (request.roomNumber !== request.location) {
-        return `${request.roomNumber} - ${request.location}`;
-      } else {
-        return request.roomNumber;
-      }
-    }
-    
-    if (request.roomNumber) return request.roomNumber;
-    if (request.location) return request.location;
-    
-    return null;
-  };
-  
-  const extractDettagli = (request?: MaintenanceRequest) => {
-    if (!request) return null;
-    
-    // Cerca i dettagli nel campo notes
-    if (request.notes) {
-      const dettagliMatch = request.notes.match(/Dettagli del difetto:\s*([^\n]+)/);
-      if (dettagliMatch && dettagliMatch[1]) {
-        return dettagliMatch[1].trim();
-      }
-    }
-    
-    // Fallback: usa description se disponibile
-    if (request.description && request.description.trim() !== '') {
-      return request.description;
-    }
-    
-    // Usa requestType come ultima risorsa
-    if (request.requestType && request.requestType.trim() !== '') {
-      return request.requestType;
-    }
-    
-    return null;
-  };
-  
-  if (!isOpen) return null;
-  
-  if (isLoading) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Caricamento in corso...</DialogTitle>
-            <DialogDescription>
-              Attendere il caricamento dei dati della richiesta...
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-  
-  if (isError) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Errore</DialogTitle>
-            <DialogDescription>
-              Si è verificato un problema durante il caricamento.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="text-center py-8">
-            <p className="text-red-500">Si è verificato un errore durante il caricamento dei dettagli della richiesta.</p>
-            <Button 
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/maintenance', requestId] })}
-              variant="outline"
-              className="mt-2"
-            >
-              Riprova
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-  
-  if (!request) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Dati non disponibili</DialogTitle>
-            <DialogDescription>
-              La richiesta di manutenzione non è stata trovata.
-            </DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-  
-  // Debug temporaneo
-  console.log("DATI RICHIESTA COMPLETI:", request, {
-    id: request.id,
-    timestamp: request.timestamp,
-    notes: request.notes || "NOTES MISSING",
-    description: request.description || "DESCRIPTION MISSING",
-    requesterName: request.requesterName || "NAME MISSING",
-    requesterEmail: request.requesterEmail || "EMAIL MISSING",
-    roomNumber: request.roomNumber || "ROOM MISSING",
-    location: request.location || "LOCATION MISSING",
-    requestType: request.requestType || "TYPE MISSING",
-    ubicazione: extractUbicazione(request),
-    dettagli: extractDettagli(request),
-    dataOriginale: extractOriginalDate(request)
-  });
-  
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-base flex items-center justify-between">
-            <span>Manutenzione #{request.id}</span>
-            <div className="flex space-x-2">
-              <Badge className={`${getStatusColor(request.status)} text-white text-xs`}>
+          <DialogTitle className="text-lg flex items-center justify-between">
+            <span>Richiesta #{request.id}</span>
+            <div className="flex gap-2">
+              <Badge className={`${getStatusColor(request.status)} text-white`}>
                 {getStatusLabel(request.status)}
               </Badge>
-              <Badge className={`${getPriorityColor(request.priority)} text-white text-xs`}>
+              <Badge className={`${getPriorityColor(request.priority)} text-white`}>
                 {getPriorityLabel(request.priority)}
               </Badge>
             </div>
           </DialogTitle>
-          <DialogDescription className="text-xs">
-            {extractOriginalDate(request) || (safeDate(request.timestamp) ? formatDate(safeDate(request.timestamp)!) : 'Data non disponibile')}
+          <DialogDescription className="text-sm">
+            Creata il {formatDateTime(request.timestamp)}
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="space-y-3 py-1 text-sm">
-          {/* Informazioni essenziali */}
-          <div className="grid grid-cols-2 gap-3">
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <h3 className="text-xs font-medium text-gray-500">Richiedente</h3>
-              <p>{request.requesterName}</p>
+              <p className="text-sm font-medium text-muted-foreground">Sigla</p>
+              <p className="text-sm">{request.sigla || "N/D"}</p>
             </div>
-            
             <div>
-              <h3 className="text-xs font-medium text-gray-500">Stanza</h3>
-              <p>{request.roomNumber}</p>
+              <p className="text-sm font-medium text-muted-foreground">Luogo</p>
+              <p className="text-sm">{request.place || "N/D"}</p>
             </div>
           </div>
-          
-          {/* Ubicazione specifica */}
-          {extractUbicazione(request) && (
-            <div className="bg-yellow-50 p-2 rounded-md border border-yellow-200">
-              <h3 className="text-xs font-medium text-yellow-700">Ubicazione specifica</h3>
-              <p className="text-yellow-800">{extractUbicazione(request)}</p>
-            </div>
-          )}
-          
-          {/* Dettagli difetto */}
-          {extractDettagli(request) && (
-            <div className="bg-red-50 p-2 rounded-md border border-red-200">
-              <h3 className="text-xs font-medium text-red-700">Dettagli del difetto</h3>
-              <p className="text-red-800">{extractDettagli(request)}</p>
-            </div>
-          )}
-          
-          {/* Assegnazione rapida */}
-          <div>
-            <h3 className="text-xs font-medium text-gray-500 mb-1">Assegnata a</h3>
-            <input
-              type="text"
-              value={assignee}
-              onChange={(e) => setAssignee(e.target.value)}
-              placeholder="Nome dell'incaricato"
-              className="w-full p-1.5 border rounded-md text-sm"
-            />
+
+          <div className="grid grid-cols-1 gap-2">
+            <p className="text-sm font-medium text-muted-foreground">Ubicazione specifica</p>
+            <p className="text-sm">{request.specificLocation || "N/D"}</p>
           </div>
-          
-          {/* Note rapide */}
-          <div>
-            <h3 className="text-xs font-medium text-gray-500 mb-1">Note</h3>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Aggiungi note sulla richiesta..."
-              className="w-full min-h-[60px] text-sm"
-            />
+
+          <div className="grid grid-cols-1 gap-2">
+            <p className="text-sm font-medium text-muted-foreground">Dettagli del difetto</p>
+            <p className="text-sm">{request.defectDetails || "N/D"}</p>
           </div>
-          
-          {/* Stato sincronizzazione Google Sheets */}
-          {request.status === "completed" && request.notes?.includes("Stato originale: \"risolto\"") && (
-            <div className="bg-green-50 p-2 rounded-md border border-green-200 mt-2">
-              <h3 className="text-xs font-medium text-green-700">Sincronizzazione</h3>
-              <p className="text-green-800 text-xs">Richiesta già sincronizzata con Google Sheets</p>
+
+          {request.possibleSolution && (
+            <div className="grid grid-cols-1 gap-2">
+              <p className="text-sm font-medium text-muted-foreground">Soluzione proposta</p>
+              <p className="text-sm">{request.possibleSolution}</p>
             </div>
           )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Risolvibile da manutentori autarchici</p>
+              <p className="text-sm">{request.canBeSolvedByMaintainers ? "Sì" : "No"}</p>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Stato</p>
+              <Select value={currentStatus} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Seleziona stato" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={MaintenanceRequestStatus.PENDING}>In attesa</SelectItem>
+                  <SelectItem value={MaintenanceRequestStatus.IN_PROGRESS}>In corso</SelectItem>
+                  <SelectItem value={MaintenanceRequestStatus.COMPLETED}>Completata</SelectItem>
+                  <SelectItem value={MaintenanceRequestStatus.CANCELLED}>Annullata</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Priorità</p>
+              <Select value={currentPriority} onValueChange={handlePriorityChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Seleziona priorità" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={MaintenanceRequestPriority.LOW}>Bassa</SelectItem>
+                  <SelectItem value={MaintenanceRequestPriority.MEDIUM}>Media</SelectItem>
+                  <SelectItem value={MaintenanceRequestPriority.HIGH}>Alta</SelectItem>
+                  <SelectItem value={MaintenanceRequestPriority.URGENT}>Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
-        
-        <DialogFooter className="mt-2">
-          <Button variant="outline" size="sm" onClick={onClose}>Annulla</Button>
-          <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
-            {updateMutation.isPending ? "Salvataggio..." : "Salva"}
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose}>
+            Annulla
+          </Button>
+          <Button 
+            onClick={saveChanges} 
+            disabled={isUpdating || (currentStatus === request.status && currentPriority === request.priority)}
+          >
+            {isUpdating ? "Salvataggio..." : "Salva modifiche"}
           </Button>
         </DialogFooter>
       </DialogContent>
