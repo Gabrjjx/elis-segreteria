@@ -77,75 +77,98 @@ export default function MaintenanceRequestForm() {
 
   if (succeeded) {
     return (
-      <Card className="w-full max-w-md mx-auto mt-8">
-        <CardHeader>
-          <CardTitle className="text-center text-green-600">Richiesta inviata con successo!</CardTitle>
-          <CardDescription className="text-center">
-            La tua segnalazione è stata registrata e verrà presa in carico.
-          </CardDescription>
-        </CardHeader>
-        <CardFooter className="flex justify-center">
-          <Button onClick={() => setSucceeded(false)}>Invia una nuova segnalazione</Button>
-        </CardFooter>
-      </Card>
+      <div className="max-w-xl mx-auto mt-8 overflow-hidden shadow-lg rounded-xl">
+        <div className="bg-gradient-to-r from-green-500 to-green-600 py-6 px-8 text-white">
+          <div className="flex flex-col items-center">
+            <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h2 className="text-2xl font-bold tracking-tight">Richiesta inviata con successo!</h2>
+            <p className="text-green-100 mt-2 text-center">
+              La tua segnalazione è stata registrata e verrà presa in carico al più presto.
+            </p>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-900 p-6 flex justify-center">
+          <Button 
+            onClick={() => setSucceeded(false)}
+            className="py-6 px-8 text-base font-semibold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 border-0"
+          >
+            Invia una nuova segnalazione
+          </Button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto mt-8">
-      <CardHeader>
-        <CardTitle>Segnalazione di manutenzione</CardTitle>
-        <CardDescription>
-          Invia una richiesta di manutenzione per la residenza ELIS
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="max-w-3xl mx-auto bg-white dark:bg-gray-900 rounded-xl shadow-md overflow-hidden mt-6">
+      <div className="py-6 px-8 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+        <h2 className="text-2xl font-bold tracking-tight mb-1">Segnalazione di manutenzione</h2>
+        <p className="text-blue-50">Invia una richiesta di manutenzione per la residenza ELIS</p>
+      </div>
+
+      <div className="p-8">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="sigla"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sigla</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Inserisci la tua sigla" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Inserisci la tua sigla identificativa.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="place"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Luogo</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Es. Camera 123, Bagno, Corridoio" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Indica il luogo dove è richiesta la manutenzione.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="sigla"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base font-medium">Sigla</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Inserisci la tua sigla" 
+                        {...field} 
+                        className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs">
+                      Inserisci la tua sigla identificativa.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="place"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base font-medium">Luogo</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Es. Camera 123, Bagno, Corridoio" 
+                        {...field} 
+                        className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs">
+                      Indica il luogo dove è richiesta la manutenzione.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
             <FormField
               control={form.control}
               name="specificLocation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ubicazione specifica</FormLabel>
+                  <FormLabel className="text-base font-medium">Ubicazione specifica</FormLabel>
                   <FormControl>
-                    <Input placeholder="Es. Doccia, Lavandino, Porta" {...field} />
+                    <Input 
+                      placeholder="Es. Doccia, Lavandino, Porta" 
+                      {...field} 
+                      className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500"
+                    />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className="text-xs">
                     Specifica più in dettaglio l'ubicazione all'interno del luogo.
                   </FormDescription>
                   <FormMessage />
@@ -158,11 +181,11 @@ export default function MaintenanceRequestForm() {
               name="defectDetails"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Dettagli del difetto</FormLabel>
+                  <FormLabel className="text-base font-medium">Dettagli del difetto</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Descrivi il problema in dettaglio"
-                      className="min-h-[100px]"
+                      placeholder="Descrivi il problema in dettaglio" 
+                      className="min-h-[120px] bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500"
                       {...field} 
                     />
                   </FormControl>
@@ -171,70 +194,73 @@ export default function MaintenanceRequestForm() {
               )}
             />
             
-            <FormField
-              control={form.control}
-              name="priority"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Priorità (1-5)</FormLabel>
-                  <Select 
-                    onValueChange={(val) => field.onChange(parseInt(val))} 
-                    defaultValue={String(field.value)}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona la priorità" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="1">1 - Molto bassa</SelectItem>
-                      <SelectItem value="2">2 - Bassa</SelectItem>
-                      <SelectItem value="3">3 - Media</SelectItem>
-                      <SelectItem value="4">4 - Alta</SelectItem>
-                      <SelectItem value="5">5 - Urgente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Scegli la priorità della tua segnalazione.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="canBeSolvedByMaintainers"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      Risolvibile dai manutentori autarchici?
-                    </FormLabel>
-                    <FormDescription>
-                      Indica se pensi che il problema possa essere risolto dai manutentori interni.
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="priority"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base font-medium">Priorità (1-5)</FormLabel>
+                    <Select 
+                      onValueChange={(val) => field.onChange(parseInt(val))} 
+                      defaultValue={String(field.value)}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500">
+                          <SelectValue placeholder="Seleziona la priorità" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="1">1 - Molto bassa</SelectItem>
+                        <SelectItem value="2">2 - Bassa</SelectItem>
+                        <SelectItem value="3">3 - Media</SelectItem>
+                        <SelectItem value="4">4 - Alta</SelectItem>
+                        <SelectItem value="5">5 - Urgente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs">
+                      Scegli la priorità della tua segnalazione.
                     </FormDescription>
-                  </div>
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="canBeSolvedByMaintainers"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-base font-medium">
+                        Risolvibile dai manutentori autarchici?
+                      </FormLabel>
+                      <FormDescription className="text-xs">
+                        Indica se pensi che il problema possa essere risolto dai manutentori interni.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
             
             <FormField
               control={form.control}
               name="possibleSolution"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Possibile soluzione (facoltativo)</FormLabel>
+                  <FormLabel className="text-base font-medium">Possibile soluzione (facoltativo)</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Se hai suggerimenti su come risolvere il problema, inseriscili qui"
-                      className="min-h-[80px]"
+                      placeholder="Se hai suggerimenti su come risolvere il problema..." 
+                      className="min-h-[80px] bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500"
                       {...field} 
                     />
                   </FormControl>
@@ -243,19 +269,25 @@ export default function MaintenanceRequestForm() {
               )}
             />
             
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Invio in corso...
-                </>
-              ) : (
-                "Invia segnalazione"
-              )}
-            </Button>
+            <div className="pt-4">
+              <Button 
+                type="submit" 
+                className="w-full py-6 text-base font-semibold bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 border-0" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Invio in corso...
+                  </>
+                ) : (
+                  "Invia segnalazione"
+                )}
+              </Button>
+            </div>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
