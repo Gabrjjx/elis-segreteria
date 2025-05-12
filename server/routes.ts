@@ -8,7 +8,8 @@ import {
   insertMaintenanceRequestSchema, 
   maintenanceRequestSearchSchema,
   MaintenanceRequestStatus,
-  MaintenanceRequestPriority 
+  MaintenanceRequestPriority,
+  publicMaintenanceRequestSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";

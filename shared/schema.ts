@@ -229,6 +229,17 @@ export const insertMaintenanceRequestSchema = createInsertSchema(maintenanceRequ
   ]).default(MaintenanceRequestPriority.MEDIUM),
 });
 
+// Schema per richieste di manutenzione da parte degli studenti (form pubblico)
+export const publicMaintenanceRequestSchema = z.object({
+  sigla: z.string().min(1, "La sigla è obbligatoria"),
+  place: z.string().min(1, "Il luogo è obbligatorio"),
+  specificLocation: z.string().min(1, "L'ubicazione specifica è obbligatoria"),
+  defectDetails: z.string().min(1, "I dettagli del difetto sono obbligatori"),
+  priority: z.number().int().min(1).max(5),
+  canBeSolvedByMaintainers: z.boolean(),
+  possibleSolution: z.string().optional(),
+});
+
 // Schema per la ricerca delle richieste
 export const maintenanceRequestSearchSchema = z.object({
   query: z.string().optional(),
@@ -255,6 +266,7 @@ export const maintenanceRequestSearchSchema = z.object({
 export type InsertMaintenanceRequest = z.infer<typeof insertMaintenanceRequestSchema>;
 export type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;
 export type MaintenanceRequestSearch = z.infer<typeof maintenanceRequestSearchSchema>;
+export type PublicMaintenanceRequest = z.infer<typeof publicMaintenanceRequestSchema>;
 
 // Tabella per gli ordini PayPal
 export const paypalOrders = pgTable("paypal_orders", {
