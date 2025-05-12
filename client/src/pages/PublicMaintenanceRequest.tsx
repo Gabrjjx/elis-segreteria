@@ -1,15 +1,14 @@
-import { Container } from "@/components/ui/container";
 import MaintenanceRequestForm from "@/components/maintenance/MaintenanceRequestForm";
 import { Link } from "wouter";
 
 export default function PublicMaintenanceRequest() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
-      <Container>
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center justify-center">
           <div className="mb-8 text-center">
             <Link href="/">
-              <a className="flex justify-center mb-4">
+              <div className="flex justify-center mb-4">
                 <img 
                   src="/logo.png" 
                   alt="Segreteria ELIS College" 
@@ -19,7 +18,7 @@ export default function PublicMaintenanceRequest() {
                     e.currentTarget.style.display = 'none';
                   }}
                 />
-              </a>
+              </div>
             </Link>
             
             <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
@@ -40,14 +39,14 @@ export default function PublicMaintenanceRequest() {
             </p>
             <p className="mt-1">
               <Link href="/">
-                <a className="text-primary hover:underline">
+                <span className="text-primary hover:underline cursor-pointer">
                   Torna alla homepage
-                </a>
+                </span>
               </Link>
             </p>
           </footer>
         </div>
-      </Container>
+      </div>
     </div>
   );
 }

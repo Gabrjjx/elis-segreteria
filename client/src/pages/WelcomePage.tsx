@@ -145,6 +145,29 @@ export default function WelcomePage() {
         </div>
       </main>
       
+      {/* Quick Links */}
+      <div className="py-6 border-t border-border">
+        <div className="container mx-auto text-center">
+          <h3 className="text-lg font-medium mb-4">Link Rapidi</h3>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = "/pay"}
+              className="text-sm"
+            >
+              Paga un servizio
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = "/maintenance-request"}
+              className="text-sm"
+            >
+              Segnala un problema di manutenzione
+            </Button>
+          </div>
+        </div>
+      </div>
+      
       {/* Footer */}
       <footer className="py-4 border-t border-border">
         <div className="container mx-auto text-center text-sm text-muted-foreground">
