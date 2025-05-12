@@ -1594,12 +1594,21 @@ RifID: ${hashId}`
       
       // Creazione della richiesta di manutenzione nel database
       const result = await storage.createMaintenanceRequest({
-        requesterName: student.sigla,
+        // Campi originali
+        requesterName: student.firstName + " " + student.lastName,
         requesterEmail: "studente@elis.org", // Email generica
         roomNumber: maintenanceRequest.place,
-        location: maintenanceRequest.specificLocation,
         requestType: "Manutenzione",
-        description: description,
+        description: maintenanceRequest.defectDetails,
+        location: maintenanceRequest.specificLocation,
+        // Campi nuovi specifici
+        sigla: student.sigla,
+        place: maintenanceRequest.place,
+        specificLocation: maintenanceRequest.specificLocation,
+        defectDetails: maintenanceRequest.defectDetails,
+        canBeSolvedByMaintainers: maintenanceRequest.canBeSolvedByMaintainers,
+        possibleSolution: maintenanceRequest.possibleSolution,
+        // Campi di sistema
         priority: priority,
         notes: notes,
         status: MaintenanceRequestStatus.PENDING,
