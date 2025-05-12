@@ -170,6 +170,7 @@ export const MaintenanceRequestStatus = {
   IN_PROGRESS: "in_progress",
   COMPLETED: "completed",
   REJECTED: "rejected",
+  CANCELLED: "cancelled",
 } as const;
 
 export type MaintenanceRequestStatusValue = typeof MaintenanceRequestStatus[keyof typeof MaintenanceRequestStatus];
@@ -188,12 +189,21 @@ export type MaintenanceRequestPriorityValue = typeof MaintenanceRequestPriority[
 export const maintenanceRequests = pgTable("maintenance_requests", {
   id: serial("id").primaryKey(),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
-  requesterName: text("requester_name").notNull(),
-  requesterEmail: text("requester_email").notNull(),
-  roomNumber: text("room_number").notNull(),
-  requestType: text("request_type").notNull(),
-  description: text("description").notNull(),
-  location: text("location").notNull(),
+  // Campi originali
+  requesterName: text("requester_name"),
+  requesterEmail: text("requester_email"),
+  roomNumber: text("room_number"),
+  requestType: text("request_type"),
+  description: text("description"),
+  location: text("location"),
+  // Campi per form pubblico
+  sigla: text("sigla"),
+  place: text("place"),
+  specificLocation: text("specific_location"),
+  defectDetails: text("defect_details"),
+  canBeSolvedByMaintainers: boolean("can_be_solved_by_maintainers"),
+  possibleSolution: text("possible_solution"),
+  // Campi generali
   status: text("status").notNull().default(MaintenanceRequestStatus.PENDING),
   priority: text("priority").notNull().default(MaintenanceRequestPriority.MEDIUM),
   notes: text("notes"),
@@ -204,12 +214,21 @@ export const maintenanceRequests = pgTable("maintenance_requests", {
 
 // Schema per l'inserimento di nuove richieste
 export const insertMaintenanceRequestSchema = createInsertSchema(maintenanceRequests).pick({
+  // Campi originali
   requesterName: true,
   requesterEmail: true,
   roomNumber: true,
   requestType: true,
   description: true,
   location: true,
+  // Campi per form pubblico
+  sigla: true,
+  place: true,
+  specificLocation: true,
+  defectDetails: true,
+  canBeSolvedByMaintainers: true,
+  possibleSolution: true,
+  // Campi generali
   priority: true,
   notes: true,
   assignedTo: true,
@@ -220,6 +239,7 @@ export const insertMaintenanceRequestSchema = createInsertSchema(maintenanceRequ
     MaintenanceRequestStatus.IN_PROGRESS,
     MaintenanceRequestStatus.COMPLETED,
     MaintenanceRequestStatus.REJECTED,
+    MaintenanceRequestStatus.CANCELLED,
   ]).default(MaintenanceRequestStatus.PENDING),
   priority: z.enum([
     MaintenanceRequestPriority.LOW,
@@ -249,6 +269,7 @@ export const maintenanceRequestSearchSchema = z.object({
     MaintenanceRequestStatus.IN_PROGRESS,
     MaintenanceRequestStatus.COMPLETED,
     MaintenanceRequestStatus.REJECTED,
+    MaintenanceRequestStatus.CANCELLED,
   ]).optional(),
   priority: z.enum([
     "all",
