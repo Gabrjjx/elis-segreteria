@@ -46,12 +46,14 @@ export default function MaintenanceRequestForm() {
     setIsSubmitting(true);
     try {
       const response = await apiRequest("POST", "/api/public/maintenance", values);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Si è verificato un errore");
-      }
       
-      const data = await response.json();
+      // La funzione apiRequest restituisce già i dati come oggetto JSON
+      // non c'è bisogno di chiamare response.json()
+      const data = response;
+      
+      if (!data.requestId) {
+        throw new Error("Si è verificato un errore nell'invio della richiesta");
+      }
       
       setSucceeded(true);
       toast({
