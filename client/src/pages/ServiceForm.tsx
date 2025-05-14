@@ -77,13 +77,27 @@ export default function ServiceForm({ id }: ServiceFormProps) {
 
   // Update form values when service data is loaded
   useEffect(() => {
-    if (serviceData) {
-      // Format date from ISO string to Date object
-      const formattedData = {
-        ...serviceData,
-        date: new Date(serviceData.date),
-      };
-      form.reset(formattedData);
+    if (serviceData && typeof serviceData === 'object' && 'date' in serviceData) {
+      try {
+        // Format date from ISO string to Date object
+        const dateStr = String(serviceData.date || '');
+        const date = dateStr ? new Date(dateStr) : new Date();
+        
+        const formattedData = {
+          ...serviceData,
+          date
+        };
+        
+        form.reset(formattedData);
+      } catch (error) {
+        console.error("Errore nel parsing della data:", error);
+        // In caso di errore, usa la data corrente
+        const formattedData = {
+          ...serviceData,
+          date: new Date()
+        };
+        form.reset(formattedData);
+      }
     }
   }, [serviceData, form]);
 
@@ -102,13 +116,15 @@ export default function ServiceForm({ id }: ServiceFormProps) {
     if (watchType === ServiceType.SIGLATURA) {
       // Per siglatura, calcola in base ai pezzi
       const basePrice = defaultPrices[ServiceType.SIGLATURA];
-      const totalAmount = basePrice * watchPieces;
+      const pieces = watchPieces || 1; // Default a 1 se undefined
+      const totalAmount = basePrice * pieces;
       form.setValue("amount", totalAmount);
-    } else if (watchType === ServiceType.RIPARAZIONE) {
+    } else if (watchType === ServiceType.RIPARAZIONE && !isEditing) {
       // Per riparazione, imposta a zero perché sarà determinato dopo
+      // Solo se stiamo creando un nuovo servizio, non in modifica
       form.setValue("amount", 0);
     }
-  }, [watchType, watchPieces, form]);
+  }, [watchType, watchPieces, form, isEditing]);
 
   // Create service mutation
   const createMutation = useMutation({
@@ -336,15 +352,28 @@ export default function ServiceForm({ id }: ServiceFormProps) {
                             step="0.10"
                             {...field}
                             onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            readOnly={form.getValues("type") === ServiceType.SIGLATURA || form.getValues("type") === ServiceType.RIPARAZIONE}
-                            className={form.getValues("type") === ServiceType.SIGLATURA || form.getValues("type") === ServiceType.RIPARAZIONE ? "bg-gray-100 cursor-not-allowed" : ""}
+                            readOnly={form.getValues("type") === ServiceType.SIGLATURA || 
+                                     (form.getValues("type") === ServiceType.RIPARAZIONE && !isEditing)}
+                            className={
+                              form.getValues("type") === ServiceType.SIGLATURA 
+                                ? "bg-gray-100 cursor-not-allowed" 
+                                : form.getValues("type") === ServiceType.RIPARAZIONE && isEditing
+                                  ? "bg-yellow-50 border-yellow-300 focus:border-yellow-500 focus:ring-yellow-500" 
+                                  : form.getValues("type") === ServiceType.RIPARAZIONE && !isEditing
+                                    ? "bg-gray-100 cursor-not-allowed"
+                                    : ""
+                            }
                           />
                         </FormControl>
                         <FormDescription>
                           {form.getValues("type") === ServiceType.SIGLATURA 
-                            ? `Calcolato automaticamente: ${watchPieces} pezzi × €${defaultPrices[ServiceType.SIGLATURA].toFixed(2)} = €${(watchPieces * defaultPrices[ServiceType.SIGLATURA]).toFixed(2)}`
+                            ? `Calcolato automaticamente: ${watchPieces || 1} pezzi × €${defaultPrices[ServiceType.SIGLATURA].toFixed(2)} = €${((watchPieces || 1) * defaultPrices[ServiceType.SIGLATURA]).toFixed(2)}`
                             : form.getValues("type") === ServiceType.RIPARAZIONE
-                              ? "Il prezzo sarà stabilito dopo la valutazione della riparazione"
+                              ? isEditing 
+                                ? <span className="text-amber-700 font-medium">
+                                    La riparazione è completata. Inserisci il prezzo finale.
+                                  </span>
+                                : "Il prezzo sarà stabilito dopo la valutazione della riparazione"
                               : `Prezzo standard per ${form.getValues("type")}: €${defaultPrices[form.getValues("type") as keyof typeof defaultPrices].toFixed(2)}`
                           }
                         </FormDescription>
