@@ -45,6 +45,9 @@ app.use((req, res, next) => {
       log("Database initialized with sample data if needed");
     } catch (error) {
       log(`Error initializing database: ${error}`, "error");
+      // Non blocchiamo l'avvio dell'applicazione in caso di errori di database
+      // L'applicazione mostrerà un messaggio di errore appropriato all'utente nelle pagine
+      log("Proceeding with application startup despite database error", "warning");
     }
   }
   
