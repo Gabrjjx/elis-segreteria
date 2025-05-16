@@ -64,7 +64,7 @@ export default function ServicesPage() {
     retry: 1, // Limitiamo i tentativi di retry
     retryDelay: 2000, // Aggiungiamo un ritardo tra i tentativi
     staleTime: 1000 * 60 * 5, // Cache valida per 5 minuti
-    cacheTime: 1000 * 60 * 10 // Mantieni i dati in cache per 10 minuti
+    gcTime: 1000 * 60 * 10 // Mantieni i dati in cache per 10 minuti (in v5 di React Query si usa gcTime invece di cacheTime)
   });
 
   const handleSearch = (e: React.FormEvent) => {
