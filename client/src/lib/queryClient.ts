@@ -1,7 +1,9 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-// Durata della cache in ms (5 minuti)
-const CACHE_TIME = 5 * 60 * 1000;
+// Durata della cache in ms (10 minuti per ridurre le chiamate al database)
+const CACHE_TIME = 10 * 60 * 1000;
+// Durata di validità prima che i dati diventino "stale" (3 minuti)
+const STALE_TIME = 3 * 60 * 1000;
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -105,14 +107,22 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: 60000, // 1 minuto di validità cache prima che diventi stale
-      gcTime: CACHE_TIME, // 5 minuti di caching (in TanStack v5 gcTime sostituisce cacheTime)
-      retry: 1, // Un retry in caso di errore
-      retryDelay: 1000, // Ritardo di 1 secondo prima del retry
+      staleTime: STALE_TIME, // 3 minuti di validità cache prima che diventi stale
+      gcTime: CACHE_TIME, // 10 minuti di caching (in TanStack v5 gcTime sostituisce cacheTime)
+      retry: 2, // Due retry in caso di errore
+      retryDelay: attempt => Math.min(1000 * (2 ** attempt), 30000), // Exponential backoff con limite di 30s
+      onError: (error) => {
+        console.error('Query error:', error);
+        // Non mostriamo toast automaticamente per ogni errore
+        // perché potrebbe generare troppi messaggi
+      }
     },
     mutations: {
       retry: 1, // Un retry in caso di errore
-      retryDelay: 1000, // Ritardo di 1 secondo prima del retry
+      retryDelay: 2000, // Ritardo di 2 secondi prima del retry
+      onError: (error) => {
+        console.error('Mutation error:', error);
+      }
     },
   },
 });
