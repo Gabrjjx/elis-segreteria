@@ -37,7 +37,7 @@ export default function Dashboard() {
   }, [filterPeriod]);
 
   // Fetch dashboard metrics
-  const { data: metrics, isLoading: isLoadingMetrics } = useQuery({
+  const { data: metrics, isLoading: isLoadingMetrics, error: metricsError } = useQuery({
     queryKey: ['/api/dashboard/metrics', filterPeriod],
     queryFn: async () => {
       console.log('Fetching metrics with filter:', queryString);
@@ -46,11 +46,21 @@ export default function Dashboard() {
         throw new Error('Errore nel caricamento delle metriche');
       }
       return response.json();
+    },
+    retry: 1, // Riduciamo i tentativi di retry per evitare troppi errori di rate limit
+    retryDelay: 1500, // Aggiungiamo un ritardo tra i tentativi
+    onError: (error) => {
+      console.error("Errore nel caricamento delle metriche:", error);
+      toast({
+        title: "Errore di connessione",
+        description: "Impossibile caricare le metriche. Riprova più tardi.",
+        variant: "destructive",
+      });
     }
   });
 
   // Fetch recent services
-  const { data: recentServices, isLoading: isLoadingServices } = useQuery({
+  const { data: recentServices, isLoading: isLoadingServices, error: servicesError } = useQuery({
     queryKey: ['/api/dashboard/recent-services', filterPeriod],
     queryFn: async () => {
       console.log('Fetching recent services with filter:', queryString);
@@ -59,11 +69,21 @@ export default function Dashboard() {
         throw new Error('Errore nel caricamento dei servizi recenti');
       }
       return response.json();
+    },
+    retry: 1, // Riduciamo i tentativi di retry per evitare troppi errori di rate limit
+    retryDelay: 2500, // Aggiungiamo un ritardo tra i tentativi
+    onError: (error) => {
+      console.error("Errore nel caricamento dei servizi recenti:", error);
+      toast({
+        title: "Errore di connessione",
+        description: "Impossibile caricare i servizi recenti. Riprova più tardi.",
+        variant: "destructive",
+      });
     }
   });
 
   // Fetch pending payments
-  const { data: pendingPayments, isLoading: isLoadingPayments } = useQuery({
+  const { data: pendingPayments, isLoading: isLoadingPayments, error: paymentsError } = useQuery({
     queryKey: ['/api/dashboard/pending-payments', filterPeriod],
     queryFn: async () => {
       console.log('Fetching pending payments with filter:', queryString);
@@ -72,6 +92,16 @@ export default function Dashboard() {
         throw new Error('Errore nel caricamento dei pagamenti pendenti');
       }
       return response.json();
+    },
+    retry: 1, // Riduciamo i tentativi di retry per evitare troppi errori di rate limit
+    retryDelay: 2000, // Aggiungiamo un ritardo tra i tentativi
+    onError: (error) => {
+      console.error("Errore nel caricamento dei pagamenti pendenti:", error);
+      toast({
+        title: "Errore di connessione",
+        description: "Impossibile caricare i pagamenti pendenti. Riprova più tardi.",
+        variant: "destructive",
+      });
     }
   });
 
@@ -153,7 +183,15 @@ export default function Dashboard() {
           ))}
         </div>
       ) : (
-        <DashboardMetrics metrics={metrics} />
+        <DashboardMetrics metrics={metrics || {
+          totalServices: 0,
+          pendingPayments: 0,
+          siglaturaCount: 0,
+          happyHourCount: 0,
+          repairCount: 0,
+          totalAmount: 0,
+          pendingAmount: 0
+        }} />
       )}
 
       {/* Data Filter Section */}
