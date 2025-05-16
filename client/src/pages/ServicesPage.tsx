@@ -5,19 +5,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ServiceList from "@/components/services/ServicesList";
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search, Filter, AlertTriangle, RefreshCw } from "lucide-react";
 import { ServiceTypeValue, PaymentStatusValue } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function ServicesPage() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const searchParams = new URLSearchParams(search);
+  const { toast } = useToast();
   
-  const [filters, setFilters] = useState({
+  type FilterType = {
+    query: string;
+    type: ServiceTypeValue | "all";
+    status: PaymentStatusValue | "all";
+    page: number;
+    limit: number;
+  };
+  
+  const [filters, setFilters] = useState<FilterType>({
     query: searchParams.get("query") || "",
-    type: (searchParams.get("type") as ServiceTypeValue) || "all",
-    status: (searchParams.get("status") as PaymentStatusValue) || "all",
+    type: (searchParams.get("type") as ServiceTypeValue | "all") || "all",
+    status: (searchParams.get("status") as PaymentStatusValue | "all") || "all",
     page: parseInt(searchParams.get("page") || "1"),
     limit: parseInt(searchParams.get("limit") || "10")
   });
@@ -36,7 +47,7 @@ export default function ServicesPage() {
   }, [search]);
 
   // Fetch services with filters
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/services', filters],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -49,7 +60,11 @@ export default function ServicesPage() {
       const response = await fetch(`/api/services?${params.toString()}`);
       if (!response.ok) throw new Error("Failed to fetch services");
       return response.json();
-    }
+    },
+    retry: 1, // Limitiamo i tentativi di retry
+    retryDelay: 2000, // Aggiungiamo un ritardo tra i tentativi
+    staleTime: 1000 * 60 * 5, // Cache valida per 5 minuti
+    cacheTime: 1000 * 60 * 10 // Mantieni i dati in cache per 10 minuti
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -186,10 +201,37 @@ export default function ServicesPage() {
           <div className="p-8">
             <Skeleton className="h-64 w-full" />
           </div>
+        ) : error ? (
+          <div className="p-8">
+            <Card className="border-amber-500">
+              <CardContent className="p-6 flex flex-col items-center text-center">
+                <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
+                <h3 className="text-lg font-medium mb-2">Problema di connessione al database</h3>
+                <p className="text-gray-500 mb-4">
+                  Si è verificato un problema durante il caricamento dei servizi. 
+                  Potrebbe essere un problema temporaneo con il database.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="flex items-center" 
+                  onClick={() => {
+                    refetch();
+                    toast({
+                      title: "Aggiornamento in corso",
+                      description: "Stiamo provando a ricaricare i dati...",
+                    });
+                  }}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Riprova
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         ) : (
           <ServiceList 
-            services={data?.services} 
-            total={data?.total}
+            services={data?.services || []} 
+            total={data?.total || 0}
             currentPage={filters.page}
             limit={filters.limit}
             onPageChange={handlePageChange}
