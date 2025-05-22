@@ -100,7 +100,7 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <p className="text-gray-500">Data:</p>
-                  <p>{format(new Date(receipt.date), "dd MMMM yyyy", { locale: it })}</p>
+                  <p>{receipt.receiptDate ? format(new Date(receipt.receiptDate), "dd MMMM yyyy", { locale: it }) : 'Data non disponibile'}</p>
                 </div>
                 <div>
                   <p className="text-gray-500">Importo:</p>
@@ -130,7 +130,7 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
                   </div>
                   <div>
                     <p className="text-gray-500">Data servizio:</p>
-                    <p>{format(new Date(service.date), "dd MMMM yyyy", { locale: it })}</p>
+                    <p>{service && service.date ? format(new Date(service.date), "dd MMMM yyyy", { locale: it }) : 'Data non disponibile'}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Tipologia:</p>
