@@ -1345,7 +1345,7 @@ RifID: ${hashId}`
         
         // Creiamo l'ordine con i dettagli di tutti i servizi
         const serviceIds = services.map(service => service.id);
-        const orderResult = await createOrder(serviceIds, parseFloat(amount), currency, sigla);
+        const orderResult = await createPaypalOrder(serviceIds, parseFloat(amount), currency, sigla);
         return res.json({ id: orderResult.id });
       } 
       // Gestione pagamento singolo servizio (da dashboard admin)
@@ -1360,7 +1360,7 @@ RifID: ${hashId}`
         }
         
         // Creiamo l'ordine per un singolo servizio
-        const orderResult = await createOrder(serviceId, parseFloat(amount), currency);
+        const orderResult = await createPaypalOrder(serviceId, parseFloat(amount), currency);
         return res.json({ id: orderResult.id });
       } else {
         return res.status(400).json({ message: "Parametri richiesti mancanti" });
