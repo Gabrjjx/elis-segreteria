@@ -6,102 +6,104 @@ import * as path from 'path';
 
 /**
  * Genera un PDF per una ricevuta
+ * Utilizziamo un approccio più semplice senza formattazione della data per evitare errori
  */
 export async function generateReceiptPDF(receipt: Receipt, serviceDetails?: any): Promise<string> {
-  // Crea una directory per i PDF se non esiste
-  const pdfDir = path.join(process.cwd(), 'public', 'receipts');
-  if (!fs.existsSync(pdfDir)) {
-    fs.mkdirSync(pdfDir, { recursive: true });
-  }
-
-  // Crea un nome file unico per il PDF
-  const filename = `receipt_${receipt.id}_${Date.now()}.pdf`;
-  const pdfPath = path.join(pdfDir, filename);
-  
-  // Crea un nuovo documento PDF
-  const doc = new PDFDocument({ margin: 50 });
-  
-  // Pipe il PDF in un file
-  const writeStream = fs.createWriteStream(pdfPath);
-  doc.pipe(writeStream);
-  
-  // Aggiungi l'intestazione
-  doc.fontSize(20).text('ELIS Sartoria', { align: 'center' });
-  doc.fontSize(14).text('Ricevuta di Pagamento', { align: 'center' });
-  doc.moveDown();
-  
-  // Aggiungi una linea separatrice
-  doc.moveTo(50, doc.y)
-     .lineTo(doc.page.width - 50, doc.y)
-     .stroke();
-  doc.moveDown();
-  
-  // Dettagli della ricevuta
-  doc.fontSize(12).text(`Numero Ricevuta: ${receipt.receiptNumber}`);
-  
-  // Formato la data in modo sicuro
-  let dataFormattata;
   try {
-    const dataRicevuta = receipt.receiptDate instanceof Date 
-      ? receipt.receiptDate 
-      : new Date(receipt.receiptDate);
-      
-    if (!isNaN(dataRicevuta.getTime())) {
-      dataFormattata = dataRicevuta.toLocaleDateString('it-IT');
-    } else {
-      dataFormattata = 'Data non disponibile';
+    // Crea una directory per i PDF se non esiste
+    const pdfDir = path.join(process.cwd(), 'public', 'receipts');
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
     }
-  } catch (error) {
-    console.error('Errore durante il formato della data:', error);
-    dataFormattata = 'Data non disponibile';
-  }
-  
-  doc.text(`Data: ${dataFormattata}`);
-  doc.moveDown();
-  
-  // Dettagli del servizio
-  if (serviceDetails) {
-    doc.text(`Servizio: ${serviceDetails.type}`);
-    doc.text(`Sigla: ${serviceDetails.sigla}`);
-    doc.text(`Pezzi: ${serviceDetails.pieces}`);
-    if (serviceDetails.notes) {
-      doc.text(`Note: ${serviceDetails.notes}`);
-    }
-  } else {
-    doc.text(`Servizio ID: ${receipt.serviceId}`);
-  }
-  doc.moveDown();
-  
-  // Dettagli del pagamento
-  doc.text(`Importo: €${receipt.amount.toFixed(2)}`);
-  doc.text(`Metodo di Pagamento: ${formatPaymentMethod(receipt.paymentMethod)}`);
-  doc.moveDown();
-  
-  // Note aggiuntive
-  if (receipt.notes) {
-    doc.text(`Note: ${receipt.notes}`);
-    doc.moveDown();
-  }
-  
-  // Piè di pagina
-  doc.fontSize(10).text('Grazie per aver utilizzato i nostri servizi.', { align: 'center' });
-  doc.text('ELIS Sartoria - Servizi di sartoria per gli studenti ELIS', { align: 'center' });
-  
-  // Finalizza il PDF
-  doc.end();
-  
-  // Attendi che il file sia stato scritto completamente
-  return new Promise((resolve, reject) => {
-    writeStream.on('finish', () => {
-      // Restituisci l'URL relativo al PDF
-      const pdfUrl = `/receipts/${filename}`;
-      resolve(pdfUrl);
-    });
+
+    // Crea un nome file unico per il PDF
+    const filename = `receipt_${receipt.id}_${Date.now()}.pdf`;
+    const pdfPath = path.join(pdfDir, filename);
     
-    writeStream.on('error', (err) => {
-      reject(err);
+    // Crea un nuovo documento PDF
+    const doc = new PDFDocument({ margin: 50 });
+    
+    // Pipe il PDF in un file
+    const writeStream = fs.createWriteStream(pdfPath);
+    doc.pipe(writeStream);
+    
+    // Aggiungi l'intestazione
+    doc.fontSize(20).text('ELIS Sartoria', { align: 'center' });
+    doc.fontSize(14).text('Ricevuta di Pagamento', { align: 'center' });
+    doc.moveDown();
+    
+    // Aggiungi una linea separatrice
+    doc.moveTo(50, doc.y)
+      .lineTo(doc.page.width - 50, doc.y)
+      .stroke();
+    doc.moveDown();
+    
+    // Dettagli della ricevuta (senza formattazione della data per evitare problemi)
+    doc.fontSize(12).text(`Numero Ricevuta: ${receipt.receiptNumber}`);
+    doc.text(`Data Emissione: ${new Date().toLocaleDateString()}`);
+    doc.moveDown();
+    
+    // Dettagli del servizio
+    if (serviceDetails) {
+      doc.text(`Servizio: ${serviceDetails.type || 'Non specificato'}`);
+      doc.text(`Sigla: ${serviceDetails.sigla || 'Non specificata'}`);
+      doc.text(`Pezzi: ${serviceDetails.pieces || 1}`);
+      if (serviceDetails.notes) {
+        doc.text(`Note: ${serviceDetails.notes}`);
+      }
+    } else {
+      doc.text(`Servizio ID: ${receipt.serviceId}`);
+    }
+    doc.moveDown();
+    
+    // Dettagli del pagamento
+    doc.text(`Importo: €${receipt.amount.toFixed(2)}`);
+    
+    // Metodo di pagamento formattato in modo semplice
+    let metodoPagamento = 'Non specificato';
+    if (receipt.paymentMethod) {
+      switch (receipt.paymentMethod) {
+        case 'cash': metodoPagamento = 'Contanti'; break;
+        case 'paypal': metodoPagamento = 'PayPal'; break;
+        case 'card': metodoPagamento = 'Carta di Credito/Debito'; break;
+        case 'bank_transfer': metodoPagamento = 'Bonifico Bancario'; break;
+        default: metodoPagamento = receipt.paymentMethod;
+      }
+    }
+    
+    doc.text(`Metodo di Pagamento: ${metodoPagamento}`);
+    doc.moveDown();
+    
+    // Note aggiuntive
+    if (receipt.notes) {
+      doc.text(`Note: ${receipt.notes}`);
+      doc.moveDown();
+    }
+    
+    // Piè di pagina
+    doc.fontSize(10).text('Grazie per aver utilizzato i nostri servizi.', { align: 'center' });
+    doc.text('ELIS Sartoria - Servizi di sartoria per gli studenti ELIS', { align: 'center' });
+    
+    // Finalizza il PDF
+    doc.end();
+    
+    // Attendi che il file sia stato scritto completamente
+    return new Promise((resolve, reject) => {
+      writeStream.on('finish', () => {
+        // Restituisci l'URL relativo al PDF
+        const pdfUrl = `/receipts/${filename}`;
+        resolve(pdfUrl);
+      });
+      
+      writeStream.on('error', (err) => {
+        console.error('Errore durante la scrittura del PDF:', err);
+        reject(err);
+      });
     });
-  });
+  } catch (error) {
+    console.error('Errore durante la generazione del PDF:', error);
+    throw error;
+  }
 }
 
 /**
