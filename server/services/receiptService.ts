@@ -38,7 +38,25 @@ export async function generateReceiptPDF(receipt: Receipt, serviceDetails?: any)
   
   // Dettagli della ricevuta
   doc.fontSize(12).text(`Numero Ricevuta: ${receipt.receiptNumber}`);
-  doc.text(`Data: ${new Date(receipt.receiptDate).toLocaleDateString('it-IT')}`);
+  
+  // Formato la data in modo sicuro
+  let dataFormattata;
+  try {
+    const dataRicevuta = receipt.receiptDate instanceof Date 
+      ? receipt.receiptDate 
+      : new Date(receipt.receiptDate);
+      
+    if (!isNaN(dataRicevuta.getTime())) {
+      dataFormattata = dataRicevuta.toLocaleDateString('it-IT');
+    } else {
+      dataFormattata = 'Data non disponibile';
+    }
+  } catch (error) {
+    console.error('Errore durante il formato della data:', error);
+    dataFormattata = 'Data non disponibile';
+  }
+  
+  doc.text(`Data: ${dataFormattata}`);
   doc.moveDown();
   
   // Dettagli del servizio
