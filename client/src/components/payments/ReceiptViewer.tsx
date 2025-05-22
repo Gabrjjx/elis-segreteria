@@ -44,18 +44,34 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
     enabled: isOpen && !!serviceId, // Only fetch when dialog is open
   });
   
-  // Handle download (this would be expanded in a real implementation)
+  // Handle download of the receipt
   const handleDownload = () => {
+    if (!receipt || !receipt.htmlUrl) {
+      toast({
+        title: "Errore",
+        description: "Nessuna ricevuta disponibile per il download.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setDownloadLoading(true);
     
-    // In a real application, this would be an API call to generate a PDF
+    // Crea un link temporaneo per scaricare il file
+    const link = document.createElement('a');
+    link.href = receipt.htmlUrl;
+    link.setAttribute('download', `ricevuta_${receipt.receiptNumber}.html`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
     setTimeout(() => {
       toast({
         title: "Ricevuta scaricata",
         description: "La ricevuta è stata scaricata con successo.",
       });
       setDownloadLoading(false);
-    }, 1500);
+    }, 500);
   };
   
   // Get payment method display
@@ -170,7 +186,7 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
               ) : (
                 <Icons.fileText className="mr-2 h-4 w-4" />
               )}
-              Scarica PDF
+              Scarica Ricevuta
             </Button>
           )}
         </DialogFooter>
