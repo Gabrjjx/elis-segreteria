@@ -46,10 +46,7 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
   
   // Handle download of the receipt
   const handleDownload = () => {
-    // Usa pdfUrl come fallback per htmlUrl (compatibilità con le ricevute esistenti)
-    const fileUrl = receipt?.htmlUrl || receipt?.pdfUrl;
-    
-    if (!receipt || !fileUrl) {
+    if (!receipt || !serviceId) {
       toast({
         title: "Errore",
         description: "Nessuna ricevuta disponibile per il download.",
@@ -60,21 +57,76 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
     
     setDownloadLoading(true);
     
+    // Creiamo l'HTML manualmente usando le informazioni che abbiamo
+    const createReceiptHTML = () => {
+      const dateStr = receipt.receiptDate ? 
+        new Date(receipt.receiptDate).toLocaleDateString('it-IT') : 
+        new Date().toLocaleDateString('it-IT');
+      
+      const paymentMethod = getPaymentMethodDisplay(receipt.paymentMethod);
+      const serviceType = service?.type === 'siglatura' ? 'Siglatura' :
+                          service?.type === 'happy_hour' ? 'Happy Hour' :
+                          service?.type === 'riparazione' ? 'Riparazione' : 
+                          service?.type || 'Non specificato';
+      
+      return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Ricevuta #${receipt.receiptNumber}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 40px; }
+          h1 { text-align: center; color: #333; }
+          .receipt-box { border: 1px solid #ccc; padding: 20px; max-width: 600px; margin: 0 auto; }
+          .receipt-header { text-align: center; margin-bottom: 20px; }
+          .receipt-detail { margin: 10px 0; }
+          .receipt-footer { margin-top: 30px; text-align: center; font-size: 0.8em; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="receipt-box">
+          <div class="receipt-header">
+            <h1>ELIS Sartoria</h1>
+            <h2>Ricevuta di Pagamento</h2>
+          </div>
+          
+          <div class="receipt-detail"><strong>Ricevuta N.:</strong> ${receipt.receiptNumber}</div>
+          <div class="receipt-detail"><strong>Data:</strong> ${dateStr}</div>
+          <div class="receipt-detail"><strong>Servizio ID:</strong> ${receipt.serviceId}</div>
+          <div class="receipt-detail"><strong>Tipo Servizio:</strong> ${serviceType}</div>
+          <div class="receipt-detail"><strong>Sigla:</strong> ${service?.sigla || 'Non specificata'}</div>
+          <div class="receipt-detail"><strong>Pezzi:</strong> ${service?.pieces || '0'}</div>
+          <div class="receipt-detail"><strong>Importo:</strong> €${receipt.amount.toFixed(2)}</div>
+          <div class="receipt-detail"><strong>Metodo di Pagamento:</strong> ${paymentMethod}</div>
+          
+          <div class="receipt-footer">
+            <p>Grazie per aver utilizzato i nostri servizi.</p>
+            <p>ELIS Sartoria - Servizi di sartoria per gli studenti ELIS</p>
+            <p>Documento generato il: ${new Date().toLocaleString('it-IT')}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+      `;
+    };
+    
+    // Crea un blob con il contenuto HTML
+    const html = createReceiptHTML();
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
     // Crea un link temporaneo per scaricare il file
     const link = document.createElement('a');
-    link.href = fileUrl;
-    
-    // Determina l'estensione del file in base all'URL
-    const isHtml = fileUrl.toLowerCase().endsWith('.html');
-    const isPdf = fileUrl.toLowerCase().endsWith('.pdf');
-    const extension = isHtml ? 'html' : (isPdf ? 'pdf' : 'html');
-    
-    link.setAttribute('download', `ricevuta_${receipt.receiptNumber}.${extension}`);
+    link.href = url;
+    link.setAttribute('download', `ricevuta_${receipt.receiptNumber}.html`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
+    // Rilascia l'URL quando non è più necessario
     setTimeout(() => {
+      URL.revokeObjectURL(url);
       toast({
         title: "Ricevuta scaricata",
         description: "La ricevuta è stata scaricata con successo.",
@@ -195,7 +247,7 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
               ) : (
                 <Icons.fileText className="mr-2 h-4 w-4" />
               )}
-              {receipt?.pdfUrl ? 'Scarica PDF' : 'Scarica Ricevuta'}
+              Scarica Ricevuta
             </Button>
           )}
         </DialogFooter>
