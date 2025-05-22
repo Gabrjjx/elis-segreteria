@@ -305,23 +305,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePaypalOrderInfo(orderId: string, updates: any): Promise<void> {
-    const processedUpdates: any = { ...updates };
+    // Creiamo un oggetto di aggiornamento solo con i campi validi per il database
+    const dbUpdates: any = {};
     
-    // Se lo stato è completed, impostiamo completedAt
-    if (updates.status === PaypalOrderStatus.COMPLETED && !processedUpdates.completedAt) {
-      processedUpdates.completedAt = new Date();
+    // Aggiungiamo solo i campi che vogliamo aggiornare nel database
+    if (updates.status) {
+      dbUpdates.status = updates.status;
     }
     
-    // Aggiorniamo la risposta JSON se presente
-    if (updates.paypalResponse) {
-      processedUpdates.paypalResponse = typeof updates.paypalResponse === 'string' 
-        ? updates.paypalResponse 
-        : JSON.stringify(updates.paypalResponse);
+    // Se lo stato è completed, impostiamo completedAt
+    if (updates.status === PaypalOrderStatus.COMPLETED) {
+      dbUpdates.completedAt = new Date();
+    }
+    
+    // Aggiorniamo la risposta JSON completa
+    // Convertiamo prima l'oggetto originale in una stringa JSON
+    const orderInfo = await this.getPaypalOrderInfo(orderId);
+    if (orderInfo) {
+      const updatedPaypalResponse = {
+        ...JSON.parse(orderInfo.paypalResponse || '{}'),
+        ...updates
+      };
+      dbUpdates.paypalResponse = JSON.stringify(updatedPaypalResponse);
     }
     
     await db
       .update(paypalOrders)
-      .set(processedUpdates)
+      .set(dbUpdates)
       .where(eq(paypalOrders.id, orderId));
   }
 
