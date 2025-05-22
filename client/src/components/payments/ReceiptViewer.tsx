@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Receipt, Service } from "@shared/schema";
+import { jsPDF } from "jspdf";
 
 interface ReceiptViewerProps {
   serviceId: number;
@@ -57,8 +58,15 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
     
     setDownloadLoading(true);
     
-    // Creiamo l'HTML manualmente usando le informazioni che abbiamo
-    const createReceiptHTML = () => {
+    try {
+      // Creiamo un nuovo documento PDF
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Prepariamo i dati della ricevuta
       const dateStr = receipt.receiptDate ? 
         new Date(receipt.receiptDate).toLocaleDateString('it-IT') : 
         new Date().toLocaleDateString('it-IT');
@@ -69,70 +77,90 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
                           service?.type === 'riparazione' ? 'Riparazione' : 
                           service?.type || 'Non specificato';
       
-      return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Ricevuta #${receipt.receiptNumber}</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 40px; }
-          h1 { text-align: center; color: #333; }
-          .receipt-box { border: 1px solid #ccc; padding: 20px; max-width: 600px; margin: 0 auto; }
-          .receipt-header { text-align: center; margin-bottom: 20px; }
-          .receipt-detail { margin: 10px 0; }
-          .receipt-footer { margin-top: 30px; text-align: center; font-size: 0.8em; color: #666; }
-        </style>
-      </head>
-      <body>
-        <div class="receipt-box">
-          <div class="receipt-header">
-            <h1>ELIS Sartoria</h1>
-            <h2>Ricevuta di Pagamento</h2>
-          </div>
-          
-          <div class="receipt-detail"><strong>Ricevuta N.:</strong> ${receipt.receiptNumber}</div>
-          <div class="receipt-detail"><strong>Data:</strong> ${dateStr}</div>
-          <div class="receipt-detail"><strong>Servizio ID:</strong> ${receipt.serviceId}</div>
-          <div class="receipt-detail"><strong>Tipo Servizio:</strong> ${serviceType}</div>
-          <div class="receipt-detail"><strong>Sigla:</strong> ${service?.sigla || 'Non specificata'}</div>
-          <div class="receipt-detail"><strong>Pezzi:</strong> ${service?.pieces || '0'}</div>
-          <div class="receipt-detail"><strong>Importo:</strong> €${receipt.amount.toFixed(2)}</div>
-          <div class="receipt-detail"><strong>Metodo di Pagamento:</strong> ${paymentMethod}</div>
-          
-          <div class="receipt-footer">
-            <p>Grazie per aver utilizzato i nostri servizi.</p>
-            <p>ELIS Sartoria - Servizi di sartoria per gli studenti ELIS</p>
-            <p>Documento generato il: ${new Date().toLocaleString('it-IT')}</p>
-          </div>
-        </div>
-      </body>
-      </html>
-      `;
-    };
-    
-    // Crea un blob con il contenuto HTML
-    const html = createReceiptHTML();
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    
-    // Crea un link temporaneo per scaricare il file
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `ricevuta_${receipt.receiptNumber}.html`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Rilascia l'URL quando non è più necessario
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
+      // Impostiamo il font
+      doc.setFont('helvetica', 'normal');
+      
+      // Intestazione
+      doc.setFontSize(22);
+      doc.text('ELIS Sartoria', 105, 20, { align: 'center' });
+      doc.setFontSize(16);
+      doc.text('Ricevuta di Pagamento', 105, 30, { align: 'center' });
+      
+      // Linea separatrice
+      doc.setLineWidth(0.5);
+      doc.line(20, 35, 190, 35);
+      
+      // Dettagli ricevuta
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Ricevuta N.:', 20, 50);
+      doc.setFont('helvetica', 'normal');
+      doc.text(receipt.receiptNumber, 70, 50);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Data:', 20, 60);
+      doc.setFont('helvetica', 'normal');
+      doc.text(dateStr, 70, 60);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Servizio ID:', 20, 70);
+      doc.setFont('helvetica', 'normal');
+      doc.text(receipt.serviceId.toString(), 70, 70);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Tipo Servizio:', 20, 80);
+      doc.setFont('helvetica', 'normal');
+      doc.text(serviceType, 70, 80);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Sigla:', 20, 90);
+      doc.setFont('helvetica', 'normal');
+      doc.text(service?.sigla || 'Non specificata', 70, 90);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Pezzi:', 20, 100);
+      doc.setFont('helvetica', 'normal');
+      doc.text(service?.pieces?.toString() || '0', 70, 100);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Importo:', 20, 110);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`€${receipt.amount.toFixed(2)}`, 70, 110);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Metodo di Pagamento:', 20, 120);
+      doc.setFont('helvetica', 'normal');
+      doc.text(paymentMethod, 70, 120);
+      
+      // Linea separatrice
+      doc.setLineWidth(0.5);
+      doc.line(20, 130, 190, 130);
+      
+      // Footer
+      doc.setFontSize(10);
+      doc.text('Grazie per aver utilizzato i nostri servizi.', 105, 150, { align: 'center' });
+      doc.text('ELIS Sartoria - Servizi di sartoria per gli studenti ELIS', 105, 160, { align: 'center' });
+      doc.text(`Documento generato il: ${new Date().toLocaleString('it-IT')}`, 105, 170, { align: 'center' });
+      
+      // Salviamo il PDF
+      doc.save(`ricevuta_${receipt.receiptNumber}.pdf`);
+      
+      setTimeout(() => {
+        toast({
+          title: "Ricevuta PDF scaricata",
+          description: "La ricevuta PDF è stata scaricata con successo.",
+        });
+        setDownloadLoading(false);
+      }, 500);
+    } catch (error) {
+      console.error('Errore durante la generazione del PDF:', error);
       toast({
-        title: "Ricevuta scaricata",
-        description: "La ricevuta è stata scaricata con successo.",
+        title: "Errore",
+        description: "Si è verificato un errore durante la generazione del PDF.",
+        variant: "destructive"
       });
       setDownloadLoading(false);
-    }, 500);
+    }
   };
   
   // Get payment method display
