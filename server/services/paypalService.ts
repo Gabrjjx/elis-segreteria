@@ -58,20 +58,9 @@ export async function captureOrder(orderId: string): Promise<{ success: boolean,
       return { success: true, order: orderInfo };
     }
 
-    // Elimina ed inserisci di nuovo l'ordine per evitare problemi con i campi date
-    await db.delete(paypalOrders).where(eq(paypalOrders.id, orderId));
-    
-    // Crea un nuovo oggetto ordine con i dati aggiornati
-    await db.insert(paypalOrders).values({
-      id: orderId,
-      serviceId: orderInfo.serviceId || null,
-      amount: orderInfo.amount,
-      currency: orderInfo.currency || "EUR",
-      status: 'COMPLETED',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      completedAt: new Date(),
-      paypalResponse: orderInfo.paypalResponse
+    // Impostiamo lo stato a COMPLETED senza eliminare l'ordine
+    await storage.updatePaypalOrderInfo(orderId, {
+      status: 'COMPLETED'
     });
     
     // Recupera l'ordine aggiornato

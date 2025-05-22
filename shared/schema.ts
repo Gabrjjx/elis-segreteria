@@ -49,6 +49,7 @@ export const services = pgTable("services", {
   type: text("type").notNull(),
   amount: doublePrecision("amount").notNull(),
   status: text("status").notNull(),
+  paymentMethod: text("payment_method"),  // Metodo di pagamento utilizzato
   notes: text("notes"),
 });
 
