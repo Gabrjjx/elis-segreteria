@@ -61,8 +61,8 @@ export async function captureOrder(orderId: string): Promise<{ success: boolean,
   const updatedOrder = {
     ...orderInfo,
     status: 'COMPLETED',
-    updatedAt: new Date().toISOString(),
-    completedAt: new Date().toISOString()
+    updatedAt: new Date(),
+    completedAt: new Date()
   };
 
   await storage.updatePaypalOrderInfo(orderId, updatedOrder);
