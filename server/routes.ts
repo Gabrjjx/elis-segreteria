@@ -1454,15 +1454,48 @@ RifID: ${hashId}`
   app.get("/api/services/:id/receipt", async (req: Request, res: Response) => {
     try {
       const serviceId = parseInt(req.params.id);
-      const receipt = await storage.getReceiptByServiceId(serviceId);
       
+      // Prima verifichiamo se esiste già una ricevuta
+      let receipt = await storage.getReceiptByServiceId(serviceId);
+      
+      // Se non esiste, verifichiamo se il servizio è stato pagato e in tal caso creiamo la ricevuta
       if (!receipt) {
-        return res.status(404).json({ message: "Ricevuta non trovata per questo servizio" });
+        const service = await storage.getService(serviceId);
+        
+        if (!service) {
+          return res.status(404).json({ message: "Servizio non trovato" });
+        }
+        
+        // Verifichiamo se il servizio è stato pagato
+        if (service.status === 'paid') {
+          // Generiamo un numero di ricevuta unico
+          const now = new Date();
+          const receiptNumber = `RIC-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${serviceId}`;
+          
+          // Creiamo la ricevuta
+          const receiptId = await storage.createReceipt({
+            serviceId: serviceId,
+            amount: service.amount,
+            paymentMethod: service.paymentMethod || 'paypal',
+            receiptNumber: receiptNumber,
+            receiptDate: new Date(),
+            notes: `Ricevuta generata automaticamente per il servizio #${serviceId}`
+          });
+          
+          // Recuperiamo la ricevuta appena creata
+          receipt = await storage.getReceipt(receiptId);
+          
+          if (!receipt) {
+            return res.status(500).json({ message: "Errore nella creazione della ricevuta" });
+          }
+        } else {
+          return res.status(400).json({ message: "Il servizio non risulta pagato, impossibile generare la ricevuta" });
+        }
       }
       
       res.json(receipt);
     } catch (error) {
-      console.error("Errore durante il recupero della ricevuta:", error);
+      console.error("Errore durante il recupero o la creazione della ricevuta:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
