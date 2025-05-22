@@ -393,6 +393,16 @@ export class DatabaseStorage implements IStorage {
     const [receipt] = await db.select().from(receipts).where(eq(receipts.serviceId, serviceId));
     return receipt || undefined;
   }
+  
+  async updateReceipt(id: number, updates: Partial<InsertReceipt>): Promise<Receipt | undefined> {
+    const [updatedReceipt] = await db
+      .update(receipts)
+      .set(updates)
+      .where(eq(receipts.id, id))
+      .returning();
+    
+    return updatedReceipt || undefined;
+  }
 
   async getReceipts(params: ReceiptSearch): Promise<{ receipts: Receipt[], total: number }> {
     // Inizia con una query base
