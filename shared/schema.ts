@@ -292,7 +292,7 @@ export type PublicMaintenanceRequest = z.infer<typeof publicMaintenanceRequestSc
 // Tabella per gli ordini PayPal
 export const paypalOrders = pgTable("paypal_orders", {
   id: text("id").primaryKey(), // ID dell'ordine PayPal
-  serviceId: integer("service_id").notNull(),
+  serviceId: integer("service_id").notNull().default(0), // Usiamo default 0 per pagamenti multipli
   amount: doublePrecision("amount").notNull(),
   currency: text("currency").notNull().default("EUR"),
   status: text("status").notNull(),
