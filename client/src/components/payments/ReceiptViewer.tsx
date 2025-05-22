@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Receipt, Service } from "@shared/schema";
-import { jsPDF } from "jspdf";
+import html2pdf from 'html2pdf.js';
 
 interface ReceiptViewerProps {
   serviceId: number;
@@ -45,8 +45,11 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
     enabled: isOpen && !!serviceId, // Only fetch when dialog is open
   });
   
+  // Riferimento all'elemento HTML da convertire in PDF
+  const receiptRef = useRef<HTMLDivElement>(null);
+  
   // Handle download of the receipt
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!receipt || !serviceId) {
       toast({
         title: "Errore",
@@ -59,13 +62,6 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
     setDownloadLoading(true);
     
     try {
-      // Creiamo un nuovo documento PDF
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
       // Prepariamo i dati della ricevuta
       const dateStr = receipt.receiptDate ? 
         new Date(receipt.receiptDate).toLocaleDateString('it-IT') : 
@@ -77,73 +73,71 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
                           service?.type === 'riparazione' ? 'Riparazione' : 
                           service?.type || 'Non specificato';
       
-      // Impostiamo il font
-      doc.setFont('helvetica', 'normal');
+      // Creiamo un elemento HTML temporaneo per la ricevuta
+      const receiptElement = document.createElement('div');
+      receiptElement.innerHTML = `
+        <div style="font-family: Arial, sans-serif; padding: 40px; max-width: 600px; margin: 0 auto;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #333; margin-bottom: 5px;">ELIS Sartoria</h1>
+            <h2 style="color: #555; margin-top: 5px;">Ricevuta di Pagamento</h2>
+          </div>
+          
+          <div style="border: 1px solid #ddd; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; width: 40%;">Ricevuta N.:</td>
+                <td style="padding: 8px 0;">${receipt.receiptNumber}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold;">Data:</td>
+                <td style="padding: 8px 0;">${dateStr}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold;">Servizio ID:</td>
+                <td style="padding: 8px 0;">${receipt.serviceId}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold;">Tipo Servizio:</td>
+                <td style="padding: 8px 0;">${serviceType}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold;">Sigla:</td>
+                <td style="padding: 8px 0;">${service?.sigla || 'Non specificata'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold;">Pezzi:</td>
+                <td style="padding: 8px 0;">${service?.pieces || '0'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold;">Importo:</td>
+                <td style="padding: 8px 0;">€${receipt.amount.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold;">Metodo di Pagamento:</td>
+                <td style="padding: 8px 0;">${paymentMethod}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="text-align: center; font-size: 0.9em; color: #666; margin-top: 30px;">
+            <p>Grazie per aver utilizzato i nostri servizi.</p>
+            <p>ELIS Sartoria - Servizi di sartoria per gli studenti ELIS</p>
+            <p>Documento generato il: ${new Date().toLocaleString('it-IT')}</p>
+          </div>
+        </div>
+      `;
       
-      // Intestazione
-      doc.setFontSize(22);
-      doc.text('ELIS Sartoria', 105, 20, { align: 'center' });
-      doc.setFontSize(16);
-      doc.text('Ricevuta di Pagamento', 105, 30, { align: 'center' });
+      // Opzioni per html2pdf
+      const options = {
+        margin: 10,
+        filename: `ricevuta_${receipt.receiptNumber}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
       
-      // Linea separatrice
-      doc.setLineWidth(0.5);
-      doc.line(20, 35, 190, 35);
-      
-      // Dettagli ricevuta
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Ricevuta N.:', 20, 50);
-      doc.setFont('helvetica', 'normal');
-      doc.text(receipt.receiptNumber, 70, 50);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Data:', 20, 60);
-      doc.setFont('helvetica', 'normal');
-      doc.text(dateStr, 70, 60);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Servizio ID:', 20, 70);
-      doc.setFont('helvetica', 'normal');
-      doc.text(receipt.serviceId.toString(), 70, 70);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Tipo Servizio:', 20, 80);
-      doc.setFont('helvetica', 'normal');
-      doc.text(serviceType, 70, 80);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Sigla:', 20, 90);
-      doc.setFont('helvetica', 'normal');
-      doc.text(service?.sigla || 'Non specificata', 70, 90);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Pezzi:', 20, 100);
-      doc.setFont('helvetica', 'normal');
-      doc.text(service?.pieces?.toString() || '0', 70, 100);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Importo:', 20, 110);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`€${receipt.amount.toFixed(2)}`, 70, 110);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Metodo di Pagamento:', 20, 120);
-      doc.setFont('helvetica', 'normal');
-      doc.text(paymentMethod, 70, 120);
-      
-      // Linea separatrice
-      doc.setLineWidth(0.5);
-      doc.line(20, 130, 190, 130);
-      
-      // Footer
-      doc.setFontSize(10);
-      doc.text('Grazie per aver utilizzato i nostri servizi.', 105, 150, { align: 'center' });
-      doc.text('ELIS Sartoria - Servizi di sartoria per gli studenti ELIS', 105, 160, { align: 'center' });
-      doc.text(`Documento generato il: ${new Date().toLocaleString('it-IT')}`, 105, 170, { align: 'center' });
-      
-      // Salviamo il PDF
-      doc.save(`ricevuta_${receipt.receiptNumber}.pdf`);
+      // Convertiamo l'HTML in PDF
+      await html2pdf().from(receiptElement).set(options).save();
       
       setTimeout(() => {
         toast({
@@ -151,7 +145,7 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
           description: "La ricevuta PDF è stata scaricata con successo.",
         });
         setDownloadLoading(false);
-      }, 500);
+      }, 1000);
     } catch (error) {
       console.error('Errore durante la generazione del PDF:', error);
       toast({
