@@ -268,10 +268,14 @@ export class DatabaseStorage implements IStorage {
 
   // PayPal operations
   async storePaypalOrderInfo(orderId: string, orderInfo: any): Promise<void> {
-    // Assumiamo che il parametro orderInfo includa almeno serviceId, amount, currency e status
+    // Usiamo il primo ID servizio dall'array se disponibile, altrimenti il serviceId
+    const serviceId = orderInfo.serviceIds && Array.isArray(orderInfo.serviceIds) && orderInfo.serviceIds.length > 0 
+      ? orderInfo.serviceIds[0] 
+      : orderInfo.serviceId || 0;
+      
     await db.insert(paypalOrders).values({
       id: orderId,
-      serviceId: orderInfo.serviceId,
+      serviceId: serviceId,
       amount: orderInfo.amount,
       currency: orderInfo.currency || "EUR",
       status: orderInfo.status,
