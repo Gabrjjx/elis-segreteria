@@ -46,49 +46,63 @@ export async function createOrder(
  * Cattura un pagamento PayPal (completa la transazione)
  */
 export async function captureOrder(orderId: string): Promise<{ success: boolean, order: any }> {
-  // Recupera le informazioni dell'ordine
-  const orderInfo = await storage.getPaypalOrderInfo(orderId);
-  
-  if (!orderInfo) {
-    throw new Error(`PayPal order ${orderId} not found`);
-  }
+  try {
+    // Recupera le informazioni dell'ordine
+    const orderInfo = await storage.getPaypalOrderInfo(orderId);
+    
+    if (!orderInfo) {
+      throw new Error(`PayPal order ${orderId} not found`);
+    }
 
-  if (orderInfo.status === 'COMPLETED') {
-    throw new Error('Order has already been captured');
-  }
+    if (orderInfo.status === 'COMPLETED') {
+      return { success: true, order: orderInfo };
+    }
 
-  // Aggiorna lo stato dell'ordine
-  const updatedOrder = {
-    ...orderInfo,
-    status: 'COMPLETED',
-    updatedAt: new Date(),
-    completedAt: new Date()
-  };
+    // Elimina ed inserisci di nuovo l'ordine per evitare problemi con i campi date
+    await db.delete(paypalOrders).where(eq(paypalOrders.id, orderId));
+    
+    // Crea un nuovo oggetto ordine con i dati aggiornati
+    await db.insert(paypalOrders).values({
+      id: orderId,
+      serviceId: orderInfo.serviceId || null,
+      amount: orderInfo.amount,
+      currency: orderInfo.currency || "EUR",
+      status: 'COMPLETED',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      completedAt: new Date(),
+      paypalResponse: orderInfo.paypalResponse
+    });
+    
+    // Recupera l'ordine aggiornato
+    const updatedOrderInfo = await storage.getPaypalOrderInfo(orderId);
 
-  await storage.updatePaypalOrderInfo(orderId, updatedOrder);
-
-  // Aggiorna lo stato dei servizi a "pagati" se presenti ID servizi
-  if (orderInfo.serviceIds && Array.isArray(orderInfo.serviceIds)) {
-    for (const serviceId of orderInfo.serviceIds) {
-      if (serviceId > 0) {
-        const service = await storage.getService(serviceId);
-        
-        if (service && service.status !== 'paid') {
-          await storage.updateService(serviceId, { status: 'paid' });
+    // Aggiorna lo stato dei servizi a "pagati" se presenti ID servizi
+    if (orderInfo.serviceIds && Array.isArray(orderInfo.serviceIds)) {
+      for (const serviceId of orderInfo.serviceIds) {
+        if (serviceId > 0) {
+          const service = await storage.getService(serviceId);
+          
+          if (service && service.status !== 'paid') {
+            await storage.updateService(serviceId, { status: 'paid' });
+          }
         }
       }
+    } 
+    // Supporto per vecchio formato con singolo serviceId
+    else if (orderInfo.serviceId) {
+      const service = await storage.getService(orderInfo.serviceId);
+      
+      if (service && service.status !== 'paid') {
+        await storage.updateService(orderInfo.serviceId, { status: 'paid' });
+      }
     }
-  } 
-  // Supporto per vecchio formato con singolo serviceId
-  else if (orderInfo.serviceId) {
-    const service = await storage.getService(orderInfo.serviceId);
-    
-    if (service && service.status !== 'paid') {
-      await storage.updateService(orderInfo.serviceId, { status: 'paid' });
-    }
-  }
 
-  return { success: true, order: updatedOrder };
+    return { success: true, order: updatedOrderInfo || orderInfo };
+  } catch (error) {
+    console.error("Errore durante la cattura dell'ordine:", error);
+    throw error;
+  }
 }
 
 /**
