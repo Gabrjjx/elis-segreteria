@@ -46,7 +46,10 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
   
   // Handle download of the receipt
   const handleDownload = () => {
-    if (!receipt || !receipt.htmlUrl) {
+    // Usa pdfUrl come fallback per htmlUrl (compatibilità con le ricevute esistenti)
+    const fileUrl = receipt?.htmlUrl || receipt?.pdfUrl;
+    
+    if (!receipt || !fileUrl) {
       toast({
         title: "Errore",
         description: "Nessuna ricevuta disponibile per il download.",
@@ -59,8 +62,14 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
     
     // Crea un link temporaneo per scaricare il file
     const link = document.createElement('a');
-    link.href = receipt.htmlUrl;
-    link.setAttribute('download', `ricevuta_${receipt.receiptNumber}.html`);
+    link.href = fileUrl;
+    
+    // Determina l'estensione del file in base all'URL
+    const isHtml = fileUrl.toLowerCase().endsWith('.html');
+    const isPdf = fileUrl.toLowerCase().endsWith('.pdf');
+    const extension = isHtml ? 'html' : (isPdf ? 'pdf' : 'html');
+    
+    link.setAttribute('download', `ricevuta_${receipt.receiptNumber}.${extension}`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -186,7 +195,7 @@ export function ReceiptViewer({ serviceId, isOpen, onClose }: ReceiptViewerProps
               ) : (
                 <Icons.fileText className="mr-2 h-4 w-4" />
               )}
-              Scarica Ricevuta
+              {receipt?.pdfUrl ? 'Scarica PDF' : 'Scarica Ricevuta'}
             </Button>
           )}
         </DialogFooter>
