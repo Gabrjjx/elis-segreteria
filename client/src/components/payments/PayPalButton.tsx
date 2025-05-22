@@ -39,7 +39,7 @@ export function PayPalButton({
     
     try {
       // Step 1: Creare l'ordine PayPal
-      const createOrderResponse = await apiRequest<{ id: string }>("POST", "/api/paypal/create-order", {
+      const orderData = await apiRequest("POST", "/api/paypal/create-order", {
         serviceId,
         sigla, // Passiamo la sigla per i pagamenti pubblici
         amount: amount.toFixed(2),
@@ -47,11 +47,7 @@ export function PayPalButton({
         isPublicPayment: serviceId === -1 // Indica se è un pagamento dalla pagina pubblica
       });
       
-      if (!createOrderResponse.ok) {
-        throw new Error("Errore durante la creazione dell'ordine PayPal");
-      }
-      
-      const { id: orderId } = await createOrderResponse.json();
+      const orderId = orderData.id;
       
       // Step 2: Informiamo l'utente che sta avvenendo il pagamento
       toast({
@@ -63,11 +59,7 @@ export function PayPalButton({
       setTimeout(async () => {
         try {
           // Catturiamo direttamente l'ordine (simulando che l'utente ha completato il processo su PayPal)
-          const captureResponse = await apiRequest("POST", `/api/paypal/capture/${orderId}`);
-          
-          if (!captureResponse.ok) {
-            throw new Error("Errore durante la cattura del pagamento");
-          }
+          const captureData = await apiRequest("POST", `/api/paypal/capture/${orderId}`);
           
           // Pagamento completato con successo
           toast({
