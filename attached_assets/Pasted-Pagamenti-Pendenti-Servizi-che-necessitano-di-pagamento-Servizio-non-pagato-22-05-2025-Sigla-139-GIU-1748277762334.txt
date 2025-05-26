@@ -1,0 +1,205 @@
+Pagamenti Pendenti
+Servizi che necessitano di pagamento
+Servizio non pagato
+22/05/2025
+Sigla
+139
+GIUSEPPE ERCOLINO
+Tipologia
+Siglatura
+N. Pezzi
+1
+Importo
+€0.50
+Segna come pagato
+Servizio non pagato
+21/05/2025
+Sigla
+166
+ANTONIO PETTINATO
+Tipologia
+Siglatura
+N. Pezzi
+6
+Importo
+€3.00
+Segna come pagato
+Servizio non pagato
+19/05/2025
+Sigla
+143
+LEONARDO STANGONI
+Tipologia
+Siglatura
+N. Pezzi
+15
+Importo
+€7.50
+Segna come pagato
+Servizio non pagato
+19/05/2025
+Sigla
+163
+LUCA LAGANA
+Tipologia
+Siglatura
+N. Pezzi
+3
+Importo
+€1.50
+Segna come pagato
+Servizio non pagato
+16/05/2025
+Sigla
+163
+LUCA LAGANA
+Tipologia
+Siglatura
+N. Pezzi
+3
+Importo
+€1.50
+Segna come pagato
+Servizio non pagato
+16/05/2025
+Sigla
+157
+GABRIELE INGROSSO
+Tipologia
+Siglatura
+N. Pezzi
+1
+Importo
+€0.50
+Segna come pagato
+Servizio non pagato
+14/05/2025
+Sigla
+185
+DARIO NARDELLA
+Tipologia
+Siglatura
+N. Pezzi
+1
+Importo
+€0.50
+Segna come pagato
+Servizio non pagato
+13/05/2025
+Sigla
+177
+EMANUELE SILEO
+Tipologia
+Siglatura
+N. Pezzi
+1
+Importo
+€0.50
+Segna come pagato
+Servizio non pagato
+12/05/2025
+Sigla
+137
+RAFFAELE DE MUCCI
+Tipologia
+Siglatura
+N. Pezzi
+1
+Importo
+€0.50
+Segna come pagato
+Servizio non pagato
+12/05/2025
+Sigla
+132
+LEONARDO CRESCITELLI
+Tipologia
+Siglatura
+N. Pezzi
+1
+Importo
+€0.50
+Segna come pagato
+Servizio non pagato
+12/05/2025
+Sigla
+137
+RAFFAELE DE MUCCI
+Tipologia
+Riparazione
+N. Pezzi
+1
+Importo
+€0.50
+Segna come pagato
+Servizio non pagato
+12/05/2025
+Sigla
+184
+MARCO BARTOLINI
+Tipologia
+Siglatura
+N. Pezzi
+1
+Importo
+€0.50
+Segna come pagato
+Servizio non pagato
+09/05/2025
+Sigla
+115
+ANTONIO CANGIANO
+Tipologia
+Happy Hour
+N. Pezzi
+1
+Importo
+€1.00
+Segna come pagato
+Servizio non pagato
+08/05/2025
+Sigla
+177
+EMANUELE SILEO
+Tipologia
+Happy Hour
+N. Pezzi
+1
+Importo
+€1.00
+Segna come pagato
+Servizio non pagato
+08/05/2025
+Sigla
+116
+MANUEL LAMMOGLIA
+Tipologia
+Happy Hour
+N. Pezzi
+1
+Importo
+€2.00
+Segna come pagato
+Servizio non pagato
+08/05/2025
+Sigla
+128
+TITO CATALANO
+Tipologia
+Siglatura
+N. Pezzi
+1
+Importo
+€0.50
+Segna come pagato
+Servizio non pagato
+08/05/2025
+Sigla
+115
+ANTONIO CANGIANO
+Tipologia
+Happy Hour
+N. Pezzi
+1
+Importo
+€1.00
