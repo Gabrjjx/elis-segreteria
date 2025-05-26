@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
-import PendingPayments from "@/components/dashboard/PendingPayments";
 import ServiceList from "@/components/services/ServicesList";
 import { Plus, Search, Filter, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -82,28 +81,7 @@ export default function Dashboard() {
     }
   });
 
-  // Fetch pending payments
-  const { data: pendingPayments, isLoading: isLoadingPayments, error: paymentsError } = useQuery({
-    queryKey: ['/api/dashboard/pending-payments', filterPeriod],
-    queryFn: async () => {
-      console.log('Fetching pending payments with filter:', queryString);
-      const response = await fetch(`/api/dashboard/pending-payments?${queryString}`);
-      if (!response.ok) {
-        throw new Error('Errore nel caricamento dei pagamenti pendenti');
-      }
-      return response.json();
-    },
-    retry: 1, // Riduciamo i tentativi di retry per evitare troppi errori di rate limit
-    retryDelay: 2000, // Aggiungiamo un ritardo tra i tentativi
-    onError: (error) => {
-      console.error("Errore nel caricamento dei pagamenti pendenti:", error);
-      toast({
-        title: "Errore di connessione",
-        description: "Impossibile caricare i pagamenti pendenti. Riprova più tardi.",
-        variant: "destructive",
-      });
-    }
-  });
+
 
   const handleAddNewService = () => {
     setLocation("/services/new");
@@ -258,22 +236,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Pending Payments */}
-      {isLoadingPayments ? (
-        <div className="bg-white shadow overflow-hidden rounded-lg mb-6">
-          <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">Pagamenti Pendenti</h3>
-            <p className="text-sm text-gray-500">Servizi che necessitano di pagamento</p>
-          </div>
-          <div className="p-8">
-            <Skeleton className="h-32 w-full" />
-          </div>
-        </div>
-      ) : (
-        pendingPayments && pendingPayments.length > 0 && (
-          <PendingPayments pendingPayments={pendingPayments} filterPeriod={filterPeriod} />
-        )
-      )}
+
     </>
   );
 }
