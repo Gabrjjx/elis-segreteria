@@ -271,7 +271,7 @@ export default function Dashboard() {
         </div>
       ) : (
         pendingPayments && pendingPayments.length > 0 && (
-          <PendingPayments pendingPayments={pendingPayments} />
+          <PendingPayments pendingPayments={pendingPayments} filterPeriod={filterPeriod} />
         )
       )}
     </>
