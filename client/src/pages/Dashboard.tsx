@@ -11,6 +11,7 @@ import { Plus, Search, Filter, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
+import html2pdf from "html2pdf.js";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -85,6 +86,97 @@ export default function Dashboard() {
 
   const handleAddNewService = () => {
     setLocation("/services/new");
+  };
+
+  const handleExportServices = async () => {
+    try {
+      // Fetch all services (not just recent ones)
+      const response = await fetch('/api/services?limit=1000');
+      if (!response.ok) {
+        throw new Error('Errore nel caricamento dei servizi');
+      }
+      const data = await response.json();
+      const allServices = data.services;
+
+      // Create HTML content for PDF
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h1 style="text-align: center; color: #333; margin-bottom: 30px;">
+            Report Servizi - Sartoria ELIS
+          </h1>
+          <p style="text-align: center; margin-bottom: 30px; color: #666;">
+            Generato il ${new Date().toLocaleDateString('it-IT')}
+          </p>
+          
+          <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <thead>
+              <tr style="background-color: #f8f9fa;">
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Data</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Sigla</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Nome</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Tipologia</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Pezzi</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Importo</th>
+                <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Stato</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${allServices.map((service: any) => `
+                <tr>
+                  <td style="border: 1px solid #ddd; padding: 8px;">${new Date(service.date).toLocaleDateString('it-IT')}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px;">${service.sigla}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px;">
+                    ${service.student ? `${service.student.firstName} ${service.student.lastName}` : 'N/A'}
+                  </td>
+                  <td style="border: 1px solid #ddd; padding: 8px;">
+                    ${service.type === 'siglatura' ? 'Siglatura' : 
+                      service.type === 'happy_hour' ? 'Happy Hour' : 
+                      service.type === 'riparazione' ? 'Riparazione' : service.type}
+                  </td>
+                  <td style="border: 1px solid #ddd; padding: 8px;">${service.pieces}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px;">€${service.amount.toFixed(2)}</td>
+                  <td style="border: 1px solid #ddd; padding: 8px;">
+                    <span style="color: ${service.status === 'paid' ? '#10b981' : '#ef4444'};">
+                      ${service.status === 'paid' ? 'Pagato' : 'Da pagare'}
+                    </span>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div style="margin-top: 30px; text-align: center; color: #666; font-size: 12px;">
+            <p>Totale servizi: ${allServices.length}</p>
+            <p>Importo totale: €${allServices.reduce((sum: number, s: any) => sum + s.amount, 0).toFixed(2)}</p>
+          </div>
+        </div>
+      `;
+
+      // Convert to PDF
+      const opt = {
+        margin: 1,
+        filename: `servizi-report-${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+      };
+
+      await html2pdf().set(opt).from(htmlContent).save();
+
+      toast({
+        title: "Export completato",
+        description: "Il report PDF è stato scaricato con successo.",
+        variant: "default",
+      });
+
+    } catch (error) {
+      console.error('Errore durante l\'export:', error);
+      toast({
+        title: "Errore nell'export",
+        description: "Si è verificato un errore durante la generazione del PDF.",
+        variant: "destructive",
+      });
+    }
   };
   
   // Gestisce il cambio del mese
@@ -221,7 +313,11 @@ export default function Dashboard() {
             <h3 className="text-lg leading-6 font-medium text-gray-900">Servizi Recenti</h3>
             <p className="text-sm text-gray-500">Lista dei servizi registrati</p>
           </div>
-          <Button variant="outline" className="text-primary hover:bg-primary-100 hover:text-primary">
+          <Button 
+            variant="outline" 
+            className="text-primary hover:bg-primary-100 hover:text-primary"
+            onClick={handleExportServices}
+          >
             <Download className="mr-2 h-4 w-4" />
             Esporta
           </Button>
