@@ -164,9 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error(`Errore #${index + 1}:`, {
               path: err.path,
               message: err.message,
-              code: err.code,
-              expected: err.expected,
-              received: err.received
+              code: err.code
             });
           });
           
@@ -515,7 +513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const stanza = originalRequest.roomNumber;
           
           console.log(`Cerco nel foglio Google la richiesta di: ${richiedente}, stanza: ${stanza}, data: ${timestamp}`);
-          const rowIndex = await findRequestRowInGoogleSheet(timestamp, richiedente, stanza);
+          const rowIndex = await findRequestRowInGoogleSheet(timestamp, richiedente || "", stanza || "");
           
           if (rowIndex >= 0) {
             // Richiesta trovata, aggiorniamo lo stato
@@ -834,7 +832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const rowIndex = await findRequestRowInGoogleSheet(
             timestamp,
             request.requesterName,
-            request.roomNumber
+            request.roomNumber || ""
           );
 
           if (rowIndex >= 0) {
