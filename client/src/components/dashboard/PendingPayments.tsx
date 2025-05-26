@@ -12,9 +12,10 @@ import { ServiceWithStudent, ServiceType } from "@shared/schema";
 
 interface PendingPaymentsProps {
   pendingPayments: ServiceWithStudent[];
+  filterPeriod?: { startDate: Date; endDate: Date };
 }
 
-export default function PendingPayments({ pendingPayments }: PendingPaymentsProps) {
+export default function PendingPayments({ pendingPayments, filterPeriod }: PendingPaymentsProps) {
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<number | null>(null);
 
@@ -26,8 +27,9 @@ export default function PendingPayments({ pendingPayments }: PendingPaymentsProp
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/services'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/pending-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics', filterPeriod] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/pending-payments', filterPeriod] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/recent-services', filterPeriod] });
       
       toast({
         title: "Pagamento registrato",
