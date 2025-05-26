@@ -831,7 +831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const timestamp = new Date(request.timestamp);
           const rowIndex = await findRequestRowInGoogleSheet(
             timestamp,
-            request.requesterName,
+            request.requesterName || "",
             request.roomNumber || ""
           );
 
