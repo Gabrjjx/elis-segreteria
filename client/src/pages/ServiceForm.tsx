@@ -105,12 +105,44 @@ export default function ServiceForm({ id }: ServiceFormProps) {
   // Detect type changes to auto-update the amount
   const watchType = form.watch("type");
   const watchPieces = form.watch("pieces");
+  const watchSigla = form.watch("sigla");
   
   useEffect(() => {
     if (watchType && !form.getFieldState("amount").isDirty) {
       form.setValue("amount", defaultPrices[watchType as keyof typeof defaultPrices]);
     }
   }, [watchType, form]);
+
+  // Auto-populate cognome when sigla changes
+  useEffect(() => {
+    const fetchStudentData = async () => {
+      if (watchSigla && watchSigla.trim() !== "") {
+        try {
+          const response = await fetch(`/api/students/by-sigla/${watchSigla.trim()}`);
+          if (response.ok) {
+            const student = await response.json();
+            if (student && student.lastName) {
+              form.setValue("cognome", student.lastName);
+            }
+          } else {
+            // If student not found, clear the cognome field
+            form.setValue("cognome", "");
+          }
+        } catch (error) {
+          console.error("Errore nel recupero dati studente:", error);
+          // On error, clear the cognome field
+          form.setValue("cognome", "");
+        }
+      } else {
+        // If sigla is empty, clear cognome
+        form.setValue("cognome", "");
+      }
+    };
+
+    // Debounce the API call to avoid too many requests
+    const timeoutId = setTimeout(fetchStudentData, 500);
+    return () => clearTimeout(timeoutId);
+  }, [watchSigla, form]);
   
   // Gestione automatica importo in base al tipo di servizio
   useEffect(() => {
@@ -301,7 +333,13 @@ export default function ServiceForm({ id }: ServiceFormProps) {
                       <FormItem>
                         <FormLabel>Cognome</FormLabel>
                         <FormControl>
-                          <Input placeholder="Es. Rossi" {...field} />
+                          <Input 
+                            placeholder="Inserisci una sigla per popolare automaticamente" 
+                            {...field} 
+                            value={field.value || ""}
+                            readOnly
+                            className="bg-gray-50"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
