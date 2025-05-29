@@ -212,6 +212,10 @@ export default function ServiceList({
                     <div className="text-xs text-gray-500">
                       {service.student.firstName} {service.student.lastName}
                     </div>
+                  ) : service.cognome ? (
+                    <div className="text-xs text-gray-500">
+                      {service.cognome}
+                    </div>
                   ) : (
                     <div className="text-xs text-gray-400 italic">
                       Nessun studente associato

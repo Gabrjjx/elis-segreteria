@@ -126,7 +126,8 @@ export default function Dashboard() {
                   <td style="border: 1px solid #ddd; padding: 8px;">${new Date(service.date).toLocaleDateString('it-IT')}</td>
                   <td style="border: 1px solid #ddd; padding: 8px;">${service.sigla}</td>
                   <td style="border: 1px solid #ddd; padding: 8px;">
-                    ${service.student ? `${service.student.firstName} ${service.student.lastName}` : 'N/A'}
+                    ${service.student ? `${service.student.firstName} ${service.student.lastName}` : 
+                      service.cognome ? service.cognome : 'N/A'}
                   </td>
                   <td style="border: 1px solid #ddd; padding: 8px;">
                     ${service.type === 'siglatura' ? 'Siglatura' : 

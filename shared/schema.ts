@@ -45,6 +45,7 @@ export const services = pgTable("services", {
   id: serial("id").primaryKey(),
   date: timestamp("date").notNull(),
   sigla: text("sigla").notNull(),
+  cognome: text("cognome"),  // Cognome dello studente
   pieces: integer("pieces").notNull().default(1),
   type: text("type").notNull(),
   amount: doublePrecision("amount").notNull(),
@@ -63,6 +64,7 @@ export const defaultPrices = {
 // Service insert schema
 export const insertServiceSchema = createInsertSchema(services).pick({
   sigla: true,
+  cognome: true,
   pieces: true,
   type: true,
   amount: true,

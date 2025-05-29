@@ -67,6 +67,7 @@ export default function ServiceForm({ id }: ServiceFormProps) {
     defaultValues: {
       date: new Date(),
       sigla: "",
+      cognome: "",
       pieces: 1,
       type: ServiceType.SIGLATURA,
       amount: defaultPrices[ServiceType.SIGLATURA],
@@ -287,6 +288,20 @@ export default function ServiceForm({ id }: ServiceFormProps) {
                         <FormLabel>Sigla</FormLabel>
                         <FormControl>
                           <Input placeholder="Es. 145" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="cognome"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cognome</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Es. Rossi" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
