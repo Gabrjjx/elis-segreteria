@@ -21,12 +21,17 @@ import {
   Student, 
   InsertStudent, 
   StudentSearch,
+  BikeReservation,
+  InsertBikeReservation,
+  BikeReservationSearch,
+  BikeReservationStatusValue,
   services,
   users,
   maintenanceRequests,
   paypalOrders,
   receipts,
-  students
+  students,
+  bikeReservations
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, gte, lte, desc, count, sum, or, and } from "drizzle-orm";
@@ -95,6 +100,13 @@ export interface IStorage {
   updateStudent(id: number, student: Partial<InsertStudent>): Promise<Student | undefined>;
   deleteStudent(id: number): Promise<boolean>;
   importStudentsFromCSV(csvData: string): Promise<{ success: number, failed: number }>;
+  
+  // Bike reservation operations
+  getBikeReservations(params: BikeReservationSearch): Promise<{ reservations: BikeReservation[], total: number }>;
+  getBikeReservation(id: number): Promise<BikeReservation | undefined>;
+  getBikeReservationByOrderId(orderId: string): Promise<BikeReservation | undefined>;
+  createBikeReservation(reservation: InsertBikeReservation): Promise<BikeReservation>;
+  updateBikeReservationStatus(id: number, status: BikeReservationStatusValue, paymentDate?: Date, approvalDate?: Date): Promise<BikeReservation | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1355,6 +1367,99 @@ GIUSEPPE,PALMIERI,119`;
     }
     
     return { success, failed };
+  }
+
+  // Bike reservation operations
+  async getBikeReservations(params: BikeReservationSearch): Promise<{ reservations: BikeReservation[], total: number }> {
+    let query = db.select().from(bikeReservations);
+    let countQuery = db.select({ count: count() }).from(bikeReservations);
+
+    // Build where conditions
+    const conditions = [];
+    
+    if (params.sigla) {
+      conditions.push(like(bikeReservations.sigla, `%${params.sigla}%`));
+    }
+    
+    if (params.customerEmail) {
+      conditions.push(like(bikeReservations.customerEmail, `%${params.customerEmail}%`));
+    }
+    
+    if (params.status && params.status !== "all") {
+      conditions.push(eq(bikeReservations.status, params.status));
+    }
+    
+    if (params.startDate) {
+      const startDate = new Date(params.startDate);
+      conditions.push(gte(bikeReservations.createdAt, startDate));
+    }
+    
+    if (params.endDate) {
+      const endDate = new Date(params.endDate);
+      endDate.setHours(23, 59, 59, 999);
+      conditions.push(lte(bikeReservations.createdAt, endDate));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+      countQuery = countQuery.where(and(...conditions));
+    }
+
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const offset = (page - 1) * limit;
+
+    const [reservations, totalResult] = await Promise.all([
+      query.orderBy(desc(bikeReservations.createdAt))
+           .limit(limit)
+           .offset(offset),
+      countQuery
+    ]);
+
+    const total = totalResult[0]?.count || 0;
+    return { reservations, total };
+  }
+
+  async getBikeReservation(id: number): Promise<BikeReservation | undefined> {
+    const [reservation] = await db.select().from(bikeReservations).where(eq(bikeReservations.id, id));
+    return reservation || undefined;
+  }
+
+  async getBikeReservationByOrderId(orderId: string): Promise<BikeReservation | undefined> {
+    const [reservation] = await db.select().from(bikeReservations).where(eq(bikeReservations.orderId, orderId));
+    return reservation || undefined;
+  }
+
+  async createBikeReservation(reservation: InsertBikeReservation): Promise<BikeReservation> {
+    const [created] = await db.insert(bikeReservations).values(reservation).returning();
+    return created;
+  }
+
+  async updateBikeReservationStatus(
+    id: number, 
+    status: BikeReservationStatusValue, 
+    paymentDate?: Date, 
+    approvalDate?: Date
+  ): Promise<BikeReservation | undefined> {
+    const updateData: any = { 
+      status,
+      updatedAt: new Date()
+    };
+    
+    if (paymentDate) {
+      updateData.paymentDate = paymentDate;
+    }
+    
+    if (approvalDate) {
+      updateData.approvalDate = approvalDate;
+    }
+
+    const [updated] = await db.update(bikeReservations)
+      .set(updateData)
+      .where(eq(bikeReservations.id, id))
+      .returning();
+    
+    return updated || undefined;
   }
 }
 

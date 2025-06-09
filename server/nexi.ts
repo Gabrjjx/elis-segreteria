@@ -13,22 +13,39 @@ const NEXI_BASE_URL = process.env.NODE_ENV === "production"
 // Create Nexi payment order for bike service (2.50 EUR)
 export async function createNexiPayment(req: Request, res: Response) {
   try {
-    const { customerEmail, customerName, orderId } = req.body;
+    const { customerEmail, customerName, sigla, orderId } = req.body;
 
-    if (!customerEmail || !customerName || !orderId) {
+    if (!customerEmail || !customerName || !sigla || !orderId) {
       return res.status(400).json({
-        error: "Missing required fields: customerEmail, customerName, orderId"
+        error: "Missing required fields: customerEmail, customerName, sigla, orderId"
       });
     }
 
-    // Fixed amount for bike service
-    const amount = 250; // 2.50 EUR in cents
-    const currency = "EUR";
+    // Verify student exists
+    const student = await storage.getStudentBySigla(sigla);
+    if (!student) {
+      return res.status(400).json({
+        error: "Sigla non trovata. Inserisci una sigla valida."
+      });
+    }
+
+    // Create bike reservation in database
+    const reservationData = {
+      orderId: orderId,
+      sigla: sigla,
+      customerName: customerName,
+      customerEmail: customerEmail,
+      amount: 2.50,
+      currency: "EUR",
+      status: BikeReservationStatus.PENDING_PAYMENT,
+    };
+
+    const reservation = await storage.createBikeReservation(reservationData);
 
     // Create payment data for Nexi
     const paymentData = {
-      amount: amount,
-      currency: currency,
+      amount: 250, // 2.50 EUR in cents
+      currency: "EUR",
       orderId: orderId,
       description: "Servizio Bici ELIS - Prenotazione",
       customerId: customerEmail,
@@ -36,22 +53,22 @@ export async function createNexiPayment(req: Request, res: Response) {
       customField: {
         name: customerName,
         email: customerEmail,
-        service: "bike_rental"
+        service: "bike_rental",
+        sigla: sigla
       }
     };
 
-    // For now, return the payment data structure
-    // When you get Nexi API credentials, this will make the actual API call
     res.json({
       success: true,
+      reservationId: reservation.id,
       paymentData: paymentData,
-      paymentUrl: `${NEXI_BASE_URL}/payment/redirect`, // This will be the actual Nexi payment URL
-      message: "Payment order created successfully. Awaiting Nexi integration."
+      paymentUrl: `${NEXI_BASE_URL}/payment/redirect`,
+      message: "Bike reservation created. Ready for payment processing."
     });
 
   } catch (error) {
-    console.error("Failed to create Nexi payment:", error);
-    res.status(500).json({ error: "Failed to create payment order." });
+    console.error("Failed to create bike reservation:", error);
+    res.status(500).json({ error: "Failed to create bike reservation." });
   }
 }
 
@@ -62,22 +79,44 @@ export async function handleNexiCallback(req: Request, res: Response) {
 
     console.log("Nexi payment callback received:", { orderId, status, transactionId });
 
-    // Update the service payment status based on callback
+    // Find the bike reservation by order ID
+    const reservation = await storage.getBikeReservationByOrderId(orderId);
+    if (!reservation) {
+      return res.status(404).json({ error: "Bike reservation not found" });
+    }
+
+    // Update reservation status based on payment result
     if (status === "AUTHORIZED" || status === "CAPTURED") {
-      // Payment successful - update service status to paid
-      // This will integrate with your service creation logic
+      // Payment successful - update status to paid
+      await storage.updateBikeReservationStatus(
+        reservation.id, 
+        BikeReservationStatus.PAID,
+        new Date() // Set payment date
+      );
+
+      console.log(`Payment confirmed for bike reservation ${reservation.id}`);
+      
       res.json({ 
         success: true, 
-        message: "Payment confirmed",
+        message: "Payment confirmed - bike reservation updated",
         orderId: orderId,
-        transactionId: transactionId
+        transactionId: transactionId,
+        reservationId: reservation.id
       });
     } else {
-      // Payment failed
+      // Payment failed - update status to cancelled
+      await storage.updateBikeReservationStatus(
+        reservation.id, 
+        BikeReservationStatus.CANCELLED
+      );
+
+      console.log(`Payment failed for bike reservation ${reservation.id}`);
+      
       res.json({ 
         success: false, 
-        message: "Payment failed or cancelled",
-        orderId: orderId
+        message: "Payment failed - bike reservation cancelled",
+        orderId: orderId,
+        reservationId: reservation.id
       });
     }
 
