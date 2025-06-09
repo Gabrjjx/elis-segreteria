@@ -1758,6 +1758,56 @@ RifID: ${hashId}`
     }
   });
 
+  // Nexi Payment Routes for Bike Service (2.50 EUR)
+  app.post("/api/nexi/create-payment", createNexiPayment);
+  app.post("/api/nexi/callback", handleNexiCallback);
+  app.get("/api/nexi/verify/:orderId", verifyNexiPayment);
+
+  // Public endpoint for bike service payment
+  app.post("/api/public/bike-payment", async (req: Request, res: Response) => {
+    try {
+      const { customerEmail, customerName, sigla } = req.body;
+
+      if (!customerEmail || !customerName || !sigla) {
+        return res.status(400).json({
+          error: "Missing required fields: customerEmail, customerName, sigla"
+        });
+      }
+
+      // Generate unique order ID for the bike service
+      const orderId = `BIKE_${sigla}_${Date.now()}`;
+
+      // Create payment data for Nexi (2.50 EUR)
+      const paymentData = {
+        amount: 250, // 2.50 EUR in cents
+        currency: "EUR",
+        orderId: orderId,
+        description: "Servizio Bici ELIS - Prenotazione",
+        customerId: customerEmail,
+        customerName: customerName,
+        sigla: sigla,
+        paymentMethod: ["CARD"]
+      };
+
+      res.json({
+        success: true,
+        orderId: orderId,
+        paymentData: paymentData,
+        paymentUrl: `${process.env.NODE_ENV === "production" 
+          ? "https://ecommerce.nexi.it" 
+          : "https://int-ecommerce.nexi.it"}/payment/redirect`,
+        message: "Payment order created. Ready for Nexi integration.",
+        amount: "2.50 EUR"
+      });
+
+    } catch (error: any) {
+      console.error("Error creating bike payment:", error);
+      res.status(500).json({ 
+        message: "Error creating bike payment: " + error.message 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

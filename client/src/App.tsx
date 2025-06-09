@@ -31,6 +31,7 @@ const LazyPublicPaymentPage = lazy(() => import("@/pages/PublicPaymentPage"));
 const LazyQrScannerPage = lazy(() => import("@/pages/QrScannerPage"));
 const LazyWelcomePage = lazy(() => import("@/pages/WelcomePage"));
 const LazyPublicMaintenanceRequest = lazy(() => import("@/pages/PublicMaintenanceRequest"));
+const LazyBikePayment = lazy(() => import("@/pages/BikePayment"));
 
 function LoadingFallback() {
   return null; // Nessun indicatore di caricamento
@@ -67,6 +68,13 @@ function Router() {
         <Route path="/maintenance-request">
           <PublicLayout>
             <LazyPublicMaintenanceRequest />
+          </PublicLayout>
+        </Route>
+        
+        {/* Rotta pubblica per il pagamento del servizio bici */}
+        <Route path="/bike-payment">
+          <PublicLayout>
+            <LazyBikePayment />
           </PublicLayout>
         </Route>
         

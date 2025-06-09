@@ -425,3 +425,67 @@ export const studentSearchSchema = z.object({
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
 export type Student = typeof students.$inferSelect;
 export type StudentSearch = z.infer<typeof studentSearchSchema>;
+
+// Stati delle prenotazioni bici
+export const BikeReservationStatus = {
+  PENDING_PAYMENT: "pending_payment",
+  PAID: "paid",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+  COMPLETED: "completed",
+  CANCELLED: "cancelled",
+} as const;
+
+export type BikeReservationStatusValue = typeof BikeReservationStatus[keyof typeof BikeReservationStatus];
+
+// Tabella per le prenotazioni bici
+export const bikeReservations = pgTable("bike_reservations", {
+  id: serial("id").primaryKey(),
+  orderId: text("order_id").notNull().unique(), // ID ordine Nexi
+  sigla: text("sigla").notNull(),
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email").notNull(),
+  amount: doublePrecision("amount").notNull().default(2.50),
+  currency: text("currency").notNull().default("EUR"),
+  status: text("status").notNull().default(BikeReservationStatus.PENDING_PAYMENT),
+  paymentDate: timestamp("payment_date"),
+  approvalDate: timestamp("approval_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Schema per l'inserimento delle prenotazioni bici
+export const insertBikeReservationSchema = createInsertSchema(bikeReservations).pick({
+  orderId: true,
+  sigla: true,
+  customerName: true,
+  customerEmail: true,
+  amount: true,
+  currency: true,
+  status: true,
+  notes: true,
+});
+
+// Schema per la ricerca delle prenotazioni bici
+export const bikeReservationSearchSchema = z.object({
+  sigla: z.string().optional(),
+  customerEmail: z.string().optional(),
+  status: z.enum([
+    "all",
+    BikeReservationStatus.PENDING_PAYMENT,
+    BikeReservationStatus.PAID,
+    BikeReservationStatus.APPROVED,
+    BikeReservationStatus.REJECTED,
+    BikeReservationStatus.COMPLETED,
+    BikeReservationStatus.CANCELLED,
+  ]).optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  page: z.number().int().positive().optional().default(1),
+  limit: z.number().int().positive().optional().default(10),
+});
+
+export type InsertBikeReservation = z.infer<typeof insertBikeReservationSchema>;
+export type BikeReservation = typeof bikeReservations.$inferSelect;
+export type BikeReservationSearch = z.infer<typeof bikeReservationSearchSchema>;

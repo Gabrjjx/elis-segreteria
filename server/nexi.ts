@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import crypto from "crypto";
+import { storage } from "./storage";
+import { BikeReservationStatus } from "@shared/schema";
 
 /* Nexi Payment Service for Bike Reservations (2.50 EUR) */
 
