@@ -29,6 +29,7 @@ import {
   captureOrder as capturePaypalOrder,
   checkOrderStatus as checkPaypalOrderStatus
 } from "./services/paypalService";
+import { createNexiPayment, handleNexiCallback, verifyNexiPayment } from "./nexi";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
