@@ -53,16 +53,17 @@ export default function PublicPaymentPage() {
     toast({
       title: "Pagamento completato",
       description: "Grazie per il tuo pagamento. Tutti i servizi sono stati saldati.",
-      variant: "success",
     });
     
     // Imposta lo stato di pagamento completato
     setPaymentSuccess(true);
     
-    // Aggiorna la lista dei servizi dopo un pagamento completato
-    setTimeout(() => {
+    // Forza un refresh della query in modo sicuro
+    try {
       refetch();
-    }, 1000);
+    } catch (error) {
+      console.log("Refetch error handled safely:", error);
+    }
   };
   
   const handlePaymentCancel = () => {

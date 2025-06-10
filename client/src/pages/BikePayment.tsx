@@ -43,18 +43,30 @@ function CheckoutForm({ clientSecret, onSuccess }: { clientSecret: string, onSuc
     setIsProcessing(true);
     setError(null);
 
-    const { error: submitError } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/bike-payment?success=true`,
-      },
-    });
+    try {
+      const { error: submitError } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/bike-payment?success=true`,
+        },
+      });
 
-    if (submitError) {
-      setError(submitError.message || "Errore durante il pagamento");
+      if (submitError) {
+        setError(submitError.message || "Errore durante il pagamento");
+        setIsProcessing(false);
+      } else {
+        // Payment successful - call onSuccess safely
+        try {
+          onSuccess();
+        } catch (callbackError) {
+          console.log("Success callback error handled:", callbackError);
+          // Still consider payment successful even if callback fails
+        }
+      }
+    } catch (error: any) {
+      console.error("Payment confirmation error:", error);
+      setError("Si è verificato un errore durante il pagamento. Riprova.");
       setIsProcessing(false);
-    } else {
-      onSuccess();
     }
   };
 
