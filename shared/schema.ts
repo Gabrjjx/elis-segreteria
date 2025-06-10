@@ -438,6 +438,58 @@ export const BikeReservationStatus = {
 
 export type BikeReservationStatusValue = typeof BikeReservationStatus[keyof typeof BikeReservationStatus];
 
+// Stati dei pagamenti della segreteria
+export const SecretariatPaymentStatus = {
+  PENDING: "pending",
+  PROCESSING: "processing", 
+  COMPLETED: "completed",
+  FAILED: "failed",
+  CANCELLED: "cancelled",
+} as const;
+
+export type SecretariatPaymentStatusValue = typeof SecretariatPaymentStatus[keyof typeof SecretariatPaymentStatus];
+
+// Tabella per i pagamenti della segreteria
+export const secretariatPayments = pgTable("secretariat_payments", {
+  id: serial("id").primaryKey(),
+  orderId: text("order_id").notNull().unique(),
+  sigla: text("sigla").notNull(),
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email").notNull(),
+  amount: doublePrecision("amount").notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  status: text("status").notNull().default(SecretariatPaymentStatus.PENDING),
+  paymentIntentId: text("payment_intent_id"), // Stripe Payment Intent ID
+  paymentDate: timestamp("payment_date"),
+  metadata: text("metadata"), // JSON per dati extra
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Schema per i pagamenti della segreteria
+export const insertSecretariatPaymentSchema = createInsertSchema(secretariatPayments).pick({
+  orderId: true,
+  sigla: true,
+  customerName: true,
+  customerEmail: true,
+  amount: true,
+  currency: true,
+  status: true,
+  paymentIntentId: true,
+  metadata: true,
+}).extend({
+  status: z.enum([
+    SecretariatPaymentStatus.PENDING,
+    SecretariatPaymentStatus.PROCESSING,
+    SecretariatPaymentStatus.COMPLETED,
+    SecretariatPaymentStatus.FAILED,
+    SecretariatPaymentStatus.CANCELLED,
+  ]),
+});
+
+export type InsertSecretariatPayment = z.infer<typeof insertSecretariatPaymentSchema>;
+export type SecretariatPayment = typeof secretariatPayments.$inferSelect;
+
 // Tabella per le prenotazioni bici
 export const bikeReservations = pgTable("bike_reservations", {
   id: serial("id").primaryKey(),

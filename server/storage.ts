@@ -25,13 +25,17 @@ import {
   InsertBikeReservation,
   BikeReservationSearch,
   BikeReservationStatusValue,
+  SecretariatPayment,
+  InsertSecretariatPayment,
+  SecretariatPaymentStatus,
   services,
   users,
   maintenanceRequests,
   paypalOrders,
   receipts,
   students,
-  bikeReservations
+  bikeReservations,
+  secretariatPayments
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, gte, lte, desc, count, sum, or, and } from "drizzle-orm";
@@ -107,6 +111,13 @@ export interface IStorage {
   getBikeReservationByOrderId(orderId: string): Promise<BikeReservation | undefined>;
   createBikeReservation(reservation: InsertBikeReservation): Promise<BikeReservation>;
   updateBikeReservationStatus(id: number, status: BikeReservationStatusValue, paymentDate?: Date, approvalDate?: Date): Promise<BikeReservation | undefined>;
+  
+  // Secretariat payment operations
+  createSecretariatPayment(payment: InsertSecretariatPayment): Promise<SecretariatPayment>;
+  getSecretariatPayment(id: number): Promise<SecretariatPayment | undefined>;
+  getSecretariatPaymentByOrderId(orderId: string): Promise<SecretariatPayment | undefined>;
+  getSecretariatPaymentByPaymentIntentId(paymentIntentId: string): Promise<SecretariatPayment | undefined>;
+  updateSecretariatPaymentStatus(orderId: string, status: string, paymentDate?: Date): Promise<SecretariatPayment | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1457,6 +1468,47 @@ GIUSEPPE,PALMIERI,119`;
     const [updated] = await db.update(bikeReservations)
       .set(updateData)
       .where(eq(bikeReservations.id, id))
+      .returning();
+    
+    return updated || undefined;
+  }
+
+  // Secretariat payment operations
+  async createSecretariatPayment(payment: InsertSecretariatPayment): Promise<SecretariatPayment> {
+    const [created] = await db.insert(secretariatPayments)
+      .values(payment)
+      .returning();
+    return created;
+  }
+
+  async getSecretariatPayment(id: number): Promise<SecretariatPayment | undefined> {
+    const [payment] = await db.select().from(secretariatPayments).where(eq(secretariatPayments.id, id));
+    return payment || undefined;
+  }
+
+  async getSecretariatPaymentByOrderId(orderId: string): Promise<SecretariatPayment | undefined> {
+    const [payment] = await db.select().from(secretariatPayments).where(eq(secretariatPayments.orderId, orderId));
+    return payment || undefined;
+  }
+
+  async getSecretariatPaymentByPaymentIntentId(paymentIntentId: string): Promise<SecretariatPayment | undefined> {
+    const [payment] = await db.select().from(secretariatPayments).where(eq(secretariatPayments.paymentIntentId, paymentIntentId));
+    return payment || undefined;
+  }
+
+  async updateSecretariatPaymentStatus(orderId: string, status: string, paymentDate?: Date): Promise<SecretariatPayment | undefined> {
+    const updateData: any = { 
+      status,
+      updatedAt: new Date()
+    };
+    
+    if (paymentDate) {
+      updateData.paymentDate = paymentDate;
+    }
+
+    const [updated] = await db.update(secretariatPayments)
+      .set(updateData)
+      .where(eq(secretariatPayments.orderId, orderId))
       .returning();
     
     return updated || undefined;
