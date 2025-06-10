@@ -22,6 +22,7 @@ const paymentSchema = z.object({
   sigla: z.string().min(1, "La sigla è obbligatoria"),
   customerName: z.string().min(2, "Il nome deve essere di almeno 2 caratteri"),
   customerEmail: z.string().email("Inserisci un indirizzo email valido"),
+  amount: z.number().min(0.50, "L'importo minimo è 0.50 €").max(100, "L'importo massimo è 100 €"),
 });
 
 type PaymentFormData = z.infer<typeof paymentSchema>;
@@ -102,6 +103,7 @@ export default function BikePayment() {
       sigla: "",
       customerName: "",
       customerEmail: "",
+      amount: 2.50,
     },
   });
 
@@ -136,11 +138,11 @@ export default function BikePayment() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <Bike className="h-12 w-12 text-blue-600 mr-3" />
-            <h1 className="text-3xl font-bold text-gray-900">Servizio Bici ELIS</h1>
+            <CreditCard className="h-12 w-12 text-blue-600 mr-3" />
+            <h1 className="text-3xl font-bold text-gray-900">Pagamenti Segreteria ELIS</h1>
           </div>
           <p className="text-lg text-gray-600">
-            Prenotazione e pagamento per il servizio bici
+            Pagamento sicuro per servizi di segreteria
           </p>
         </div>
 
@@ -152,7 +154,7 @@ export default function BikePayment() {
                 Dati per il Pagamento
               </CardTitle>
               <CardDescription>
-                Inserisci i tuoi dati per procedere con il pagamento di 2.50 €
+                Inserisci i tuoi dati e l'importo da pagare
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -200,6 +202,28 @@ export default function BikePayment() {
                     )}
                   />
 
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Importo (€)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="0.01" 
+                            min="0.50" 
+                            max="100" 
+                            placeholder="2.50" 
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   {error && (
                     <Alert variant="destructive">
                       <AlertDescription>{error}</AlertDescription>
@@ -211,7 +235,7 @@ export default function BikePayment() {
                       <span className="text-sm font-medium text-blue-900">Importo da pagare:</span>
                       <span className="text-xl font-bold text-blue-900 flex items-center">
                         <Euro className="h-5 w-5 mr-1" />
-                        2.50
+                        {form.watch('amount')?.toFixed(2) || '0.00'}
                       </span>
                     </div>
                   </div>
@@ -238,7 +262,7 @@ export default function BikePayment() {
                 Pagamento Sicuro
               </CardTitle>
               <CardDescription>
-                Completa il pagamento di 2.50 € con la tua carta
+                Completa il pagamento di €{paymentData?.amount?.toFixed(2)} con la tua carta
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -250,7 +274,7 @@ export default function BikePayment() {
                   </div>
                   <div>
                     <span className="font-medium text-blue-900">Importo:</span>
-                    <p className="text-blue-700">€2.50</p>
+                    <p className="text-blue-700">€{paymentData?.amount?.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -278,7 +302,7 @@ export default function BikePayment() {
                 Pagamento Completato!
               </CardTitle>
               <CardDescription>
-                La tua prenotazione bici è stata registrata con successo
+                Il tuo pagamento di segreteria è stato registrato con successo
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
