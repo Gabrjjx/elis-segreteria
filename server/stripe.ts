@@ -117,34 +117,31 @@ export async function handleStripeWebhook(req: Request, res: Response) {
         const orderId = paymentIntent.metadata.orderId;
         const sigla = paymentIntent.metadata.sigla;
         
-        if (orderId && sigla) {
-          // Find the reservation by order ID
-          const reservation = await storage.getBikeReservationByOrderId(orderId);
-          if (reservation) {
-            // Update reservation status to paid
-            await storage.updateBikeReservationStatus(
-              reservation.id, 
-              BikeReservationStatus.PAID,
-              new Date() // Set payment date
-            );
-            
-            // Mark all unpaid services for this sigla as paid
-            const { services } = await storage.getServices({
-              sigla: sigla,
-              status: "unpaid",
-              page: 1,
-              limit: 100
+        if (sigla) {
+          console.log(`Processing payment for sigla: ${sigla}, orderId: ${orderId}`);
+          
+          // Mark all unpaid services for this sigla as paid
+          const { services } = await storage.getServices({
+            sigla: sigla,
+            status: "unpaid",
+            page: 1,
+            limit: 100
+          });
+          
+          console.log(`Found ${services.length} unpaid services for sigla ${sigla}`);
+          
+          // Update each service to paid status
+          for (const service of services) {
+            await storage.updateService(service.id, {
+              status: "paid",
+              payment_method: "card" // Stripe payment
             });
-            
-            // Update each service to paid status
-            for (const service of services) {
-              await storage.updateService(service.id, {
-                status: "paid"
-              });
-            }
-            
-            console.log(`Payment confirmed for order ${orderId}. Updated ${services.length} services for sigla ${sigla}`);
+            console.log(`Updated service ${service.id} to paid status`);
           }
+          
+          console.log(`Payment confirmed for sigla ${sigla}. Updated ${services.length} services from unpaid to paid`);
+        } else {
+          console.log('No sigla found in payment metadata');
         }
         break;
         
