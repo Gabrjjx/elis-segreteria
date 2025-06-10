@@ -205,7 +205,7 @@ export default function SecretariatPayment() {
         amount: pendingServices.totalAmount
       };
       
-      const response = await apiRequest("POST", "/api/public/bike-payment", paymentData);
+      const response = await apiRequest("POST", "/api/public/secretariat-payment", paymentData);
       setPaymentData(response);
       setClientSecret(response.clientSecret);
       setStep('payment');

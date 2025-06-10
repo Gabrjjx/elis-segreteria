@@ -1805,7 +1805,25 @@ RifID: ${hashId}`
     }
   });
 
+  // Endpoint pubblico per creare un pagamento della segreteria
+  app.post("/api/public/secretariat-payment", async (req: Request, res: Response) => {
+    try {
+      await createBikePaymentIntent(req, res);
+    } catch (error) {
+      console.error("Errore nella creazione del pagamento segreteria:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
 
+  // Endpoint per verificare lo stato del pagamento
+  app.get("/api/public/payment-status/:orderId", async (req: Request, res: Response) => {
+    try {
+      await verifyBikePaymentStatus(req, res);
+    } catch (error) {
+      console.error("Errore nella verifica del pagamento:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

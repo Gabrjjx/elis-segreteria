@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import { BikeReservationStatus } from "@shared/schema";
+import { SecretariatPaymentStatus } from "@shared/schema";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
@@ -41,18 +41,18 @@ export async function createBikePaymentIntent(req: Request, res: Response) {
     // Generate unique order ID for the secretariat service
     const orderId = `SEC_${sigla}_${Date.now()}`;
 
-    // Create secretariat service reservation in database
-    const reservationData = {
+    // Create secretariat payment record in database
+    const paymentData = {
       orderId: orderId,
       sigla: sigla,
       customerName: customerName,
       customerEmail: customerEmail,
       amount: numAmount,
       currency: "EUR",
-      status: BikeReservationStatus.PENDING_PAYMENT,
+      status: SecretariatPaymentStatus.PENDING,
     };
 
-    const reservation = await storage.createBikeReservation(reservationData);
+    const payment = await storage.createSecretariatPayment(paymentData);
 
     // Create Stripe payment intent with variable amount
     const paymentIntent = await stripe.paymentIntents.create({
@@ -63,7 +63,7 @@ export async function createBikePaymentIntent(req: Request, res: Response) {
         sigla: sigla,
         customerName: customerName,
         customerEmail: customerEmail,
-        reservationId: reservation.id.toString(),
+        paymentId: payment.id.toString(),
         service: "secretariat_service",
         amount: numAmount.toString()
       },
@@ -71,11 +71,14 @@ export async function createBikePaymentIntent(req: Request, res: Response) {
       receipt_email: customerEmail,
     });
 
+    // Update payment record with payment intent ID
+    await storage.updateSecretariatPaymentStatus(orderId, SecretariatPaymentStatus.PROCESSING);
+
     res.json({
       success: true,
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
-      reservationId: reservation.id,
+      paymentId: payment.id,
       orderId: orderId,
       amount: numAmount,
       message: "Secretariat service payment created. Ready for payment."
