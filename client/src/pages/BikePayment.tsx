@@ -310,18 +310,18 @@ export default function BikePayment() {
                 <div className="text-center">
                   <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-green-900 mb-2">
-                    Prenotazione Confermata
+                    Pagamento Confermato
                   </h3>
                   <p className="text-green-700">
-                    Riceverai una conferma via email. La tua richiesta sarà esaminata dall'amministrazione.
+                    Riceverai una conferma via email. La transazione è stata completata con successo.
                   </p>
                 </div>
               </div>
 
               <Alert>
                 <AlertDescription>
-                  Il pagamento di 2.50 € è stato elaborato con successo. 
-                  Attendi l'approvazione dell'amministrazione per utilizzare il servizio bici.
+                  Il pagamento è stato elaborato con successo. 
+                  La ricevuta sarà disponibile nella tua email.
                 </AlertDescription>
               </Alert>
 
@@ -337,7 +337,7 @@ export default function BikePayment() {
                 }}
                 size="lg"
               >
-                Nuova Prenotazione
+                Nuovo Pagamento
               </Button>
             </CardContent>
           </Card>
@@ -346,7 +346,7 @@ export default function BikePayment() {
         {/* Info Footer */}
         <div className="mt-8 text-center text-sm text-gray-500">
           <p>
-            Pagamento sicuro tramite Stripe • Servizio Bici ELIS
+            Pagamento sicuro tramite Stripe • Segreteria ELIS
           </p>
           <p className="mt-1">
             Per assistenza contatta l'amministrazione ELIS

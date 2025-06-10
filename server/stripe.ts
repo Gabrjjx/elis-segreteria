@@ -14,11 +14,19 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 // Create Stripe payment intent for bike service (2.50 EUR)
 export async function createBikePaymentIntent(req: Request, res: Response) {
   try {
-    const { customerEmail, customerName, sigla } = req.body;
+    const { customerEmail, customerName, sigla, amount } = req.body;
 
-    if (!customerEmail || !customerName || !sigla) {
+    if (!customerEmail || !customerName || !sigla || !amount) {
       return res.status(400).json({
-        error: "Missing required fields: customerEmail, customerName, sigla"
+        error: "Missing required fields: customerEmail, customerName, sigla, amount"
+      });
+    }
+
+    // Validate amount
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount < 0.50 || numAmount > 100) {
+      return res.status(400).json({
+        error: "Invalid amount. Must be between 0.50 and 100.00 EUR"
       });
     }
 
@@ -30,25 +38,25 @@ export async function createBikePaymentIntent(req: Request, res: Response) {
       });
     }
 
-    // Generate unique order ID for the bike service
-    const orderId = `BIKE_${sigla}_${Date.now()}`;
+    // Generate unique order ID for the secretariat service
+    const orderId = `SEC_${sigla}_${Date.now()}`;
 
-    // Create bike reservation in database
+    // Create secretariat service reservation in database
     const reservationData = {
       orderId: orderId,
       sigla: sigla,
       customerName: customerName,
       customerEmail: customerEmail,
-      amount: 2.50,
+      amount: numAmount,
       currency: "EUR",
       status: BikeReservationStatus.PENDING_PAYMENT,
     };
 
     const reservation = await storage.createBikeReservation(reservationData);
 
-    // Create Stripe payment intent
+    // Create Stripe payment intent with variable amount
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: 250, // 2.50 EUR in cents
+      amount: Math.round(numAmount * 100), // Convert EUR to cents
       currency: "eur",
       metadata: {
         orderId: orderId,
@@ -56,9 +64,10 @@ export async function createBikePaymentIntent(req: Request, res: Response) {
         customerName: customerName,
         customerEmail: customerEmail,
         reservationId: reservation.id.toString(),
-        service: "bike_rental"
+        service: "secretariat_service",
+        amount: numAmount.toString()
       },
-      description: "Servizio Bici ELIS - Prenotazione",
+      description: "Servizio Segreteria ELIS - Pagamento",
       receipt_email: customerEmail,
     });
 
@@ -68,12 +77,13 @@ export async function createBikePaymentIntent(req: Request, res: Response) {
       paymentIntentId: paymentIntent.id,
       reservationId: reservation.id,
       orderId: orderId,
-      message: "Bike reservation created. Ready for payment."
+      amount: numAmount,
+      message: "Secretariat service payment created. Ready for payment."
     });
 
   } catch (error) {
-    console.error("Failed to create bike payment intent:", error);
-    res.status(500).json({ error: "Failed to create bike payment intent." });
+    console.error("Failed to create secretariat payment intent:", error);
+    res.status(500).json({ error: "Failed to create secretariat payment intent." });
   }
 }
 
