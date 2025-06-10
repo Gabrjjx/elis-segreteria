@@ -27,7 +27,7 @@ const paymentSchema = z.object({
 type PaymentFormData = z.infer<typeof paymentSchema>;
 
 // Stripe Checkout Form Component
-function CheckoutForm({ clientSecret, onSuccess }: { clientSecret: string, onSuccess: () => void }) {
+function CheckoutForm({ clientSecret, onSuccess, amount }: { clientSecret: string, onSuccess: () => void, amount: number }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -94,7 +94,7 @@ function CheckoutForm({ clientSecret, onSuccess }: { clientSecret: string, onSuc
         ) : (
           <>
             <CreditCard className="h-4 w-4 mr-2" />
-            Paga 2.50 €
+            Paga €{amount.toFixed(2)}
           </>
         )}
       </Button>
@@ -353,7 +353,7 @@ export default function SecretariatPayment() {
               </div>
 
               <Elements stripe={stripePromise} options={{ clientSecret }}>
-                <CheckoutForm clientSecret={clientSecret} onSuccess={handlePaymentSuccess} />
+                <CheckoutForm clientSecret={clientSecret} onSuccess={handlePaymentSuccess} amount={paymentData?.amount || 0} />
               </Elements>
 
               <Button 
