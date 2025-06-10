@@ -55,6 +55,46 @@ curl -X POST \
      http://localhost:5000/api/stripe/webhook
 ```
 
+### Test con Postman
+
+**Configurazione Postman per Pagamento Segreteria:**
+
+1. **Method**: POST
+2. **URL**: `{{base_url}}/api/public/secretariat-payment`
+3. **Headers**:
+   ```
+   Content-Type: application/json
+   Accept: application/json
+   ```
+4. **Body** (raw JSON):
+   ```json
+   {
+     "customerEmail": "studente@example.com",
+     "customerName": "GABRIELE INGROSSO",
+     "sigla": "127",
+     "amount": 1.50
+   }
+   ```
+
+**Variabili Postman Environment:**
+```
+base_url: http://localhost:5000 (locale)
+base_url: https://segreteriabicolab.boclab.it (produzione)
+```
+
+**Response attesa (200 OK):**
+```json
+{
+  "success": true,
+  "clientSecret": "pi_xxxxx_secret_xxxxx",
+  "paymentIntentId": "pi_xxxxx",
+  "paymentId": 2,
+  "orderId": "SEC_127_1749550134698",
+  "amount": 1.5,
+  "message": "Secretariat service payment created. Ready for payment."
+}
+```
+
 ## Autenticazione
 Alcune API richiedono autenticazione. Gli endpoint pubblici sono contrassegnati come `[PUBLIC]`.
 
@@ -443,6 +483,70 @@ Importa da Google Sheets.
 - **DateTime**: ISO 8601 (es. "2025-06-10T10:08:54.720Z")
 - **Timestamp**: Unix timestamp in millisecondi
 
+## ⚠️ Gestione Errori
+
+### Errori Comuni
+
+**400 Bad Request:**
+```json
+{
+  "error": "Missing required fields: customerEmail, customerName, sigla, amount"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "message": "Sigla non trovata. Inserisci una sigla valida."
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "message": "Errore interno del server"
+}
+```
+
+### Validazione Stripe
+
+**Amount fuori range:**
+```json
+{
+  "error": "Invalid amount. Must be between 0.50 and 100.00 EUR"
+}
+```
+
+**Sigla non valida:**
+```json
+{
+  "error": "Sigla non trovata. Inserisci una sigla valida."
+}
+```
+
+### Debug con Postman
+
+1. **Verifica Headers**: Assicurati che `Content-Type: application/json` sia impostato
+2. **Verifica Body**: Il JSON deve essere valido e contenere tutti i campi richiesti
+3. **Check Environment**: Verifica che `{{base_url}}` punti all'ambiente corretto
+4. **Console Logs**: Controlla i log del server per errori dettagliati
+
+### Troubleshooting
+
+**Errore di connessione:**
+- Verifica che il server sia in esecuzione sulla porta 5000
+- Controlla firewall e proxy settings
+
+**Webhook Stripe non funziona:**
+- Verifica `STRIPE_SECRET_KEY` nelle variabili ambiente
+- Controlla che l'endpoint webhook sia configurato in Stripe Dashboard
+- Verifica la firma del webhook con `Stripe-Signature` header
+
+**Pagamento non si completa:**
+- Controlla che il `clientSecret` sia valido
+- Verifica l'integrazione frontend con Stripe Elements
+- Monitora i log del webhook per conferma pagamento
+
 ## 💡 Note Importanti
 
 1. **Paginazione**: Tutti gli endpoint che restituiscono liste supportano paginazione con `page` e `limit`
@@ -451,3 +555,5 @@ Importa da Google Sheets.
 4. **Errori**: Gli errori restituiscono sempre un oggetto `{ message: string }` o `{ error: string }`
 5. **CORS**: L'API supporta CORS per richieste da frontend
 6. **Webhooks**: I webhook Stripe aggiornano automaticamente lo stato dei servizi
+7. **Rate Limiting**: Non implementato, ma consigliato per produzione
+8. **SSL/HTTPS**: Obbligatorio per webhook Stripe in produzione
