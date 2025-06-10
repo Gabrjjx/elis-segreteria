@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +11,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Bike, CreditCard, Euro, CheckCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+
+// Initialize Stripe
+if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
+  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
+}
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 const paymentSchema = z.object({
   sigla: z.string().min(1, "La sigla è obbligatoria"),
@@ -18,8 +26,73 @@ const paymentSchema = z.object({
 
 type PaymentFormData = z.infer<typeof paymentSchema>;
 
-export default function BikePayment() {
+// Stripe Checkout Form Component
+function CheckoutForm({ clientSecret, onSuccess }: { clientSecret: string, onSuccess: () => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    const { error: submitError } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/bike-payment?success=true`,
+      },
+    });
+
+    if (submitError) {
+      setError(submitError.message || "Errore durante il pagamento");
+      setIsProcessing(false);
+    } else {
+      onSuccess();
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <PaymentElement />
+      
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <Button 
+        type="submit" 
+        className="w-full" 
+        disabled={!stripe || isProcessing}
+        size="lg"
+      >
+        {isProcessing ? (
+          <>
+            <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+            Elaborazione pagamento...
+          </>
+        ) : (
+          <>
+            <CreditCard className="h-4 w-4 mr-2" />
+            Paga 2.50 €
+          </>
+        )}
+      </Button>
+    </form>
+  );
+}
+
+export default function BikePayment() {
+  const [step, setStep] = useState<'form' | 'payment' | 'success'>('form');
+  const [clientSecret, setClientSecret] = useState<string>("");
   const [paymentData, setPaymentData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,25 +105,29 @@ export default function BikePayment() {
     },
   });
 
+  // Check for success parameter in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      setStep('success');
+    }
+  }, []);
+
   const onSubmit = async (data: PaymentFormData) => {
-    setIsProcessing(true);
     setError(null);
 
     try {
       const response = await apiRequest("POST", "/api/public/bike-payment", data);
       setPaymentData(response);
+      setClientSecret(response.clientSecret);
+      setStep('payment');
     } catch (err: any) {
       setError(err.message || "Errore durante la creazione del pagamento");
-    } finally {
-      setIsProcessing(false);
     }
   };
 
-  const handlePayment = () => {
-    if (paymentData?.paymentUrl) {
-      // In production, this would redirect to Nexi payment page
-      window.open(paymentData.paymentUrl, '_blank');
-    }
+  const handlePaymentSuccess = () => {
+    setStep('success');
   };
 
   return (
@@ -67,7 +144,7 @@ export default function BikePayment() {
           </p>
         </div>
 
-        {!paymentData ? (
+        {step === 'form' && (
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -142,73 +219,102 @@ export default function BikePayment() {
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={isProcessing}
                     size="lg"
                   >
-                    {isProcessing ? (
-                      <>
-                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                        Creazione ordine...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Procedi al Pagamento
-                      </>
-                    )}
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Procedi al Pagamento
                   </Button>
                 </form>
               </Form>
             </CardContent>
           </Card>
-        ) : (
+        )}
+
+        {step === 'payment' && clientSecret && (
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <CreditCard className="h-5 w-5 mr-2" />
+                Pagamento Sicuro
+              </CardTitle>
+              <CardDescription>
+                Completa il pagamento di 2.50 € con la tua carta
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 bg-blue-50 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-blue-900">Sigla:</span>
+                    <p className="text-blue-700">{paymentData.orderId?.split('_')[1]}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-blue-900">Importo:</span>
+                    <p className="text-blue-700">€2.50</p>
+                  </div>
+                </div>
+              </div>
+
+              <Elements stripe={stripePromise} options={{ clientSecret }}>
+                <CheckoutForm clientSecret={clientSecret} onSuccess={handlePaymentSuccess} />
+              </Elements>
+
+              <Button 
+                variant="outline" 
+                className="w-full mt-4" 
+                onClick={() => setStep('form')}
+              >
+                Torna Indietro
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 'success' && (
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center text-green-600">
                 <CheckCircle className="h-5 w-5 mr-2" />
-                Ordine Creato con Successo
+                Pagamento Completato!
               </CardTitle>
               <CardDescription>
-                Il tuo ordine di pagamento è stato generato
+                La tua prenotazione bici è stata registrata con successo
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-green-50 p-4 rounded-lg">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-green-900">ID Ordine:</span>
-                    <p className="text-green-700">{paymentData.orderId}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-green-900">Importo:</span>
-                    <p className="text-green-700">{paymentData.amount}</p>
-                  </div>
+                <div className="text-center">
+                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-green-900 mb-2">
+                    Prenotazione Confermata
+                  </h3>
+                  <p className="text-green-700">
+                    Riceverai una conferma via email. La tua richiesta sarà esaminata dall'amministrazione.
+                  </p>
                 </div>
               </div>
 
               <Alert>
                 <AlertDescription>
-                  {paymentData.message}
+                  Il pagamento di 2.50 € è stato elaborato con successo. 
+                  Attendi l'approvazione dell'amministrazione per utilizzare il servizio bici.
                 </AlertDescription>
               </Alert>
 
-              <div className="space-y-3">
-                <Button onClick={handlePayment} className="w-full" size="lg">
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Vai al Pagamento Nexi
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="w-full" 
-                  onClick={() => {
-                    setPaymentData(null);
-                    form.reset();
-                  }}
-                >
-                  Nuovo Pagamento
-                </Button>
-              </div>
+              <Button 
+                className="w-full" 
+                onClick={() => {
+                  setStep('form');
+                  setPaymentData(null);
+                  setClientSecret("");
+                  form.reset();
+                  // Clear URL parameters
+                  window.history.pushState({}, '', '/bike-payment');
+                }}
+                size="lg"
+              >
+                Nuova Prenotazione
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -216,7 +322,7 @@ export default function BikePayment() {
         {/* Info Footer */}
         <div className="mt-8 text-center text-sm text-gray-500">
           <p>
-            Pagamento sicuro tramite Nexi • Servizio Bici ELIS
+            Pagamento sicuro tramite Stripe • Servizio Bici ELIS
           </p>
           <p className="mt-1">
             Per assistenza contatta l'amministrazione ELIS
