@@ -22,7 +22,6 @@ const paymentSchema = z.object({
   sigla: z.string().min(1, "La sigla è obbligatoria"),
   customerName: z.string().min(2, "Il nome deve essere di almeno 2 caratteri"),
   customerEmail: z.string().email("Inserisci un indirizzo email valido"),
-  amount: z.number().min(0.50, "L'importo minimo è 0.50 €").max(100, "L'importo massimo è 100 €"),
 });
 
 type PaymentFormData = z.infer<typeof paymentSchema>;
@@ -96,6 +95,8 @@ export default function BikePayment() {
   const [clientSecret, setClientSecret] = useState<string>("");
   const [paymentData, setPaymentData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingServices, setPendingServices] = useState<any>(null);
+  const [isLoadingServices, setIsLoadingServices] = useState(false);
 
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
@@ -103,7 +104,6 @@ export default function BikePayment() {
       sigla: "",
       customerName: "",
       customerEmail: "",
-      amount: 2.50,
     },
   });
 
@@ -115,11 +115,59 @@ export default function BikePayment() {
     }
   }, []);
 
+  // Function to fetch pending services for a sigla
+  const fetchPendingServices = async (sigla: string) => {
+    if (!sigla || sigla.length < 2) {
+      setPendingServices(null);
+      return;
+    }
+
+    setIsLoadingServices(true);
+    try {
+      const response = await apiRequest("GET", `/api/public/services/pending/${sigla}`);
+      setPendingServices(response);
+      
+      // Auto-populate customer name if student found
+      if (response.student) {
+        form.setValue('customerName', `${response.student.firstName} ${response.student.lastName}`);
+      }
+      
+      setError(null);
+    } catch (err: any) {
+      setPendingServices(null);
+      setError(err.message || "Errore nel recupero dei servizi");
+    } finally {
+      setIsLoadingServices(false);
+    }
+  };
+
+  // Watch sigla field changes
+  const watchedSigla = form.watch('sigla');
+  useEffect(() => {
+    if (watchedSigla) {
+      const timer = setTimeout(() => {
+        fetchPendingServices(watchedSigla);
+      }, 500); // Debounce for 500ms
+      
+      return () => clearTimeout(timer);
+    }
+  }, [watchedSigla]);
+
   const onSubmit = async (data: PaymentFormData) => {
     setError(null);
 
+    if (!pendingServices || pendingServices.totalAmount === 0) {
+      setError("Nessun servizio in sospeso trovato per questa sigla");
+      return;
+    }
+
     try {
-      const response = await apiRequest("POST", "/api/public/bike-payment", data);
+      const paymentData = {
+        ...data,
+        amount: pendingServices.totalAmount
+      };
+      
+      const response = await apiRequest("POST", "/api/public/bike-payment", paymentData);
       setPaymentData(response);
       setClientSecret(response.clientSecret);
       setStep('payment');
@@ -202,27 +250,47 @@ export default function BikePayment() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Importo (€)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.01" 
-                            min="0.50" 
-                            max="100" 
-                            placeholder="2.50" 
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Mostra informazioni sui servizi pendenti */}
+                  {isLoadingServices && (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex items-center">
+                        <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mr-2" />
+                        <span className="text-sm text-gray-600">Ricerca servizi in corso...</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {pendingServices && (
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-blue-900 mb-2">
+                        Servizi in sospeso per {pendingServices.student.firstName} {pendingServices.student.lastName}
+                      </h4>
+                      <div className="space-y-2">
+                        {pendingServices.pendingServices.map((service: any) => (
+                          <div key={service.id} className="flex justify-between items-center text-sm">
+                            <span className="text-blue-700">
+                              {service.type} - {new Date(service.date).toLocaleDateString()}
+                            </span>
+                            <span className="font-medium text-blue-900">€{service.amount.toFixed(2)}</span>
+                          </div>
+                        ))}
+                        <div className="border-t border-blue-200 pt-2 mt-2">
+                          <div className="flex justify-between items-center font-semibold">
+                            <span className="text-blue-900">Totale da pagare:</span>
+                            <span className="text-lg text-blue-900">€{pendingServices.totalAmount.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {pendingServices && pendingServices.servicesCount === 0 && (
+                    <Alert>
+                      <AlertDescription>
+                        Nessun servizio in sospeso trovato per questa sigla.
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                   {error && (
                     <Alert variant="destructive">
@@ -230,23 +298,16 @@ export default function BikePayment() {
                     </Alert>
                   )}
 
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-blue-900">Importo da pagare:</span>
-                      <span className="text-xl font-bold text-blue-900 flex items-center">
-                        <Euro className="h-5 w-5 mr-1" />
-                        {form.watch('amount')?.toFixed(2) || '0.00'}
-                      </span>
-                    </div>
-                  </div>
+
 
                   <Button 
                     type="submit" 
                     className="w-full" 
                     size="lg"
+                    disabled={!pendingServices || pendingServices.totalAmount === 0}
                   >
                     <CreditCard className="h-4 w-4 mr-2" />
-                    Procedi al Pagamento
+                    {pendingServices ? `Procedi al Pagamento (€${pendingServices.totalAmount.toFixed(2)})` : 'Procedi al Pagamento'}
                   </Button>
                 </form>
               </Form>

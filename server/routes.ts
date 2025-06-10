@@ -1766,6 +1766,45 @@ RifID: ${hashId}`
   // Public endpoint for bike service payment (Stripe)
   app.post("/api/public/bike-payment", createBikePaymentIntent);
 
+  // Endpoint pubblico per ottenere servizi pendenti per sigla
+  app.get("/api/public/services/pending/:sigla", async (req: Request, res: Response) => {
+    try {
+      const { sigla } = req.params;
+
+      // Verifica che la sigla esista
+      const student = await storage.getStudentBySigla(sigla);
+      if (!student) {
+        return res.status(404).json({ message: "Sigla non trovata" });
+      }
+
+      // Cerca servizi non pagati per questa sigla
+      const { services } = await storage.getServices({
+        sigla: sigla,
+        status: "unpaid",
+        page: 1,
+        limit: 50
+      });
+
+      // Calcola il totale da pagare
+      const totalAmount = services.reduce((sum, service) => sum + service.amount, 0);
+
+      res.json({
+        student: {
+          sigla: student.sigla,
+          firstName: student.firstName,
+          lastName: student.lastName
+        },
+        pendingServices: services,
+        totalAmount: totalAmount,
+        servicesCount: services.length
+      });
+
+    } catch (error) {
+      console.error("Errore nel recupero servizi pendenti:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
