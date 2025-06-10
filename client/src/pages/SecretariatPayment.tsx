@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle, CreditCard, User, Euro, AlertCircle, Loader2, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -141,6 +141,15 @@ export default function SecretariatPayment() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success') === 'true') {
       setStep('success');
+    } else if (urlParams.get('canceled') === 'true') {
+      setStep('cancelled');
+    } else if (urlParams.get('payment_intent_client_secret')) {
+      // Handle return from Stripe redirect
+      const clientSecret = urlParams.get('payment_intent_client_secret');
+      if (clientSecret) {
+        setStep('payment');
+        setClientSecret(clientSecret);
+      }
     }
   }, []);
 
