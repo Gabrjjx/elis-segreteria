@@ -110,9 +110,10 @@ export async function handleStripeWebhook(req: Request, res: Response) {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         const orderId = paymentIntent.metadata.orderId;
+        const sigla = paymentIntent.metadata.sigla;
         
-        if (orderId) {
-          // Find the bike reservation by order ID
+        if (orderId && sigla) {
+          // Find the reservation by order ID
           const reservation = await storage.getBikeReservationByOrderId(orderId);
           if (reservation) {
             // Update reservation status to paid
@@ -122,7 +123,23 @@ export async function handleStripeWebhook(req: Request, res: Response) {
               new Date() // Set payment date
             );
             
-            console.log(`Payment confirmed for bike reservation ${reservation.id}`);
+            // Mark all unpaid services for this sigla as paid
+            const { services } = await storage.getServices({
+              sigla: sigla,
+              status: "unpaid",
+              page: 1,
+              limit: 100
+            });
+            
+            // Update each service to paid status
+            for (const service of services) {
+              await storage.updateService(service.id, {
+                status: "paid",
+                paymentMethod: "card"
+              });
+            }
+            
+            console.log(`Payment confirmed for order ${orderId}. Updated ${services.length} services for sigla ${sigla}`);
           }
         }
         break;
