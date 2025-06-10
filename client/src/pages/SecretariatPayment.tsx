@@ -47,7 +47,7 @@ function CheckoutForm({ clientSecret, onSuccess }: { clientSecret: string, onSuc
       const { error: submitError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/bike-payment?success=true`,
+          return_url: `${window.location.origin}/secretariat-payment?success=true`,
         },
       });
 
@@ -102,7 +102,7 @@ function CheckoutForm({ clientSecret, onSuccess }: { clientSecret: string, onSuc
   );
 }
 
-export default function BikePayment() {
+export default function SecretariatPayment() {
   const [step, setStep] = useState<'form' | 'payment' | 'success'>('form');
   const [clientSecret, setClientSecret] = useState<string>("");
   const [paymentData, setPaymentData] = useState<any>(null);
@@ -199,7 +199,7 @@ export default function BikePayment() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <CreditCard className="h-12 w-12 text-blue-600 mr-3" />
-            <h1 className="text-3xl font-bold text-gray-900">Pagamenti Segreteria ELIS</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Pagamento Servizi ELIS</h1>
           </div>
           <p className="text-lg text-gray-600">
             Pagamento sicuro per servizi di segreteria
@@ -406,7 +406,7 @@ export default function BikePayment() {
                   setClientSecret("");
                   form.reset();
                   // Clear URL parameters
-                  window.history.pushState({}, '', '/bike-payment');
+                  window.history.pushState({}, '', '/secretariat-payment');
                 }}
                 size="lg"
               >
