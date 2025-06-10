@@ -5,8 +5,60 @@ Il sistema ELIS fornisce API REST per la gestione di servizi di sartoria, pagame
 
 **Base URL**: `http://localhost:5000`
 
+## Headers Richiesti
+
+### Headers Standard
+```
+Content-Type: application/json
+Accept: application/json
+```
+
+### Headers per Webhook
+```
+Content-Type: application/json
+Stripe-Signature: whsec_xxxxx (solo per webhook Stripe)
+```
+
+### Headers per Upload File
+```
+Content-Type: multipart/form-data
+```
+
+### Headers per CSV Import
+```
+Content-Type: application/json
+```
+
+### Esempi di Chiamate cURL
+
+**GET con parametri:**
+```bash
+curl -H "Accept: application/json" \
+     "http://localhost:5000/api/services?sigla=127&status=unpaid"
+```
+
+**POST con JSON:**
+```bash
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json" \
+     -d '{"sigla":"127","type":"siglatura","amount":1.5}' \
+     http://localhost:5000/api/services
+```
+
+**Webhook Stripe:**
+```bash
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -H "Stripe-Signature: t=1234567890,v1=signature" \
+     -d '{"type":"payment_intent.succeeded","data":{"object":{}}}' \
+     http://localhost:5000/api/stripe/webhook
+```
+
 ## Autenticazione
 Alcune API richiedono autenticazione. Gli endpoint pubblici sono contrassegnati come `[PUBLIC]`.
+
+**Cookie di Sessione**: Gli endpoint autenticati utilizzano cookie di sessione Express.
 
 ---
 
