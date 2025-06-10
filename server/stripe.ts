@@ -119,9 +119,24 @@ export async function handleStripeWebhook(req: Request, res: Response) {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         const orderId = paymentIntent.metadata.orderId;
         const sigla = paymentIntent.metadata.sigla;
+        const serviceType = paymentIntent.metadata.service;
         
-        if (sigla) {
-          console.log(`Processing payment for sigla: ${sigla}, orderId: ${orderId}`);
+        if (sigla && orderId) {
+          console.log(`Processing payment for sigla: ${sigla}, orderId: ${orderId}, service: ${serviceType}`);
+          
+          // Update secretariat payment status to completed
+          if (serviceType === "secretariat_service") {
+            try {
+              await storage.updateSecretariatPaymentStatus(
+                orderId, 
+                SecretariatPaymentStatus.COMPLETED,
+                new Date()
+              );
+              console.log(`Secretariat payment ${orderId} marked as completed`);
+            } catch (error) {
+              console.error(`Failed to update secretariat payment ${orderId}:`, error);
+            }
+          }
           
           // Mark all unpaid services for this sigla as paid
           const { services } = await storage.getServices({
@@ -136,15 +151,14 @@ export async function handleStripeWebhook(req: Request, res: Response) {
           // Update each service to paid status
           for (const service of services) {
             await storage.updateService(service.id, {
-              status: "paid",
-              payment_method: "card" // Stripe payment
+              status: "paid"
             });
             console.log(`Updated service ${service.id} to paid status`);
           }
           
           console.log(`Payment confirmed for sigla ${sigla}. Updated ${services.length} services from unpaid to paid`);
         } else {
-          console.log('No sigla found in payment metadata');
+          console.log('Missing sigla or orderId in payment metadata');
         }
         break;
         
