@@ -152,7 +152,7 @@ export default function WelcomePage() {
           <div className="flex flex-wrap justify-center gap-4">
             <Button 
               variant="outline" 
-              onClick={() => window.location.href = "/pay"}
+              onClick={() => window.location.href = "/bike-payment"}
               className="text-sm"
             >
               Paga un servizio

@@ -134,8 +134,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
             // Update each service to paid status
             for (const service of services) {
               await storage.updateService(service.id, {
-                status: "paid",
-                paymentMethod: "card"
+                status: "paid"
               });
             }
             
