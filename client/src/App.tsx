@@ -32,6 +32,7 @@ const LazyQrScannerPage = lazy(() => import("@/pages/QrScannerPage"));
 const LazyWelcomePage = lazy(() => import("@/pages/WelcomePage"));
 const LazyPublicMaintenanceRequest = lazy(() => import("@/pages/PublicMaintenanceRequest"));
 const LazySecretariatPayment = lazy(() => import("@/pages/SecretariatPayment"));
+const LazyReportsAdmin = lazy(() => import("@/pages/ReportsAdmin"));
 
 function LoadingFallback() {
   return null; // Nessun indicatore di caricamento
@@ -92,6 +93,7 @@ function Router() {
               </Route>
               <Route path="/payments" component={LazyPaymentsPage} />
               <Route path="/reports" component={LazyReportsPage} />
+              <Route path="/reports/admin" component={LazyReportsAdmin} />
               <Route path="/maintenance" component={LazyMaintenancePage} />
               <Route path="/students" component={LazyStudentsPage} />
               <Route path="/settings" component={LazySettingsPage} />
