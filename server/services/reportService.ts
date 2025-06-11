@@ -1,5 +1,5 @@
 import { storage } from "../storage";
-import puppeteer from "puppeteer";
+import jsPDF from "jspdf";
 import * as fs from "fs";
 import * as path from "path";
 

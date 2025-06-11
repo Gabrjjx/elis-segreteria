@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage, DatabaseStorage } from "./storage";
+import { schedulerService } from "./services/schedulerService";
 
 const app = express();
 app.use(express.json());
@@ -52,6 +53,14 @@ app.use((req, res, next) => {
   }
   
   const server = await registerRoutes(app);
+
+  // Start the daily report scheduler
+  try {
+    await schedulerService.start();
+    log("Daily report scheduler started successfully");
+  } catch (error) {
+    log(`Error starting scheduler: ${error}`, "error");
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

@@ -1,10 +1,10 @@
-import cron from 'node-cron';
+import * as cron from 'node-cron';
 import { reportService } from './reportService';
 import * as fs from 'fs';
 import * as path from 'path';
 
 export class SchedulerService {
-  private reportJob: cron.ScheduledTask | null = null;
+  private reportJob: any = null;
 
   async start() {
     console.log('Starting scheduler service...');
@@ -13,7 +13,6 @@ export class SchedulerService {
     this.reportJob = cron.schedule('0 23 * * *', async () => {
       await this.generateDailyReport();
     }, {
-      scheduled: true,
       timezone: 'Europe/Rome'
     });
 
@@ -22,7 +21,9 @@ export class SchedulerService {
     // Optional: Generate a test report immediately on startup (for development)
     if (process.env.NODE_ENV === 'development') {
       console.log('Development mode: generating test report...');
-      await this.generateDailyReport();
+      setTimeout(async () => {
+        await this.generateDailyReport();
+      }, 2000);
     }
   }
 

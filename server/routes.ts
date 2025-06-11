@@ -1825,6 +1825,59 @@ RifID: ${hashId}`
     }
   });
 
+  // Report endpoints
+  app.post("/api/reports/generate", async (req: Request, res: Response) => {
+    try {
+      const { date } = req.body;
+      const { schedulerService } = await import("./services/schedulerService");
+      
+      const filePath = date 
+        ? await schedulerService.generateReportForDate(date)
+        : await schedulerService.generateDailyReport();
+      
+      res.json({ 
+        success: true, 
+        filePath,
+        message: "Report generato con successo" 
+      });
+    } catch (error) {
+      console.error("Errore nella generazione del report:", error);
+      res.status(500).json({ message: "Errore nella generazione del report" });
+    }
+  });
+
+  app.get("/api/reports/list", async (req: Request, res: Response) => {
+    try {
+      const { schedulerService } = await import("./services/schedulerService");
+      const reports = schedulerService.getGeneratedReports();
+      res.json(reports);
+    } catch (error) {
+      console.error("Errore nel recupero dei report:", error);
+      res.status(500).json({ message: "Errore nel recupero dei report" });
+    }
+  });
+
+  app.get("/api/reports/download/:fileName", async (req: Request, res: Response) => {
+    try {
+      const { fileName } = req.params;
+      const filePath = `./reports/${fileName}`;
+      
+      if (!fileName.endsWith('.pdf') || !fileName.startsWith('report_')) {
+        return res.status(400).json({ message: "Nome file non valido" });
+      }
+      
+      res.download(filePath, fileName, (err) => {
+        if (err) {
+          console.error("Errore nel download:", err);
+          res.status(404).json({ message: "File non trovato" });
+        }
+      });
+    } catch (error) {
+      console.error("Errore nel download del report:", error);
+      res.status(500).json({ message: "Errore nel download del report" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
