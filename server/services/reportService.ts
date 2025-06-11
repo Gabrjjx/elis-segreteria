@@ -1,5 +1,5 @@
 import { storage } from "../storage";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -141,291 +141,132 @@ export class ReportService {
     }
   }
 
-  generateReportHTML(data: DailyReportData): string {
+  generatePDF(data: DailyReportData): Buffer {
     const formatCurrency = (amount: number) => `€${amount.toFixed(2)}`;
     const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('it-IT');
 
-    return `
-    <!DOCTYPE html>
-    <html lang="it">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Report Giornaliero ELIS - ${formatDate(data.date)}</title>
-        <style>
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                margin: 0;
-                padding: 20px;
-                background-color: #f5f5f5;
-                color: #333;
-            }
-            .container {
-                max-width: 800px;
-                margin: 0 auto;
-                background: white;
-                padding: 30px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-            .header {
-                text-align: center;
-                border-bottom: 3px solid #007bff;
-                padding-bottom: 20px;
-                margin-bottom: 30px;
-            }
-            .header h1 {
-                margin: 0;
-                color: #007bff;
-                font-size: 28px;
-            }
-            .header .date {
-                font-size: 16px;
-                color: #666;
-                margin-top: 5px;
-            }
-            .section {
-                margin-bottom: 25px;
-                padding: 20px;
-                border-radius: 8px;
-                border-left: 4px solid #007bff;
-                background-color: #f8f9fa;
-            }
-            .section h2 {
-                margin-top: 0;
-                color: #007bff;
-                font-size: 20px;
-            }
-            .stats-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 15px;
-                margin-top: 15px;
-            }
-            .stat-card {
-                background: white;
-                padding: 15px;
-                border-radius: 6px;
-                text-align: center;
-                border: 1px solid #e9ecef;
-            }
-            .stat-value {
-                font-size: 24px;
-                font-weight: bold;
-                color: #007bff;
-            }
-            .stat-label {
-                font-size: 12px;
-                color: #666;
-                text-transform: uppercase;
-                margin-top: 5px;
-            }
-            .payment-list {
-                background: white;
-                border-radius: 6px;
-                padding: 15px;
-                margin-top: 15px;
-            }
-            .payment-item {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 10px 0;
-                border-bottom: 1px solid #eee;
-            }
-            .payment-item:last-child {
-                border-bottom: none;
-            }
-            .payment-info {
-                flex: 1;
-            }
-            .payment-amount {
-                font-weight: bold;
-                color: #28a745;
-            }
-            .status-badge {
-                padding: 4px 8px;
-                border-radius: 12px;
-                font-size: 12px;
-                font-weight: bold;
-                text-transform: uppercase;
-            }
-            .status-completed { background: #d4edda; color: #155724; }
-            .status-processing { background: #fff3cd; color: #856404; }
-            .status-pending { background: #f8d7da; color: #721c24; }
-            .summary-total {
-                background: #007bff;
-                color: white;
-                padding: 15px;
-                border-radius: 6px;
-                text-align: center;
-                margin-top: 20px;
-            }
-            .summary-total h3 {
-                margin: 0;
-                font-size: 18px;
-            }
-            .summary-amount {
-                font-size: 24px;
-                font-weight: bold;
-                margin-top: 5px;
-            }
-            .footer {
-                text-align: center;
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #e9ecef;
-                color: #666;
-                font-size: 12px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>📊 Report Giornaliero ELIS</h1>
-                <div class="date">${formatDate(data.date)}</div>
-            </div>
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPosition = 20;
 
-            <!-- Servizi di Sartoria -->
-            <div class="section">
-                <h2>👔 Servizi di Sartoria</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value">${data.services.total}</div>
-                        <div class="stat-label">Servizi Totali</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${data.services.paid}</div>
-                        <div class="stat-label">Pagati</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${data.services.unpaid}</div>
-                        <div class="stat-label">In Sospeso</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${formatCurrency(data.services.totalAmount)}</div>
-                        <div class="stat-label">Importo Totale</div>
-                    </div>
-                </div>
-                
-                <div class="stats-grid" style="margin-top: 15px;">
-                    <div class="stat-card">
-                        <div class="stat-value">${data.services.byType.siglatura}</div>
-                        <div class="stat-label">Siglature</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${data.services.byType.riparazione}</div>
-                        <div class="stat-label">Riparazioni</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${data.services.byType.happyHour}</div>
-                        <div class="stat-label">Happy Hour</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${formatCurrency(data.services.paidAmount)}</div>
-                        <div class="stat-label">Incassato</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pagamenti Segreteria -->
-            <div class="section">
-                <h2>💳 Pagamenti Segreteria</h2>
-                ${data.payments.secretariat.length > 0 ? `
-                    <div class="payment-list">
-                        ${data.payments.secretariat.map(payment => `
-                            <div class="payment-item">
-                                <div class="payment-info">
-                                    <strong>${payment.customerName}</strong> (${payment.sigla})<br>
-                                    <small>Ordine: ${payment.orderId}</small>
-                                </div>
-                                <div>
-                                    <div class="payment-amount">${formatCurrency(payment.amount)}</div>
-                                    <span class="status-badge status-${payment.status}">${payment.status}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="summary-total">
-                        <h3>Totale Pagamenti Segreteria</h3>
-                        <div class="summary-amount">${formatCurrency(data.payments.totalSecretariatAmount)}</div>
-                    </div>
-                ` : `
-                    <p style="text-align: center; color: #666; font-style: italic;">Nessun pagamento registrato oggi</p>
-                `}
-            </div>
-
-            <!-- Manutenzione -->
-            <div class="section">
-                <h2>🔧 Richieste di Manutenzione</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value">${data.maintenance.newRequests}</div>
-                        <div class="stat-label">Nuove Richieste</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${data.maintenance.completedRequests}</div>
-                        <div class="stat-label">Completate</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${data.maintenance.urgentRequests}</div>
-                        <div class="stat-label">Urgenti</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Studenti -->
-            <div class="section">
-                <h2>👥 Nuovi Studenti</h2>
-                <div class="stat-card" style="max-width: 200px;">
-                    <div class="stat-value">${data.students.newStudents}</div>
-                    <div class="stat-label">Registrati Oggi</div>
-                </div>
-            </div>
-
-            <div class="footer">
-                Report generato automaticamente il ${new Date().toLocaleString('it-IT')}<br>
-                Sistema ELIS - Amministrazione Residenza
-            </div>
-        </div>
-    </body>
-    </html>
-    `;
-  }
-
-  async generatePDF(data: DailyReportData): Promise<Buffer> {
-    const html = this.generateReportHTML(data);
+    // Header
+    doc.setFontSize(24);
+    doc.setTextColor(0, 123, 255);
+    doc.text('Report Giornaliero ELIS', pageWidth / 2, yPosition, { align: 'center' });
     
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    yPosition += 10;
+    doc.setFontSize(14);
+    doc.setTextColor(102, 102, 102);
+    doc.text(formatDate(data.date), pageWidth / 2, yPosition, { align: 'center' });
     
-    try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      
-      const pdf = await page.pdf({
-        format: 'A4',
-        margin: {
-          top: '20mm',
-          right: '20mm',
-          bottom: '20mm',
-          left: '20mm'
-        },
-        printBackground: true
-      });
-      
-      return Buffer.from(pdf);
-    } finally {
-      await browser.close();
+    yPosition += 20;
+
+    // Services section
+    doc.setFontSize(16);
+    doc.setTextColor(0, 123, 255);
+    doc.text('Servizi di Sartoria', 20, yPosition);
+    yPosition += 15;
+
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    
+    // Services stats in grid format
+    const stats = [
+      ['Servizi Totali', data.services.total.toString()],
+      ['Pagati', data.services.paid.toString()],
+      ['In Sospeso', data.services.unpaid.toString()],
+      ['Importo Totale', formatCurrency(data.services.totalAmount)],
+      ['Siglature', data.services.byType.siglatura.toString()],
+      ['Riparazioni', data.services.byType.riparazione.toString()],
+      ['Happy Hour', data.services.byType.happyHour.toString()],
+      ['Incassato', formatCurrency(data.services.paidAmount)]
+    ];
+
+    let col = 0;
+    for (const [label, value] of stats) {
+      const x = 20 + (col * 90);
+      doc.text(`${label}: ${value}`, x, yPosition);
+      col++;
+      if (col >= 2) {
+        col = 0;
+        yPosition += 8;
+      }
     }
+    if (col > 0) yPosition += 8;
+
+    yPosition += 15;
+
+    // Payments section
+    doc.setFontSize(16);
+    doc.setTextColor(0, 123, 255);
+    doc.text('Pagamenti Segreteria', 20, yPosition);
+    yPosition += 15;
+
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+
+    if (data.payments.secretariat.length > 0) {
+      for (const payment of data.payments.secretariat.slice(0, 10)) { // Limit to first 10
+        doc.text(`${payment.customerName} (${payment.sigla})`, 20, yPosition);
+        doc.text(`${formatCurrency(payment.amount)} - ${payment.status}`, 120, yPosition);
+        yPosition += 8;
+        
+        if (yPosition > pageHeight - 30) {
+          doc.addPage();
+          yPosition = 20;
+        }
+      }
+      
+      yPosition += 10;
+      doc.setFontSize(14);
+      doc.setTextColor(0, 123, 255);
+      doc.text(`Totale: ${formatCurrency(data.payments.totalSecretariatAmount)}`, 20, yPosition);
+      yPosition += 15;
+    } else {
+      doc.text('Nessun pagamento registrato oggi', 20, yPosition);
+      yPosition += 15;
+    }
+
+    // Maintenance section
+    doc.setFontSize(16);
+    doc.setTextColor(0, 123, 255);
+    doc.text('Richieste di Manutenzione', 20, yPosition);
+    yPosition += 15;
+
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Nuove Richieste: ${data.maintenance.newRequests}`, 20, yPosition);
+    yPosition += 8;
+    doc.text(`Completate: ${data.maintenance.completedRequests}`, 20, yPosition);
+    yPosition += 8;
+    doc.text(`Urgenti: ${data.maintenance.urgentRequests}`, 20, yPosition);
+    yPosition += 15;
+
+    // Students section
+    doc.setFontSize(16);
+    doc.setTextColor(0, 123, 255);
+    doc.text('Nuovi Studenti', 20, yPosition);
+    yPosition += 15;
+
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Registrati Oggi: ${data.students.newStudents}`, 20, yPosition);
+    yPosition += 20;
+
+    // Footer
+    doc.setFontSize(10);
+    doc.setTextColor(102, 102, 102);
+    const footerText = `Report generato automaticamente il ${new Date().toLocaleString('it-IT')}`;
+    doc.text(footerText, pageWidth / 2, pageHeight - 15, { align: 'center' });
+    doc.text('Sistema ELIS - Amministrazione Residenza', pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+    return Buffer.from(doc.output('arraybuffer'));
   }
 
   async saveDailyReport(date: Date): Promise<string> {
     const data = await this.getDailyReportData(date);
-    const pdf = await this.generatePDF(data);
+    const pdf = this.generatePDF(data);
     
     // Create reports directory if it doesn't exist
     const reportsDir = path.join(process.cwd(), 'reports');
