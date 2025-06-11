@@ -2,6 +2,12 @@ import { storage } from "../storage";
 import { jsPDF } from "jspdf";
 import * as fs from "fs";
 import * as path from "path";
+import sgMail from "@sendgrid/mail";
+
+// Initialize SendGrid
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
 
 export interface DailyReportData {
   date: string;
@@ -264,7 +270,80 @@ export class ReportService {
     return Buffer.from(doc.output('arraybuffer'));
   }
 
-  async saveDailyReport(date: Date): Promise<string> {
+  async sendEmailReport(data: DailyReportData, pdfBuffer: Buffer): Promise<void> {
+    if (!process.env.SENDGRID_API_KEY) {
+      throw new Error("SendGrid API key not configured");
+    }
+
+    const formatCurrency = (amount: number) => `€${amount.toFixed(2)}`;
+    const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('it-IT');
+
+    const emailContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #007bff;">Report Giornaliero ELIS - ${formatDate(data.date)}</h2>
+      
+      <h3>Servizi di Sartoria</h3>
+      <ul>
+        <li>Servizi totali: <strong>${data.services.total}</strong></li>
+        <li>Pagati: <strong>${data.services.paid}</strong></li>
+        <li>In sospeso: <strong>${data.services.unpaid}</strong></li>
+        <li>Importo totale: <strong>${formatCurrency(data.services.totalAmount)}</strong></li>
+        <li>Incassato: <strong>${formatCurrency(data.services.paidAmount)}</strong></li>
+      </ul>
+
+      <h3>Pagamenti Segreteria</h3>
+      <p>Totale pagamenti: <strong>${formatCurrency(data.payments.totalSecretariatAmount)}</strong></p>
+      <p>Numero transazioni: <strong>${data.payments.secretariat.length}</strong></p>
+
+      <h3>Manutenzione</h3>
+      <ul>
+        <li>Nuove richieste: <strong>${data.maintenance.newRequests}</strong></li>
+        <li>Completate: <strong>${data.maintenance.completedRequests}</strong></li>
+        <li>Urgenti: <strong>${data.maintenance.urgentRequests}</strong></li>
+      </ul>
+
+      <h3>Studenti</h3>
+      <p>Nuovi registrati: <strong>${data.students.newStudents}</strong></p>
+
+      <hr style="margin: 20px 0;">
+      <p style="color: #666; font-size: 12px;">
+        Report generato automaticamente il ${new Date().toLocaleString('it-IT')}<br>
+        Sistema ELIS - Amministrazione Residenza
+      </p>
+    </div>
+    `;
+
+    const msg = {
+      to: [
+        'amministrazione@elis.org',
+        'segreteria@elis.org'
+      ],
+      from: {
+        email: 'noreply@replit.dev',
+        name: 'Sistema ELIS'
+      },
+      subject: `Report Giornaliero ELIS - ${formatDate(data.date)}`,
+      html: emailContent,
+      attachments: [
+        {
+          content: pdfBuffer.toString('base64'),
+          filename: `report_${data.date}.pdf`,
+          type: 'application/pdf',
+          disposition: 'attachment'
+        }
+      ]
+    };
+
+    try {
+      await sgMail.sendMultiple(msg);
+      console.log(`Email report sent successfully for ${data.date}`);
+    } catch (error) {
+      console.error('Failed to send email report:', error);
+      throw error;
+    }
+  }
+
+  async saveDailyReport(date: Date, sendEmail: boolean = true): Promise<string> {
     const data = await this.getDailyReportData(date);
     const pdf = this.generatePDF(data);
     
@@ -278,8 +357,18 @@ export class ReportService {
     const filePath = path.join(reportsDir, fileName);
     
     fs.writeFileSync(filePath, pdf);
-    
     console.log(`Daily report saved: ${filePath}`);
+
+    // Send email if enabled
+    if (sendEmail && process.env.SENDGRID_API_KEY) {
+      try {
+        await this.sendEmailReport(data, pdf);
+        console.log(`Email sent successfully for report: ${fileName}`);
+      } catch (error) {
+        console.error(`Failed to send email for report ${fileName}:`, error);
+      }
+    }
+    
     return filePath;
   }
 }
