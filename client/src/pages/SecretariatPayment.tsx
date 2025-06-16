@@ -1,580 +1,491 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle, CreditCard, User, Euro, AlertCircle, Loader2, X } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { Smartphone, Euro, Clock, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
 
-// Initialize Stripe
-if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
-  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
+interface PendingService {
+  id: number;
+  type: string;
+  description: string;
+  amount: number;
+  date: string;
 }
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
-const paymentSchema = z.object({
-  sigla: z.string().min(1, "La sigla è obbligatoria"),
-  customerName: z.string().min(2, "Il nome deve essere di almeno 2 caratteri"),
-  customerEmail: z.string().email("Inserisci un indirizzo email valido"),
-});
-
-type PaymentFormData = z.infer<typeof paymentSchema>;
-
-// Stripe Checkout Form Component
-function CheckoutForm({ clientSecret, onSuccess, onError, amount }: { 
-  clientSecret: string, 
-  onSuccess: () => void, 
-  onError: (error: string) => void,
-  amount: number 
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      const { error: submitError } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/secretariat-payment?success=true`,
-        },
-      });
-
-      if (submitError) {
-        const errorMessage = submitError.message || "Errore durante il pagamento";
-        setError(errorMessage);
-        setIsProcessing(false);
-        
-        // Categorize error types for better user experience
-        if (submitError.type === 'card_error') {
-          onError(`Errore carta: ${errorMessage}`);
-        } else if (submitError.code === 'payment_intent_authentication_failure') {
-          onError(`Autenticazione fallita: ${errorMessage}`);
-        } else if (submitError.code === 'card_declined') {
-          onError(`Carta rifiutata: ${errorMessage}`);
-        } else {
-          onError(errorMessage);
-        }
-      } else {
-        // Payment successful - call onSuccess safely
-        try {
-          onSuccess();
-        } catch (callbackError) {
-          console.log("Success callback error handled:", callbackError);
-          // Still consider payment successful even if callback fails
-        }
-      }
-    } catch (error: any) {
-      console.error("Payment confirmation error:", error);
-      setError("Si è verificato un errore durante il pagamento. Riprova.");
-      setIsProcessing(false);
-    }
+interface PaymentState {
+  step: 'input' | 'services' | 'payment' | 'processing' | 'success' | 'error';
+  sigla: string;
+  student?: {
+    sigla: string;
+    firstName: string;
+    lastName: string;
   };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <PaymentElement />
-      
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <Button 
-        type="submit" 
-        className="w-full" 
-        disabled={!stripe || isProcessing}
-        size="lg"
-      >
-        {isProcessing ? (
-          <>
-            <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-            Elaborazione pagamento...
-          </>
-        ) : (
-          <>
-            <CreditCard className="h-4 w-4 mr-2" />
-            Paga €{amount.toFixed(2)}
-          </>
-        )}
-      </Button>
-    </form>
-  );
+  pendingServices: PendingService[];
+  totalAmount: number;
+  paymentId?: string;
+  error?: string;
 }
 
 export default function SecretariatPayment() {
-  const [step, setStep] = useState<'form' | 'payment' | 'success' | 'failed' | 'cancelled'>('form');
-  const [clientSecret, setClientSecret] = useState<string>("");
-  const [paymentData, setPaymentData] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pendingServices, setPendingServices] = useState<any>(null);
-  const [isLoadingServices, setIsLoadingServices] = useState(false);
-
-  const form = useForm<PaymentFormData>({
-    resolver: zodResolver(paymentSchema),
-    defaultValues: {
-      sigla: "",
-      customerName: "",
-      customerEmail: "",
-    },
+  const [, navigate] = useLocation();
+  const [match, params] = useRoute("/secretariat-payment");
+  const { toast } = useToast();
+  
+  const [paymentState, setPaymentState] = useState<PaymentState>({
+    step: 'input',
+    sigla: '',
+    pendingServices: [],
+    totalAmount: 0
   });
 
-  // Check for success parameter in URL
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Check for sigla in URL parameters
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('success') === 'true') {
-      setStep('success');
-    } else if (urlParams.get('canceled') === 'true') {
-      setStep('cancelled');
-    } else if (urlParams.get('payment_intent_client_secret')) {
-      // Handle return from Stripe redirect
-      const clientSecret = urlParams.get('payment_intent_client_secret');
-      if (clientSecret) {
-        setStep('payment');
-        setClientSecret(clientSecret);
-      }
+    const siglaFromUrl = urlParams.get('sigla');
+    
+    if (siglaFromUrl && paymentState.step === 'input') {
+      setPaymentState(prev => ({ ...prev, sigla: siglaFromUrl }));
+      handleSiglaSubmit(siglaFromUrl);
     }
   }, []);
 
-  // Function to fetch pending services for a sigla
-  const fetchPendingServices = async (sigla: string) => {
-    if (!sigla || sigla.length < 2) {
-      setPendingServices(null);
+  const handleSiglaSubmit = async (sigla?: string) => {
+    const targetSigla = sigla || paymentState.sigla;
+    
+    if (!targetSigla) {
+      toast({
+        title: "Sigla richiesta",
+        description: "Inserisci la tua sigla per continuare",
+        variant: "destructive"
+      });
       return;
     }
 
-    setIsLoadingServices(true);
+    setIsLoading(true);
+    
     try {
-      const response = await apiRequest("GET", `/api/public/services/pending/${sigla}`);
-      setPendingServices(response);
-      
-      // Auto-populate customer name if student found
-      if (response.student) {
-        form.setValue('customerName', `${response.student.firstName} ${response.student.lastName}`);
+      const response = await fetch(`/api/public/services/pending/${targetSigla}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Errore nel recupero dei servizi");
       }
-      
-      setError(null);
-    } catch (err: any) {
-      setPendingServices(null);
-      setError(err.message || "Errore nel recupero dei servizi");
+
+      if (data.servicesCount === 0) {
+        setPaymentState(prev => ({
+          ...prev,
+          step: 'error',
+          error: 'Nessun servizio in sospeso trovato per questa sigla'
+        }));
+        return;
+      }
+
+      setPaymentState(prev => ({
+        ...prev,
+        step: 'services',
+        sigla: targetSigla,
+        student: data.student,
+        pendingServices: data.pendingServices,
+        totalAmount: data.totalAmount
+      }));
+
+    } catch (error: any) {
+      console.error("Errore nel recupero servizi:", error);
+      setPaymentState(prev => ({
+        ...prev,
+        step: 'error',
+        error: error.message || 'Errore nel recupero dei servizi'
+      }));
     } finally {
-      setIsLoadingServices(false);
+      setIsLoading(false);
     }
   };
 
-  // Watch sigla field changes
-  const watchedSigla = form.watch('sigla');
-  useEffect(() => {
-    if (watchedSigla) {
-      const timer = setTimeout(() => {
-        fetchPendingServices(watchedSigla);
-      }, 500); // Debounce for 500ms
-      
-      return () => clearTimeout(timer);
-    }
-  }, [watchedSigla]);
-
-  const onSubmit = async (data: PaymentFormData) => {
-    setError(null);
-
-    if (!pendingServices || pendingServices.totalAmount === 0) {
-      setError("Nessun servizio in sospeso trovato per questa sigla");
-      return;
-    }
-
+  const handlePayment = async () => {
+    setIsLoading(true);
+    
     try {
-      const paymentData = {
-        ...data,
-        amount: pendingServices.totalAmount
-      };
-      
-      const response = await apiRequest("POST", "/api/public/secretariat-payment", paymentData);
-      setPaymentData(response);
-      setClientSecret(response.clientSecret);
-      setStep('payment');
-    } catch (err: any) {
-      setError(err.message || "Errore durante la creazione del pagamento");
+      const response = await fetch('/api/public/satispay-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sigla: paymentState.sigla,
+          amount: paymentState.totalAmount,
+          customerName: `${paymentState.student?.firstName} ${paymentState.student?.lastName}`,
+          description: `Pagamento servizi ELIS - ${paymentState.sigla}`
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Errore nella creazione del pagamento");
+      }
+
+      setPaymentState(prev => ({
+        ...prev,
+        step: 'payment',
+        paymentId: data.paymentId
+      }));
+
+      // Start polling for payment status
+      startPaymentPolling(data.paymentId);
+
+    } catch (error: any) {
+      console.error("Errore nel pagamento:", error);
+      setPaymentState(prev => ({
+        ...prev,
+        step: 'error',
+        error: error.message || 'Errore nella creazione del pagamento'
+      }));
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handlePaymentSuccess = () => {
-    setStep('success');
+  const startPaymentPolling = (paymentId: string) => {
+    setPaymentState(prev => ({ ...prev, step: 'processing' }));
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/public/satispay-status/${paymentId}`);
+        const data = await response.json();
+
+        if (data.status === 'ACCEPTED' || data.localStatus === 'completed') {
+          clearInterval(pollInterval);
+          setPaymentState(prev => ({ ...prev, step: 'success' }));
+          
+          toast({
+            title: "Pagamento completato!",
+            description: "I tuoi servizi sono stati pagati con successo",
+          });
+        } else if (data.status === 'CANCELED' || data.status === 'EXPIRED' || data.localStatus === 'failed') {
+          clearInterval(pollInterval);
+          setPaymentState(prev => ({
+            ...prev,
+            step: 'error',
+            error: 'Pagamento annullato o scaduto'
+          }));
+        }
+      } catch (error) {
+        console.error("Errore nel controllo stato pagamento:", error);
+      }
+    }, 3000);
+
+    // Stop polling after 5 minutes
+    setTimeout(() => {
+      clearInterval(pollInterval);
+      if (paymentState.step === 'processing') {
+        setPaymentState(prev => ({
+          ...prev,
+          step: 'error',
+          error: 'Timeout del pagamento. Riprova più tardi.'
+        }));
+      }
+    }, 300000);
   };
 
-  const handlePaymentError = (errorMessage: string) => {
-    setError(errorMessage);
-    setStep('failed');
+  const formatCurrency = (amount: number) => `€${amount.toFixed(2)}`;
+
+  const getServiceTypeLabel = (type: string) => {
+    switch (type) {
+      case 'siglatura': return 'Siglatura';
+      case 'riparazione': return 'Riparazione';
+      case 'happyHour': return 'Happy Hour';
+      default: return type;
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <CreditCard className="h-12 w-12 text-blue-600 mr-3" />
-            <h1 className="text-3xl font-bold text-gray-900">Pagamento Servizi ELIS</h1>
-          </div>
-          <p className="text-lg text-gray-600">
-            Pagamento sicuro per servizi di segreteria
-          </p>
-        </div>
-
-        {step === 'form' && (
-          <Card className="shadow-lg">
+  const renderStep = () => {
+    switch (paymentState.step) {
+      case 'input':
+        return (
+          <Card className="w-full max-w-md mx-auto">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <CreditCard className="h-5 w-5 mr-2" />
-                Dati per il Pagamento
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5 text-orange-500" />
+                Pagamento Servizi Segreteria
               </CardTitle>
               <CardDescription>
-                Inserisci i tuoi dati e l'importo da pagare
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="sigla"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Sigla Studente</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Es. 157" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="customerName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome Completo</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Es. Mario Rossi" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="customerEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="mario.rossi@email.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Mostra informazioni sui servizi pendenti */}
-                  {isLoadingServices && (
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center">
-                        <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mr-2" />
-                        <span className="text-sm text-gray-600">Ricerca servizi in corso...</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {pendingServices && (
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-900 mb-2">
-                        Servizi in sospeso per {pendingServices.student.firstName} {pendingServices.student.lastName}
-                      </h4>
-                      <div className="space-y-2">
-                        {pendingServices.pendingServices.map((service: any) => (
-                          <div key={service.id} className="flex justify-between items-center text-sm">
-                            <span className="text-blue-700">
-                              {service.type} - {new Date(service.date).toLocaleDateString()}
-                            </span>
-                            <span className="font-medium text-blue-900">€{service.amount.toFixed(2)}</span>
-                          </div>
-                        ))}
-                        <div className="border-t border-blue-200 pt-2 mt-2">
-                          <div className="flex justify-between items-center font-semibold">
-                            <span className="text-blue-900">Totale da pagare:</span>
-                            <span className="text-lg text-blue-900">€{pendingServices.totalAmount.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {pendingServices && pendingServices.servicesCount === 0 && (
-                    <Alert>
-                      <AlertDescription>
-                        Nessun servizio in sospeso trovato per questa sigla.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-
-
-
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    size="lg"
-                    disabled={!pendingServices || pendingServices.totalAmount === 0}
-                  >
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    {pendingServices ? `Procedi al Pagamento (€${pendingServices.totalAmount.toFixed(2)})` : 'Procedi al Pagamento'}
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        )}
-
-        {step === 'payment' && clientSecret && (
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <CreditCard className="h-5 w-5 mr-2" />
-                Pagamento Sicuro
-              </CardTitle>
-              <CardDescription>
-                Completa il pagamento di €{paymentData?.amount?.toFixed(2)} con la tua carta
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4 bg-blue-50 p-4 rounded-lg">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-blue-900">Sigla:</span>
-                    <p className="text-blue-700">{paymentData.orderId?.split('_')[1]}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-blue-900">Importo:</span>
-                    <p className="text-blue-700">€{paymentData?.amount?.toFixed(2)}</p>
-                  </div>
-                </div>
-              </div>
-
-              <Elements stripe={stripePromise} options={{ clientSecret }}>
-                <CheckoutForm clientSecret={clientSecret} onSuccess={handlePaymentSuccess} onError={handlePaymentError} amount={paymentData?.amount || 0} />
-              </Elements>
-
-              <Button 
-                variant="outline" 
-                className="w-full mt-4" 
-                onClick={() => setStep('form')}
-              >
-                Torna Indietro
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {step === 'success' && (
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center text-green-600">
-                <CheckCircle className="h-5 w-5 mr-2" />
-                Pagamento Completato!
-              </CardTitle>
-              <CardDescription>
-                Il tuo pagamento di segreteria è stato registrato con successo
+                Inserisci la tua sigla per visualizzare i servizi da pagare
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="text-center">
-                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-green-900 mb-2">
-                    Pagamento Confermato
-                  </h3>
-                  <p className="text-green-700">
-                    Riceverai una conferma via email. La transazione è stata completata con successo.
-                  </p>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="sigla">Sigla Studente</Label>
+                <Input
+                  id="sigla"
+                  type="text"
+                  placeholder="es. ABC123"
+                  value={paymentState.sigla}
+                  onChange={(e) => setPaymentState(prev => ({ 
+                    ...prev, 
+                    sigla: e.target.value.toUpperCase() 
+                  }))}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSiglaSubmit()}
+                />
               </div>
-
-              <Alert>
-                <AlertDescription>
-                  Il pagamento è stato elaborato con successo. 
-                  La ricevuta sarà disponibile nella tua email.
-                </AlertDescription>
-              </Alert>
-
               <Button 
-                className="w-full" 
-                onClick={() => {
-                  setStep('form');
-                  setPaymentData(null);
-                  setClientSecret("");
-                  form.reset();
-                  // Clear URL parameters
-                  window.history.pushState({}, '', '/secretariat-payment');
-                }}
-                size="lg"
+                onClick={() => handleSiglaSubmit()} 
+                disabled={!paymentState.sigla || isLoading}
+                className="w-full bg-orange-600 hover:bg-orange-700"
               >
-                Nuovo Pagamento
+                {isLoading ? "Caricamento..." : "Continua"}
               </Button>
             </CardContent>
           </Card>
-        )}
+        );
 
-        {/* Payment Failed State */}
-        {step === 'failed' && (
-          <Card className="shadow-lg border-red-200">
-            <CardHeader className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center">
-                  <AlertCircle className="h-8 w-8 text-red-600" />
-                </div>
-              </div>
-              <CardTitle className="text-red-800">Pagamento Non Riuscito</CardTitle>
-              <CardDescription className="text-red-600">
-                Si è verificato un problema durante l'elaborazione del pagamento
+      case 'services':
+        return (
+          <Card className="w-full max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle>Riepilogo Servizi</CardTitle>
+              <CardDescription>
+                Studente: {paymentState.student?.firstName} {paymentState.student?.lastName} ({paymentState.student?.sigla})
               </CardDescription>
             </CardHeader>
-            <CardContent className="text-center space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Dettagli errore</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
+            <CardContent className="space-y-4">
               <div className="space-y-3">
-                <Button 
-                  className="w-full" 
-                  onClick={() => {
-                    setStep('payment');
-                    setError(null);
-                  }}
-                  size="lg"
-                >
-                  Riprova Pagamento
-                </Button>
-                
-                <Button 
-                  variant="outline"
-                  className="w-full" 
-                  onClick={() => {
-                    setStep('form');
-                    setPaymentData(null);
-                    setClientSecret("");
-                    setError(null);
-                    form.reset();
-                    window.history.pushState({}, '', '/secretariat-payment');
-                  }}
-                  size="lg"
-                >
-                  Torna all'Inizio
-                </Button>
+                {paymentState.pendingServices.map((service) => (
+                  <div key={service.id} className="flex justify-between items-center p-3 border rounded-lg">
+                    <div>
+                      <div className="font-medium">{getServiceTypeLabel(service.type)}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {service.description || 'Servizio di sartoria'}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(service.date).toLocaleDateString('it-IT')}
+                      </div>
+                    </div>
+                    <Badge variant="outline">
+                      {formatCurrency(service.amount)}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              
+              <Separator />
+              
+              <div className="flex justify-between items-center text-lg font-semibold">
+                <span>Totale da pagare:</span>
+                <span className="text-orange-600">{formatCurrency(paymentState.totalAmount)}</span>
               </div>
 
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-blue-900 mb-2">Cosa puoi fare:</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Verifica i dati della carta</li>
-                  <li>• Controlla il saldo disponibile</li>
-                  <li>• Prova con un'altra carta</li>
-                  <li>• Contatta la tua banca se il problema persiste</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Payment Cancelled State */}
-        {step === 'cancelled' && (
-          <Card className="shadow-lg border-yellow-200">
-            <CardHeader className="text-center">
-              <div className="flex justify-center mb-4">
-                <div className="h-16 w-16 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <X className="h-8 w-8 text-yellow-600" />
+              <div className="bg-orange-50 p-4 rounded-lg text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Smartphone className="h-5 w-5 text-orange-600" />
+                  <span className="font-medium">Pagamento con Satispay</span>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  Veloce, sicuro e senza commissioni extra
+                </p>
               </div>
-              <CardTitle className="text-yellow-800">Pagamento Annullato</CardTitle>
-              <CardDescription className="text-yellow-600">
-                Il pagamento è stato annullato dall'utente
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <Alert>
-                <AlertDescription>
-                  Nessun addebito è stato effettuato sulla tua carta.
-                  Puoi ritentare il pagamento quando vuoi.
-                </AlertDescription>
-              </Alert>
 
-              <div className="space-y-3">
+              <div className="flex gap-3">
                 <Button 
-                  className="w-full" 
-                  onClick={() => {
-                    setStep('payment');
-                    setError(null);
-                  }}
-                  size="lg"
+                  variant="outline" 
+                  onClick={() => setPaymentState(prev => ({ ...prev, step: 'input' }))}
+                  className="flex-1"
                 >
-                  Riprova Pagamento
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Indietro
                 </Button>
-                
                 <Button 
-                  variant="outline"
-                  className="w-full" 
-                  onClick={() => {
-                    setStep('form');
-                    setPaymentData(null);
-                    setClientSecret("");
-                    setError(null);
-                    form.reset();
-                    window.history.pushState({}, '', '/secretariat-payment');
-                  }}
-                  size="lg"
+                  onClick={handlePayment}
+                  disabled={isLoading}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700"
                 >
-                  Torna all'Inizio
+                  {isLoading ? "Creazione..." : "Paga con Satispay"}
                 </Button>
               </div>
             </CardContent>
           </Card>
-        )}
+        );
 
-        {/* Info Footer */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>
-            Pagamento sicuro tramite Stripe • Segreteria ELIS
-          </p>
-          <p className="mt-1">
-            Per assistenza contatta l'amministrazione ELIS
+      case 'payment':
+        return (
+          <Card className="w-full max-w-md mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5 text-orange-500" />
+                Completa il Pagamento
+              </CardTitle>
+              <CardDescription>
+                Apri l'app Satispay per completare il pagamento
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+              <div className="p-6 bg-orange-50 rounded-lg">
+                <div className="text-2xl font-bold text-orange-600 mb-2">
+                  {formatCurrency(paymentState.totalAmount)}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  ID Pagamento: {paymentState.paymentId}
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-sm">
+                  1. Apri l'app Satispay sul tuo smartphone
+                </p>
+                <p className="text-sm">
+                  2. Cerca il pagamento ELIS
+                </p>
+                <p className="text-sm">
+                  3. Conferma il pagamento di {formatCurrency(paymentState.totalAmount)}
+                </p>
+              </div>
+
+              <Button 
+                variant="outline" 
+                onClick={() => startPaymentPolling(paymentState.paymentId!)}
+                className="w-full"
+              >
+                Controlla Stato Pagamento
+              </Button>
+            </CardContent>
+          </Card>
+        );
+
+      case 'processing':
+        return (
+          <Card className="w-full max-w-md mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 animate-spin" />
+                Elaborazione Pagamento
+              </CardTitle>
+              <CardDescription>
+                Attendere conferma del pagamento...
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <div className="animate-pulse p-6 bg-orange-50 rounded-lg">
+                <div className="text-lg text-orange-600">
+                  Verificando il pagamento di {formatCurrency(paymentState.totalAmount)}
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Non chiudere questa pagina
+              </p>
+            </CardContent>
+          </Card>
+        );
+
+      case 'success':
+        return (
+          <Card className="w-full max-w-md mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-5 w-5" />
+                Pagamento Completato
+              </CardTitle>
+              <CardDescription>
+                I tuoi servizi sono stati pagati con successo
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+              <div className="p-6 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600 mb-2">
+                  {formatCurrency(paymentState.totalAmount)}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Pagamento elaborato con successo
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-sm">
+                  ✓ {paymentState.pendingServices.length} servizi pagati
+                </p>
+                <p className="text-sm">
+                  ✓ Importo: {formatCurrency(paymentState.totalAmount)}
+                </p>
+                <p className="text-sm">
+                  ✓ Metodo: Satispay
+                </p>
+              </div>
+
+              <Button 
+                onClick={() => navigate('/')}
+                className="w-full"
+              >
+                Torna alla Home
+              </Button>
+            </CardContent>
+          </Card>
+        );
+
+      case 'error':
+        return (
+          <Card className="w-full max-w-md mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600">
+                <XCircle className="h-5 w-5" />
+                Errore
+              </CardTitle>
+              <CardDescription>
+                Si è verificato un problema
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+              <div className="p-4 bg-red-50 rounded-lg">
+                <p className="text-sm text-red-600">
+                  {paymentState.error || 'Errore sconosciuto'}
+                </p>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline"
+                  onClick={() => setPaymentState({
+                    step: 'input',
+                    sigla: '',
+                    pendingServices: [],
+                    totalAmount: 0
+                  })}
+                  className="flex-1"
+                >
+                  Riprova
+                </Button>
+                <Button 
+                  onClick={() => navigate('/')}
+                  className="flex-1"
+                >
+                  Home
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 p-4 flex items-center justify-center">
+      <div className="w-full max-w-4xl">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Pagamento Servizi ELIS
+          </h1>
+          <p className="text-lg text-gray-600">
+            Paga i tuoi servizi di sartoria con Satispay
           </p>
         </div>
+        {renderStep()}
       </div>
     </div>
   );
