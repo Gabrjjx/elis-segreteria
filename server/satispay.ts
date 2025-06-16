@@ -110,25 +110,51 @@ export async function createSatispayPayment(req: Request, res: Response) {
       });
     }
 
-    // Create payment with Satispay
-    const paymentData = {
-      flow: "MATCH_CODE",
-      amount_unit: Math.round(amount * 100), // Convert to cents
-      currency: "EUR",
-      description: description || `Pagamento servizi ELIS - ${sigla}`,
-      callback_url: `${process.env.REPLIT_DOMAINS || 'http://localhost:5000'}/api/satispay/webhook`,
-      metadata: {
-        sigla,
-        customerName,
-        source: "secretariat_payment"
-      }
-    };
+    // Check if Satispay credentials are configured
+    const hasCredentials = process.env.SATISPAY_KEY_ID && process.env.SATISPAY_PRIVATE_KEY;
+    
+    let payment: SatispayPayment;
+    
+    if (hasCredentials) {
+      // Use real Satispay API
+      const paymentData = {
+        flow: "MATCH_CODE",
+        amount_unit: Math.round(amount * 100), // Convert to cents
+        currency: "EUR",
+        description: description || `Pagamento servizi ELIS - ${sigla}`,
+        callback_url: `${process.env.REPLIT_DOMAINS || 'http://localhost:5000'}/api/satispay/webhook`,
+        metadata: {
+          sigla,
+          customerName,
+          source: "secretariat_payment"
+        }
+      };
 
-    const payment: SatispayPayment = await makeSatispayRequest(
-      "POST", 
-      "/wally-services/protocol/tests/simulations", 
-      paymentData
-    );
+      payment = await makeSatispayRequest(
+        "POST", 
+        "/wally-services/protocol/tests/simulations", 
+        paymentData
+      );
+    } else {
+      // Simulate Satispay payment for development/demo
+      const simulatedPaymentId = `satispay_sim_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      payment = {
+        id: simulatedPaymentId,
+        amount_unit: Math.round(amount * 100),
+        currency: "EUR",
+        status: "PENDING",
+        description: description || `Pagamento servizi ELIS - ${sigla}`,
+        created_at: new Date().toISOString(),
+        metadata: {
+          sigla,
+          customerName,
+          source: "secretariat_payment"
+        }
+      };
+      
+      console.log(`Created simulated Satispay payment: ${payment.id}`);
+    }
 
     // Store payment in database
     await storage.createSecretariatPayment({
@@ -178,18 +204,65 @@ export async function checkSatispayPaymentStatus(req: Request, res: Response) {
       return res.status(400).json({ message: "Payment ID richiesto" });
     }
 
-    // Get payment from Satispay
-    const payment: SatispayPayment = await makeSatispayRequest(
-      "GET",
-      `/wally-services/protocol/tests/simulations/${paymentId}`
-    );
-
     // Get local payment record
     const localPayment = await storage.getSecretariatPaymentByOrderId(paymentId);
     
     if (!localPayment) {
       return res.status(404).json({ message: "Pagamento non trovato" });
     }
+
+    const hasCredentials = process.env.SATISPAY_KEY_ID && process.env.SATISPAY_PRIVATE_KEY;
+    let payment: SatispayPayment;
+
+    if (hasCredentials) {
+      // Get payment from Satispay API
+      payment = await makeSatispayRequest(
+        "GET",
+        `/wally-services/protocol/tests/simulations/${paymentId}`
+      );
+    } else {
+      // Simulate payment status for development
+      const isSimulated = paymentId.startsWith('satispay_sim_');
+      
+      if (isSimulated) {
+        // For demo purposes, simulate payment acceptance after 10 seconds
+        const paymentAge = Date.now() - parseInt(paymentId.split('_')[2]);
+        const shouldBeAccepted = paymentAge > 10000; // 10 seconds
+        
+        payment = {
+          id: paymentId,
+          amount_unit: Math.round(localPayment.amount * 100),
+          currency: "EUR",
+          status: shouldBeAccepted ? "ACCEPTED" : "PENDING",
+          description: `Pagamento servizi ELIS - ${localPayment.sigla}`,
+          created_at: new Date(parseInt(paymentId.split('_')[2])).toISOString()
+        };
+
+        // Auto-complete the payment in simulation mode
+        if (shouldBeAccepted && localPayment.status === "pending") {
+          await storage.updateSecretariatPaymentStatus(paymentId, "completed");
+          
+          // Mark services as paid
+          const services = await storage.getServices({
+            sigla: localPayment.sigla,
+            status: "unpaid",
+            page: 1,
+            limit: 100
+          });
+
+          for (const service of services.services) {
+            await storage.updateService(service.id, { status: "paid" });
+          }
+          
+          console.log(`Simulated Satispay payment ${paymentId} auto-completed`);
+        }
+      } else {
+        throw new Error("Invalid payment ID for simulation mode");
+      }
+    }
+
+    // Refresh local payment status
+    const updatedLocalPayment = await storage.getSecretariatPaymentByOrderId(paymentId);
 
     res.json({
       paymentId: payment.id,
@@ -198,7 +271,7 @@ export async function checkSatispayPaymentStatus(req: Request, res: Response) {
       currency: payment.currency,
       description: payment.description,
       createdAt: payment.created_at,
-      localStatus: localPayment.status,
+      localStatus: updatedLocalPayment?.status || localPayment.status,
       sigla: localPayment.sigla,
       customerName: localPayment.customerName
     });
