@@ -202,11 +202,17 @@ export default function SecretariatPayment() {
     setIsLoading(true);
     
     try {
-      const response = await apiRequest("POST", "/api/public/secretariat-payment", {
-        sigla: paymentState.sigla,
-        customerName: paymentState.customerName,
-        customerEmail: paymentState.customerEmail,
-        amount: paymentState.totalAmount
+      const response = await fetch('/api/public/secretariat-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sigla: paymentState.sigla,
+          customerName: paymentState.customerName,
+          customerEmail: paymentState.customerEmail,
+          amount: paymentState.totalAmount
+        }),
       });
 
       const data = await response.json();
