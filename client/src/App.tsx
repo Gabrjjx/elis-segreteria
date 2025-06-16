@@ -33,6 +33,8 @@ const LazyWelcomePage = lazy(() => import("@/pages/WelcomePage"));
 const LazyPublicMaintenanceRequest = lazy(() => import("@/pages/PublicMaintenanceRequest"));
 const LazySecretariatPayment = lazy(() => import("@/pages/SecretariatPayment"));
 const LazyReportsAdmin = lazy(() => import("@/pages/ReportsAdmin"));
+const LazySatispayPayment = lazy(() => import("@/pages/SatispayPayment"));
+const LazyPaymentSelection = lazy(() => import("@/pages/PaymentSelection"));
 
 function LoadingFallback() {
   return null; // Nessun indicatore di caricamento
@@ -76,6 +78,20 @@ function Router() {
         <Route path="/secretariat-payment">
           <PublicLayout>
             <LazySecretariatPayment />
+          </PublicLayout>
+        </Route>
+        
+        {/* Rotta pubblica per il pagamento Satispay */}
+        <Route path="/satispay-payment/:sigla?">
+          <PublicLayout>
+            <LazySatispayPayment />
+          </PublicLayout>
+        </Route>
+
+        {/* Rotta pubblica per la selezione del metodo di pagamento */}
+        <Route path="/payment">
+          <PublicLayout>
+            <LazyPaymentSelection />
           </PublicLayout>
         </Route>
         

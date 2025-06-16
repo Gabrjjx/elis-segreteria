@@ -135,6 +135,7 @@ export async function createSatispayPayment(req: Request, res: Response) {
       orderId: payment.id,
       sigla,
       customerName,
+      customerEmail: "", // Satispay non richiede email
       amount,
       status: "pending",
       paymentMethod: "satispay",
