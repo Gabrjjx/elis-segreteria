@@ -455,11 +455,12 @@ export const secretariatPayments = pgTable("secretariat_payments", {
   orderId: text("order_id").notNull().unique(),
   sigla: text("sigla").notNull(),
   customerName: text("customer_name").notNull(),
-  customerEmail: text("customer_email").notNull(),
+  customerEmail: text("customer_email").notNull().default(""),
   amount: doublePrecision("amount").notNull(),
   currency: text("currency").notNull().default("EUR"),
   status: text("status").notNull().default(SecretariatPaymentStatus.PENDING),
-  paymentIntentId: text("payment_intent_id"), // Stripe Payment Intent ID
+  paymentMethod: text("payment_method").notNull().default("stripe"), // stripe, satispay, paypal
+  paymentIntentId: text("payment_intent_id"), // Stripe Payment Intent ID o Satispay Payment ID
   paymentDate: timestamp("payment_date"),
   metadata: text("metadata"), // JSON per dati extra
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -475,6 +476,7 @@ export const insertSecretariatPaymentSchema = createInsertSchema(secretariatPaym
   amount: true,
   currency: true,
   status: true,
+  paymentMethod: true,
   paymentIntentId: true,
   metadata: true,
 }).extend({

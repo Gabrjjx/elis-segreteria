@@ -30,6 +30,11 @@ import {
   checkOrderStatus as checkPaypalOrderStatus
 } from "./services/paypalService";
 import { createBikePaymentIntent, handleStripeWebhook, verifyBikePaymentStatus } from "./stripe";
+import {
+  createSatispayPayment,
+  checkSatispayPaymentStatus,
+  handleSatispayWebhook
+} from "./satispay";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -1805,13 +1810,43 @@ RifID: ${hashId}`
     }
   });
 
-  // Endpoint pubblico per creare un pagamento della segreteria
+  // Endpoint pubblico per creare un pagamento della segreteria (Stripe)
   app.post("/api/public/secretariat-payment", async (req: Request, res: Response) => {
     try {
       await createBikePaymentIntent(req, res);
     } catch (error) {
       console.error("Errore nella creazione del pagamento segreteria:", error);
       res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Endpoint pubblico per creare un pagamento Satispay
+  app.post("/api/public/satispay-payment", async (req: Request, res: Response) => {
+    try {
+      await createSatispayPayment(req, res);
+    } catch (error) {
+      console.error("Errore nella creazione del pagamento Satispay:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Endpoint per verificare lo stato del pagamento Satispay
+  app.get("/api/public/satispay-status/:paymentId", async (req: Request, res: Response) => {
+    try {
+      await checkSatispayPaymentStatus(req, res);
+    } catch (error) {
+      console.error("Errore nella verifica del pagamento Satispay:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Webhook Satispay
+  app.post("/api/satispay/webhook", async (req: Request, res: Response) => {
+    try {
+      await handleSatispayWebhook(req, res);
+    } catch (error) {
+      console.error("Errore nel webhook Satispay:", error);
+      res.status(500).json({ message: "Errore nell'elaborazione del webhook" });
     }
   });
 
