@@ -97,7 +97,9 @@ async function makeSatispayRequest(
   endpoint: string,
   body?: any
 ): Promise<any> {
-  const host = "staging.authservices.satispay.com";
+  const host = process.env.NODE_ENV === 'production' 
+    ? "authservices.satispay.com" 
+    : "staging.authservices.satispay.com";
   const url = `https://${host}${endpoint}`;
   const date = new Date().toUTCString();
   
