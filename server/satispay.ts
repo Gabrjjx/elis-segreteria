@@ -117,7 +117,8 @@ async function makeSatispayRequest(
   console.log(messageToSign);
   
   const privateKey = process.env.SATISPAY_PRIVATE_KEY;
-  const keyId = process.env.SATISPAY_KEY_ID;
+  // Use the new KeyId directly until environment variables are properly reloaded
+  const keyId = "53p1h1ejue2fu4ha3vc2lmb2k1kidqkj8s5n5nuqrt0k3g1f7nhfep41g7tvamlidortgl2nm2q66qb5as6b0abmn9kmr6ubc48hbdjnh5gfp7lpa9c5ul23i3n0l6a99rkvkvhhem19t93u1c2rna426uu6tp4inbk74a3r2q2n7eq8e8mpgav2t3k6csodnvsv5b82";
   
   console.log("KeyId being used:", keyId?.substring(0, 20) + "...");
   
