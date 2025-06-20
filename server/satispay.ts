@@ -119,6 +119,8 @@ async function makeSatispayRequest(
   const privateKey = process.env.SATISPAY_PRIVATE_KEY;
   const keyId = process.env.SATISPAY_KEY_ID;
   
+  console.log("KeyId being used:", keyId?.substring(0, 20) + "...");
+  
   if (!privateKey || !keyId) {
     throw new Error("Credenziali Satispay mancanti");
   }
