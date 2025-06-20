@@ -268,9 +268,6 @@ export default function SecretariatPayment() {
         paymentId: data.paymentId
       }));
 
-      // Start polling for payment status
-      startSatispayPolling(data.paymentId);
-
     } catch (error: any) {
       console.error("Errore nel pagamento Satispay:", error);
       setPaymentState(prev => ({
@@ -284,8 +281,6 @@ export default function SecretariatPayment() {
   };
 
   const startSatispayPolling = (paymentId: string) => {
-    setPaymentState(prev => ({ ...prev, step: 'processing' }));
-    
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/public/satispay-status/${paymentId}`);
@@ -565,11 +560,16 @@ export default function SecretariatPayment() {
               </div>
               
               <Button 
-                onClick={() => startSatispayPayment()} 
+                onClick={() => {
+                  setPaymentState(prev => ({ ...prev, step: 'processing' }));
+                  if (paymentState.paymentId) {
+                    startSatispayPolling(paymentState.paymentId);
+                  }
+                }} 
                 className="w-full bg-red-500 hover:bg-red-600"
               >
                 <Smartphone className="mr-2 h-4 w-4" />
-                Avvia Pagamento Satispay
+                Ho Completato il Pagamento
               </Button>
               
               <Button 
