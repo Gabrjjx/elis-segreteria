@@ -539,29 +539,36 @@ export default function SecretariatPayment() {
                     className="w-40 h-40 rounded-lg shadow-lg"
                   />
                 ) : (
-                  <div className="w-40 h-40 bg-white border-2 border-gray-300 flex items-center justify-center rounded-lg shadow-lg">
-                    <div className="grid grid-cols-8 gap-1 p-2">
-                      {Array.from({length: 64}).map((_, i) => (
-                        <div 
-                          key={i} 
-                          className={`w-2 h-2 ${Math.random() > 0.5 ? 'bg-black' : 'bg-white'}`}
-                        />
-                      ))}
+                  <div className="w-40 h-40 bg-red-50 border-2 border-red-200 flex items-center justify-center rounded-lg shadow-lg">
+                    <div className="text-center p-4">
+                      <div className="text-red-500 text-3xl mb-2">⚠️</div>
+                      <p className="text-red-700 text-sm font-medium">QR Code non disponibile</p>
+                      <p className="text-red-600 text-xs mt-1">Necessarie credenziali di produzione</p>
                     </div>
                   </div>
                 )}
               </div>
               
               <div className="text-center space-y-2">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <p className="font-medium text-yellow-800">Istruzioni:</p>
-                  <ol className="text-sm text-yellow-700 mt-1 text-left space-y-1">
-                    <li>1. Apri l'app Satispay</li>
-                    <li>2. Tocca "Paga in negozio"</li>
-                    <li>3. Scansiona questo QR code</li>
-                    <li>4. Conferma il pagamento di €{paymentState.totalAmount.toFixed(2)}</li>
-                  </ol>
-                </div>
+                {paymentState.qrCode ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p className="font-medium text-yellow-800">Istruzioni:</p>
+                    <ol className="text-sm text-yellow-700 mt-1 text-left space-y-1">
+                      <li>1. Apri l'app Satispay</li>
+                      <li>2. Tocca "Paga in negozio"</li>
+                      <li>3. Scansiona questo QR code</li>
+                      <li>4. Conferma il pagamento di €{paymentState.totalAmount.toFixed(2)}</li>
+                    </ol>
+                  </div>
+                ) : (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <p className="font-medium text-orange-800">Ambiente di Test</p>
+                    <p className="text-sm text-orange-700 mt-1">
+                      Per utilizzare Satispay in produzione, configurare le credenziali API autentiche.
+                      Il QR code verrà generato automaticamente dall'API Satispay.
+                    </p>
+                  </div>
+                )}
               </div>
               
               <div className="text-center text-sm text-muted-foreground space-y-1 border-t pt-3">
