@@ -1,215 +1,160 @@
-# Setup WebStorm - Guida Completa
+# Configurazione WebStorm per Sistema ELIS
 
-## Importazione Progetto
+## Setup Iniziale
 
-### 1. Apri il Progetto
-1. **File → Open** 
-2. Seleziona la cartella del progetto
-3. Scegli **"Open as Project"**
+### 1. Aprire il Progetto
+- File → Open → Seleziona cartella del progetto
+- WebStorm rileverà automaticamente la configurazione TypeScript
 
-### 2. Configurazione Automatica
-WebStorm rileverà automaticamente:
-- ✅ Progetto Node.js/TypeScript
-- ✅ Configurazione Vite
-- ✅ Package.json con scripts
+### 2. Configurazione Node.js
+- File → Settings → Languages & Frameworks → Node.js
+- Node interpreter: Seleziona Node.js v18+ dal sistema
+- Package manager: npm
 
-## Configurazioni WebStorm
+### 3. Plugin Consigliati
+Installa questi plugin per ottimizzare lo sviluppo:
+- **Tailwind CSS** - Autocompletamento classi CSS
+- **Database Tools** - Gestione PostgreSQL
+- **GitToolBox** - Miglioramenti Git
+- **Rainbow Brackets** - Visualizzazione parentesi
 
-### Node.js Interpreter
-1. **File → Settings → Languages & Frameworks → Node.js**
-2. Seleziona la versione Node.js installata (18+)
-3. ✅ Spunta "Coding assistance for Node.js"
+### 4. Configurazione Run/Debug
 
-### TypeScript Service
-1. **File → Settings → Languages & Frameworks → TypeScript**
-2. Seleziona **"Use TypeScript service"**
-3. Imposta versione: **"Bundled"**
+#### Development Server
+- Run → Edit Configurations → Add → npm
+- **Name**: Dev Server
+- **Scripts**: dev
+- **Environment variables**: NODE_ENV=development
 
-### Run Configuration
-1. **Run → Edit Configurations → +**
-2. Seleziona **"npm"**
-3. Configurazione:
-   - **Name**: "Development Server"
-   - **Package.json**: `./package.json`
-   - **Command**: `run`
-   - **Scripts**: `dev`
+#### Build Production
+- Run → Edit Configurations → Add → npm
+- **Name**: Build Production
+- **Scripts**: build
 
-### Database Integration
-1. **View → Tool Windows → Database**
-2. **+ → Data Source → PostgreSQL**
-3. Inserisci le credenziali dal tuo `.env`:
-   - **Host**: dal DATABASE_URL
-   - **Port**: 5432 (default)
-   - **Database**: nome database
-   - **User**: username
-   - **Password**: password
+#### Database Push
+- Run → Edit Configurations → Add → npm
+- **Name**: Database Push
+- **Scripts**: db:push
 
-### Environment Variables
-Crea file `.env` nella root:
-```env
-DATABASE_URL=postgresql://user:password@host:port/database
-PAYPAL_CLIENT_ID=your_client_id
-PAYPAL_CLIENT_SECRET=your_client_secret
+### 5. Configurazione TypeScript
+- File → Settings → Languages & Frameworks → TypeScript
+- **TypeScript service**: Enabled
+- **Service directory**: node_modules/typescript/lib
+- **Options**: --strict --noImplicitAny
+
+### 6. Configurazione Database
+- Database → + → Data Source → PostgreSQL
+- **Host**: ep-snowy-sun-a5ayue8j-pooler.us-east-2.aws.neon.tech
+- **Port**: 5432
+- **Database**: neondb
+- **User**: neondb_owner
+- **Password**: [dalla variabile PGPASSWORD]
+
+### 7. Struttura Progetto WebStorm
 ```
-
-## Scripts Utili
-
-### Avvio Sviluppo
-```bash
-npm run dev
-```
-- Avvia frontend (Vite) e backend (Express)
-- Hot reload automatico
-- Disponibile su `http://localhost:5000`
-
-### Database Management
-```bash
-npm run db:push        # Applica schema al database
-npm run db:studio      # Apri Drizzle Studio (GUI database)
-```
-
-### Build e Deploy
-```bash
-npm run build         # Build produzione
-npm run preview       # Preview build
-npm run type-check    # Verifica tipi TypeScript
-```
-
-## Debugging
-
-### Backend Debugging
-1. **Run → Edit Configurations → + → Node.js**
-2. Configurazione:
-   - **Name**: "Debug Backend"
-   - **JavaScript file**: `server/index.ts`
-   - **Working directory**: `./`
-   - **Environment variables**: Importa da `.env`
-
-### Frontend Debugging
-1. **Run → Edit Configurations → + → JavaScript Debug**
-2. Configurazione:
-   - **Name**: "Debug Frontend"
-   - **URL**: `http://localhost:5000`
-   - **Browser**: Chrome/Firefox
-
-## Shortcuts Utili
-
-### Navigazione
-- **Ctrl+Shift+N**: Trova file
-- **Ctrl+Shift+F**: Cerca in tutto il progetto  
-- **Ctrl+B**: Vai a definizione
-- **Alt+F7**: Trova utilizzi
-
-### Refactoring
-- **Shift+F6**: Rinomina
-- **Ctrl+Alt+M**: Estrai metodo
-- **F2**: Prossimo errore
-
-### Git Integration
-- **Alt+9**: Tool window Git
-- **Ctrl+K**: Commit
-- **Ctrl+Shift+K**: Push
-
-## Estensioni Consigliate
-
-### Plugin WebStorm
-1. **File → Settings → Plugins**
-2. Installa:
-   - **Tailwind CSS** (già incluso)
-   - **GitToolBox**
-   - **Rainbow Brackets**
-   - **String Manipulation**
-
-## Struttura Progetto in WebStorm
-
-```
-├── 📁 client/              # Frontend React
+├── 📁 client/
 │   ├── 📁 src/
-│   │   ├── 📁 components/  # Componenti UI
-│   │   ├── 📁 pages/      # Pagine applicazione
-│   │   ├── 📁 lib/        # Utilities
-│   │   └── 📁 hooks/      # Custom hooks
-│   └── 📄 index.html      # Entry point
-├── 📁 server/             # Backend Express
-│   ├── 📄 index.ts        # Server principale
-│   ├── 📄 routes.ts       # API endpoints
-│   ├── 📄 db.ts          # Database config
-│   └── 📄 storage.ts     # Database operations
-├── 📁 shared/            # Codice condiviso
-│   └── 📄 schema.ts      # Schema database + validazione
-├── 📄 package.json       # Dipendenze e scripts
-├── 📄 vite.config.ts     # Configurazione Vite
-├── 📄 tailwind.config.ts # Configurazione Tailwind
-└── 📄 tsconfig.json      # Configurazione TypeScript
+│   │   ├── 📁 components/    # Componenti React
+│   │   ├── 📁 pages/         # Pagine applicazione
+│   │   ├── 📁 hooks/         # Custom hooks
+│   │   └── 📁 lib/           # Utilities
+├── 📁 server/
+│   ├── 📄 index.ts           # Entry point server
+│   ├── 📄 routes.ts          # API endpoints
+│   ├── 📄 storage.ts         # Database operations
+│   └── 📄 satispay.ts        # Pagamenti Satispay
+├── 📁 shared/
+│   └── 📄 schema.ts          # Schema database
+└── 📄 package.json
 ```
 
-## Testing
+### 8. Shortcuts Utili
 
-### Unit Tests (Future)
-```bash
-npm run test           # Esegui test
-npm run test:watch     # Test in modalità watch
-npm run test:coverage  # Test con coverage
+#### Sviluppo
+- `Ctrl+Shift+F10` - Run configurazione corrente
+- `Ctrl+F5` - Restart server
+- `Ctrl+Shift+F` - Ricerca globale nel progetto
+- `Ctrl+B` - Vai a definizione
+
+#### Database
+- `Ctrl+Shift+A` → "Database" - Apri database tools
+- Doppio click su tabella - Visualizza dati
+- `Ctrl+Enter` - Esegui query SQL
+
+#### Git
+- `Ctrl+K` - Commit changes
+- `Ctrl+Shift+K` - Push to repository
+- `Alt+9` - Version Control tool window
+
+### 9. File Watching
+WebStorm monitor automaticamente:
+- ✅ File TypeScript (.ts, .tsx)
+- ✅ File CSS/Tailwind
+- ✅ File environment (.env)
+- ✅ Package.json dependencies
+
+### 10. Debug Configuration
+
+#### Server Debug
+- Run → Edit Configurations → Add → Node.js
+- **Name**: Debug Server
+- **JavaScript file**: dist/index.js
+- **Environment**: NODE_ENV=development
+- **Before launch**: Build
+
+#### Client Debug
+- Run → Edit Configurations → Add → JavaScript Debug
+- **Name**: Debug Client
+- **URL**: http://localhost:5000
+- **Browser**: Chrome
+
+### 11. Code Quality
+
+#### ESLint
+- File → Settings → Languages & Frameworks → ESLint
+- **Automatic ESLint configuration**: ✅
+- **Run for files**: {**/*.{js,ts,jsx,tsx}}
+
+#### Prettier
+- File → Settings → Languages & Frameworks → Prettier
+- **Prettier package**: {project}/node_modules/prettier
+- **Run for files**: {**/*.{js,ts,jsx,tsx,css,md}}
+
+### 12. Variabili Ambiente WebStorm
+
+Crea file `.env` nella root del progetto:
+```env
+# Copia da .env di produzione ma usa valori development
+NODE_ENV=development
+DATABASE_URL=postgresql://...
+SATISPAY_KEY_ID=53p1h1ejue2fu4ha3vc2...
+# ... altre variabili
 ```
 
-### E2E Tests (Future)
-```bash
-npm run e2e           # Test end-to-end
-npm run e2e:ui        # Test E2E con UI
-```
+### 13. Tasks Comuni
 
-## Troubleshooting
+#### Avvio Sviluppo
+1. Apri terminale WebStorm (`Alt+F12`)
+2. `npm install` (solo prima volta)
+3. `npm run dev`
+4. Apri http://localhost:5000
 
-### Problemi Comuni
+#### Deploy su GitHub
+1. VCS → Import into Version Control → Create Git Repository
+2. Add files to Git (`Ctrl+Alt+A`)
+3. Commit (`Ctrl+K`)
+4. VCS → Git → Push (`Ctrl+Shift+K`)
 
-**TypeScript errors**
-1. **File → Invalidate Caches and Restart**
-2. Verifica `tsconfig.json` sia valido
-3. Riavvia TypeScript service
+#### Troubleshooting
+- **TypeScript errors**: Restart TypeScript service
+- **Database connection**: Verifica credenziali in .env
+- **Build errors**: Pulisci cache e reinstalla (`npm install`)
+- **Hot reload non funziona**: Restart dev server
 
-**Database connection**
-1. Verifica `.env` configurato correttamente
-2. Testa connessione nel Database tool
-3. Esegui `npm run db:push`
+### 14. Estensioni Raccomandate
 
-**Port già in uso**
-1. Verifica nessun altro server su porta 5000
-2. Cambia porta in `vite.config.ts` se necessario
-
-**Dipendenze mancanti**
-```bash
-rm -rf node_modules package-lock.json
-npm install
-```
-
-## Workflow Consigliato
-
-1. **Avvio giornata**:
-   - Apri WebStorm
-   - Pull latest changes (Git)
-   - Avvia development server (`npm run dev`)
-
-2. **Sviluppo**:
-   - Usa hot reload per vedere modifiche
-   - Debugging con breakpoints
-   - Commit frequenti
-
-3. **Fine giornata**:
-   - Commit e push changes
-   - Stop development server
-
-## Performance Tips
-
-### WebStorm Optimization
-1. **File → Settings → Appearance & Behavior → System Settings**
-2. Aumenta memory heap: `-Xmx2048m`
-3. Disabilita plugin non necessari
-
-### Esclusioni Indexing
-1. **File → Settings → Directories**
-2. Marca come "Excluded":
-   - `node_modules`
-   - `dist`
-   - `.next` (se presente)
-
-Questo setup ti garantisce un ambiente di sviluppo ottimale in WebStorm! 🚀
+Per sviluppo ottimale installa:
+- **Tailwind CSS IntelliSense** - Autocompletamento CSS
+- **Database Navigator** - Gestione database avanzata
+- **GitLive** - Collaborazione Git real-time
+- **HTTP Client** - Test API endpoints
