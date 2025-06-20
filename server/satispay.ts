@@ -74,13 +74,38 @@ function generateSatispaySignature(
   // Create the message according to Satispay Step 4 specification
   const messageToSign = createSignatureMessage(method, path, host, timestamp, digest);
   
-  // Handle private key with proper line breaks
-  const privateKey = process.env.SATISPAY_PRIVATE_KEY.replace(/\\n/g, '\n');
+  // Handle private key with proper line breaks and format
+  let privateKey = process.env.SATISPAY_PRIVATE_KEY;
   
-  // Create signature using RSA-SHA256
+  // Ensure proper formatting
+  if (privateKey.includes('\\n')) {
+    privateKey = privateKey.replace(/\\n/g, '\n');
+  }
+  
+  // Create signature using RSA-SHA256 with explicit key object
   const signer = crypto.createSign('RSA-SHA256');
   signer.update(messageToSign, 'utf8');
-  const signature = signer.sign(privateKey, 'base64');
+  
+  let signature: string;
+  try {
+    signature = signer.sign({
+      key: privateKey,
+      format: 'pem',
+      type: 'pkcs8'
+    }, 'base64');
+    
+    console.log('Signature generated successfully with PKCS8 format');
+  } catch (error) {
+    console.error('Error signing with PKCS8, trying simple format:', error);
+    // Fallback: try with simple string format
+    try {
+      signature = signer.sign(privateKey, 'base64');
+      console.log('Signature generated successfully with simple format');
+    } catch (fallbackError) {
+      console.error('Failed to sign with any format:', fallbackError);
+      throw new Error('Impossibile generare la firma digitale RSA-SHA256');
+    }
+  }
 
   console.log('Generated signature:', signature);
 
