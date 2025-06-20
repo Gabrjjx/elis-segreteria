@@ -1,0 +1,91 @@
+6. Compose the Authorization header
+As the sixth step you must compose the Authorization header that must be sent in the current request.
+It will be containing the previously composed strings and it's required in order to be authenticated with your shop.
+
+This header must:
+
+Contains the KeyId that you obtained earlier .
+Specify that the RSA algorithm used for signing is rsa-sha256.
+List the headers that were used when creating the Message in the correct order.
+Include the signature you created in a previous step.
+Here's an example of what the Authorization header might look like:
+
+Authorization
+
+Authorization: Signature keyId="{keyId}", algorithm="rsa-sha256", headers="(request-target) host date digest", signature="{signature}"
+Consider {keyId} and {signature} as placeholders for the previously generated strings.
+
+HTTP request example
+Authorization header example
+
+POST /g_business/v1/payments HTTP/1.1
+Host: staging.authservices.satispay.com
+Date: Mon, 18 Mar 2019 15:10:24 +0000
+Content-Type: application/json
+Content-Length: 123
+Digest: SHA-256=ZML76UQPYzw5yDTmhySnU1S8nmqGde/jhqOG5rpfVSI=
+{
+  "flow": "MATCH_CODE",
+  "amount_unit": 100,
+  "currency": "EUR"
+}
+Code sample 4/4
+
+PHP
+Node.js
+Java
+C# >= .NET 7
+Python
+Bash
+
+$bodyObject = [
+    'flow' => 'MATCH_CODE',
+    'amount_unit' => 100,
+    'currency' => 'EUR'
+];
+
+$body = json_encode($bodyObject);
+
+echo "body:\n";
+echo $body . "\n";
+
+$digest = "SHA-256=" . base64_encode(hash("sha256", $body, true));
+
+echo "\ndigest:\n";
+echo $digest . "\n";
+
+$date = date('r');
+
+echo "\ndate:\n";
+echo $date . "\n";
+
+$message = "(request-target): post /g_business/v1/payments
+host: staging.authservices.satispay.com
+date: $date
+digest: $digest";
+
+echo "\nmessage:\n";
+echo $message . "\n";
+
+$privateKey = file_get_contents('private.pem'); // your private key
+
+echo "\nprivate.pem:\n";
+echo $privateKey . "\n";
+
+openssl_sign($message, $signatureRaw, $privateKey, OPENSSL_ALGO_SHA256);
+$signature = base64_encode($signatureRaw);
+
+echo "\nsignature:\n";
+echo $signature . "\n";
+
+$keyId = file_get_contents('KeyId.txt'); // your KeyId
+$authorization = "Signature keyId=\"$keyId\", algorithm=\"rsa-sha256\", headers=\"(request-target) host date digest\", signature=\"$signature\"";
+
+echo "\nauthorization:\n";
+echo $authorization . "\n";
+
+// send an HTTP request to the /g_business/v1/payments URL
+// the body must be equals to the $body variable
+// the $date variable must be sent as "date" header
+// the $authorization variable must be sent as "authorization" header
+Updated 17 days ago

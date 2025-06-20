@@ -33,6 +33,29 @@ function createDigest(body: string): string {
   return `SHA-256=${hash}`;
 }
 
+function createSignatureMessage(
+  method: string,
+  path: string,
+  host: string,
+  timestamp: string,
+  digest: string
+): string {
+  // Step 4: Create the message according to Satispay documentation
+  // Format: (request-target), host, date, digest - each on a new line
+  const requestTarget = `(request-target): ${method.toLowerCase()} ${path}`;
+  const hostHeader = `host: ${host}`;
+  const dateHeader = `date: ${timestamp}`;
+  const digestHeader = `digest: ${digest}`;
+  
+  // Compose the message with actual newline characters
+  const message = `${requestTarget}\n${hostHeader}\n${dateHeader}\n${digestHeader}`;
+  
+  console.log('Signature message created:');
+  console.log(message);
+  
+  return message;
+}
+
 function generateSatispaySignature(
   method: string,
   path: string,
@@ -48,18 +71,18 @@ function generateSatispaySignature(
     ? 'authservices.satispay.com' 
     : 'staging.authservices.satispay.com';
 
-  // Create the string to sign according to Satispay documentation
-  const stringToSign = `(request-target): ${method.toLowerCase()} ${path}\nhost: ${host}\ndate: ${timestamp}\ndigest: ${digest}`;
-  
-  console.log('String to sign:', stringToSign);
+  // Create the message according to Satispay Step 4 specification
+  const messageToSign = createSignatureMessage(method, path, host, timestamp, digest);
   
   // Handle private key with proper line breaks
   const privateKey = process.env.SATISPAY_PRIVATE_KEY.replace(/\\n/g, '\n');
   
   // Create signature using RSA-SHA256
   const signer = crypto.createSign('RSA-SHA256');
-  signer.update(stringToSign);
+  signer.update(messageToSign, 'utf8');
   const signature = signer.sign(privateKey, 'base64');
+
+  console.log('Generated signature:', signature);
 
   return `keyId="${process.env.SATISPAY_KEY_ID}",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="${signature}"`;
 }
