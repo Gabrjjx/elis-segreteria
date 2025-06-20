@@ -678,7 +678,8 @@ export default function SecretariatPayment() {
                     customerName: '',
                     customerEmail: '',
                     pendingServices: [],
-                    totalAmount: 0
+                    totalAmount: 0,
+                    qrCode: undefined
                   })}
                   className="flex-1"
                 >
