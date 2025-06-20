@@ -2,15 +2,6 @@ import { Request, Response } from "express";
 import crypto from "crypto";
 import { storage } from "./storage";
 
-// Satispay API Configuration
-const SATISPAY_BASE_URL = process.env.NODE_ENV === "production" 
-  ? "https://authservices.satispay.com" 
-  : "https://staging.authservices.satispay.com";
-
-const SATISPAY_API_BASE_URL = process.env.NODE_ENV === "production"
-  ? "https://services.satispay.com"
-  : "https://staging.services.satispay.com";
-
 interface SatispayPaymentRequest {
   sigla: string;
   amount: number;
@@ -30,67 +21,70 @@ interface SatispayPayment {
   created_at: string;
 }
 
-// Generate Satispay authentication signature
+// Satispay API configuration
+const SATISPAY_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://authservices.satispay.com' 
+  : 'https://staging.authservices.satispay.com';
+
 function generateSatispaySignature(
   method: string,
   path: string,
-  timestamp: string,
-  body: string = ""
+  body: string,
+  timestamp: string
 ): string {
-  const keyId = process.env.SATISPAY_KEY_ID;
-  const privateKey = process.env.SATISPAY_PRIVATE_KEY;
-  
-  if (!keyId || !privateKey) {
+  if (!process.env.SATISPAY_KEY_ID || !process.env.SATISPAY_PRIVATE_KEY) {
     throw new Error("Satispay credentials not configured");
   }
 
-  const stringToSign = `${method}\n${path}\n${timestamp}\n${body}`;
+  const host = process.env.NODE_ENV === 'production' 
+    ? 'authservices.satispay.com' 
+    : 'staging.authservices.satispay.com';
+
+  const stringToSign = `(request-target): ${method.toLowerCase()} ${path}\nhost: ${host}\ndate: ${timestamp}\ndigest: SHA-256=${crypto.createHash('sha256').update(body).digest('base64')}`;
   
-  const sign = crypto.createSign('RSA-SHA256');
-  sign.update(stringToSign);
-  const signature = sign.sign(privateKey, 'base64');
+  // Handle private key with proper line breaks
+  const privateKey = process.env.SATISPAY_PRIVATE_KEY.replace(/\\n/g, '\n');
   
-  return `keyId="${keyId}",algorithm="rsa-sha256",headers="(request-target) date",signature="${signature}"`;
+  const signature = crypto.sign('sha256', Buffer.from(stringToSign))
+    .update(privateKey)
+    .digest('base64');
+
+  return `keyId="${process.env.SATISPAY_KEY_ID}",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="${signature}"`;
 }
 
-// Make authenticated request to Satispay API
 async function makeSatispayRequest(
   method: string,
   endpoint: string,
-  body?: any
+  data?: any
 ): Promise<any> {
-  const timestamp = new Date().toISOString();
-  const bodyString = body ? JSON.stringify(body) : "";
-  const path = endpoint.replace(SATISPAY_API_BASE_URL, "");
-  
-  const signature = generateSatispaySignature(method, path, timestamp, bodyString);
-  
-  const headers: Record<string, string> = {
-    'Authorization': signature,
-    'Date': timestamp,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  };
+  const timestamp = new Date().toUTCString();
+  const body = data ? JSON.stringify(data) : '';
+  const path = endpoint;
+
+  const signature = generateSatispaySignature(method, path, body, timestamp);
 
   const requestOptions: RequestInit = {
     method,
-    headers,
-    body: bodyString || undefined
+    headers: {
+      'Content-Type': 'application/json',
+      'Host': process.env.NODE_ENV === 'production' 
+        ? 'authservices.satispay.com' 
+        : 'staging.authservices.satispay.com',
+      'Date': timestamp,
+      'Digest': `SHA-256=${crypto.createHash('sha256').update(body).digest('base64')}`,
+      'Authorization': `Signature ${signature}`,
+    },
+    body: body || undefined,
   };
 
-  try {
-    const response = await fetch(`${SATISPAY_API_BASE_URL}${path}`, requestOptions);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Satispay API error: ${response.status} - ${errorText}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error("Satispay API request failed:", error);
-    throw error;
+  const response = await fetch(`${SATISPAY_BASE_URL}${endpoint}`, requestOptions);
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Satispay API error: ${response.status} - ${errorText}`);
   }
+
+  return await response.json();
 }
 
 // Create Satispay payment
@@ -111,7 +105,9 @@ export async function createSatispayPayment(req: Request, res: Response) {
     }
 
     // Check if Satispay credentials are configured
-    const hasCredentials = process.env.SATISPAY_KEY_ID && process.env.SATISPAY_PRIVATE_KEY;
+    const hasCredentials = process.env.SATISPAY_KEY_ID && 
+                          process.env.SATISPAY_PRIVATE_KEY && 
+                          process.env.SATISPAY_ACTIVATION_CODE;
     
     let payment: SatispayPayment;
     
@@ -135,6 +131,8 @@ export async function createSatispayPayment(req: Request, res: Response) {
         "/wally-services/protocol/tests/simulations", 
         paymentData
       );
+      
+      console.log(`Created real Satispay payment: ${payment.id} for ${customerName} (${sigla}) - €${amount}`);
     } else {
       // Simulate Satispay payment for development/demo
       const simulatedPaymentId = `satispay_sim_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -153,7 +151,7 @@ export async function createSatispayPayment(req: Request, res: Response) {
         }
       };
       
-      console.log(`Created simulated Satispay payment: ${payment.id}`);
+      console.log(`Created simulated Satispay payment: ${payment.id} for ${customerName} (${sigla}) - €${amount}`);
     }
 
     // Store payment in database
@@ -161,30 +159,24 @@ export async function createSatispayPayment(req: Request, res: Response) {
       orderId: payment.id,
       sigla,
       customerName,
-      customerEmail: "", // Satispay non richiede email
+      customerEmail: "", // Satispay doesn't require email
       amount,
       status: "pending",
       paymentMethod: "satispay",
-      metadata: JSON.stringify({
+      metadata: {
         satispayPaymentId: payment.id,
         description: payment.description
-      })
+      }
     });
 
-    console.log(`Satispay payment created: ${payment.id} for ${customerName} (${sigla}) - €${amount}`);
-
     res.json({
+      success: true,
       paymentId: payment.id,
       amount,
-      currency: "EUR",
       status: payment.status,
-      description: payment.description,
-      redirectUrl: payment.redirect_url,
-      qrCode: `satispay://payment/${payment.id}`,
-      metadata: {
-        sigla,
-        customerName
-      }
+      message: hasCredentials 
+        ? "Pagamento Satispay creato. Completare sull'app Satispay."
+        : "Pagamento simulato creato. Completamento automatico in 10 secondi."
     });
 
   } catch (error) {
@@ -211,15 +203,39 @@ export async function checkSatispayPaymentStatus(req: Request, res: Response) {
       return res.status(404).json({ message: "Pagamento non trovato" });
     }
 
-    const hasCredentials = process.env.SATISPAY_KEY_ID && process.env.SATISPAY_PRIVATE_KEY;
+    const hasCredentials = process.env.SATISPAY_KEY_ID && 
+                          process.env.SATISPAY_PRIVATE_KEY && 
+                          process.env.SATISPAY_ACTIVATION_CODE;
     let payment: SatispayPayment;
 
-    if (hasCredentials) {
-      // Get payment from Satispay API
+    if (hasCredentials && !paymentId.startsWith('satispay_sim_')) {
+      // Get payment from real Satispay API
       payment = await makeSatispayRequest(
         "GET",
         `/wally-services/protocol/tests/simulations/${paymentId}`
       );
+      
+      // Update local payment status based on Satispay response
+      if (payment.status === 'ACCEPTED' && localPayment.status === 'pending') {
+        await storage.updateSecretariatPaymentStatus(paymentId, "completed");
+        
+        // Mark services as paid
+        const services = await storage.getServices({
+          sigla: localPayment.sigla,
+          status: "unpaid",
+          page: 1,
+          limit: 100
+        });
+
+        for (const service of services.services) {
+          await storage.updateService(service.id, { 
+            status: "paid", 
+            paymentMethod: "satispay" 
+          });
+        }
+        
+        console.log(`Real Satispay payment ${paymentId} completed and services updated`);
+      }
     } else {
       // Simulate payment status for development
       const isSimulated = paymentId.startsWith('satispay_sim_');
@@ -251,13 +267,16 @@ export async function checkSatispayPaymentStatus(req: Request, res: Response) {
           });
 
           for (const service of services.services) {
-            await storage.updateService(service.id, { status: "paid" });
+            await storage.updateService(service.id, { 
+              status: "paid", 
+              paymentMethod: "satispay" 
+            });
           }
           
           console.log(`Simulated Satispay payment ${paymentId} auto-completed`);
         }
       } else {
-        throw new Error("Invalid payment ID for simulation mode");
+        throw new Error("Invalid payment ID for current configuration");
       }
     }
 
@@ -287,97 +306,60 @@ export async function checkSatispayPaymentStatus(req: Request, res: Response) {
 // Handle Satispay webhook
 export async function handleSatispayWebhook(req: Request, res: Response) {
   try {
-    console.log("Satispay webhook received:", JSON.stringify(req.body, null, 2));
+    const { event_type, data } = req.body;
 
-    const { id: paymentId, status, amount_unit } = req.body;
+    if (event_type === "payment_update") {
+      const paymentId = data.id;
+      const status = data.status;
 
-    if (!paymentId) {
-      return res.status(400).json({ message: "Payment ID mancante nel webhook" });
-    }
-
-    // Get local payment record
-    const payment = await storage.getSecretariatPaymentByOrderId(paymentId);
-    
-    if (!payment) {
-      console.error(`Payment not found for ID: ${paymentId}`);
-      return res.status(404).json({ message: "Pagamento non trovato" });
-    }
-
-    console.log(`Processing Satispay webhook for payment ${paymentId}, status: ${status}`);
-
-    // Update payment status based on Satispay status
-    let newStatus = payment.status;
-    
-    switch (status) {
-      case "ACCEPTED":
-        newStatus = "completed";
-        break;
-      case "CANCELED":
-      case "EXPIRED":
-        newStatus = "failed";
-        break;
-      case "PENDING":
-        newStatus = "pending";
-        break;
-      default:
-        console.warn(`Unknown Satispay status: ${status}`);
-        break;
-    }
-
-    // Update payment status
-    await storage.updateSecretariatPaymentStatus(paymentId, newStatus);
-
-    // If payment is completed, mark services as paid
-    if (newStatus === "completed") {
-      try {
-        const services = await storage.getServices({
-          sigla: payment.sigla,
-          status: "unpaid",
-          page: 1,
-          limit: 100
-        });
-
-        console.log(`Found ${services.services.length} unpaid services for sigla ${payment.sigla}`);
-
-        // Mark all unpaid services for this sigla as paid
-        for (const service of services.services) {
-          await storage.updateService(service.id, { status: "paid" });
-          console.log(`Marked service ${service.id} as paid`);
-        }
-
-        console.log(`Satispay payment ${paymentId} completed successfully. Updated ${services.services.length} services.`);
+      // Update local payment status
+      if (status === "ACCEPTED") {
+        await storage.updateSecretariatPaymentStatus(paymentId, "completed");
         
-      } catch (error) {
-        console.error(`Error updating services for completed payment ${paymentId}:`, error);
+        // Get payment details to update services
+        const localPayment = await storage.getSecretariatPaymentByOrderId(paymentId);
+        if (localPayment) {
+          const services = await storage.getServices({
+            sigla: localPayment.sigla,
+            status: "unpaid",
+            page: 1,
+            limit: 100
+          });
+
+          for (const service of services.services) {
+            await storage.updateService(service.id, { 
+              status: "paid", 
+              paymentMethod: "satispay" 
+            });
+          }
+          
+          console.log(`Webhook: Satispay payment ${paymentId} completed, services updated`);
+        }
+      } else if (status === "CANCELED" || status === "EXPIRED") {
+        await storage.updateSecretariatPaymentStatus(paymentId, "failed");
       }
     }
 
-    res.json({ received: true, status: newStatus });
-
+    res.status(200).json({ received: true });
   } catch (error) {
-    console.error("Error processing Satispay webhook:", error);
-    res.status(500).json({ message: "Errore nell'elaborazione del webhook" });
+    console.error("Error handling Satispay webhook:", error);
+    res.status(500).json({ message: "Webhook error" });
   }
 }
 
 // Verify Satispay webhook signature (for production use)
 export function verifySatispayWebhookSignature(
   signature: string,
-  payload: string,
+  body: string,
   secret: string
 ): boolean {
-  try {
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(payload)
-      .digest('hex');
-    
-    return crypto.timingSafeEqual(
-      Buffer.from(signature, 'hex'),
-      Buffer.from(expectedSignature, 'hex')
-    );
-  } catch (error) {
-    console.error("Error verifying Satispay webhook signature:", error);
-    return false;
-  }
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(body)
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
 }

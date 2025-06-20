@@ -1,0 +1,80 @@
+The second step of the authentication consists in obtaining the KeyId from our servers.
+It's crucial to request and safely store this information, as you will need to use it for all the subsequent interactions with to our APIs.
+
+To safely and correctly request the KeyId, please follow the information below.
+
+Formatting the public_key field
+
+🚧
+Make sure that the public_key is correctly formatted
+Get the full content of your PEM public key previously generated.
+Add the \n string between each line of your public key.
+Collapse all the actual new line characters to bring the public key into a single line.
+Step 1
+Step 2
+Step 3
+
+-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAkbVuFw4g+Zpf2mC1EpG2
+gapOCWUp+8Xb/DjTk/WRJoFOZ+OGKZ7DZzlgGVlYgY59T4+fHS/aGXQRIYIgH3sr
+a17x2PXcgOFcWJbyAL9kS+sUej8ePkt/aeCT5i32dE27qV9T7wfYqBdzKOPdhHzN
+9p8o7SOQgmyYsw6FdioQ+zMhCDT0gF3wiXHqCztPMQr5Cb1b6tDiZO0VKNk71qXh
+l1ltvyqr68/ULlTF9oKHU3TybErU/1uHMi6PWwsylJDZdETfA+lnNFvkMhuza8Ma
+gdQQJ7/Q3wQPuZGmjBTLt5jWtnNXts+QCOkUGjz2XK06+v8J9tWf+ltBNfMdN8Ou
+YU5CxEG7+phpuexK/DhfVNyWz5Awagyn6C4Iu0cUo+s89aLMcg4hgSVZJb5CkY6K
+4ymLzgVp+M5J7g2BSXk0L/eCSkCeOy/RNs3/nJk9QlEzb7xBjwITAv3pD0X6AXmr
+OlVKW4O9ovjmXp+8UdTh/YXT6xoC4+kuGBKensLwH4Vd69llmFhneEykeEOUQSAt
+rmPm7Us0DSpXoUjiimd8eFsNV3wqSVHLV1jadlkhusYdmWhDvdrqHoXol/T5aN/E
+P3HopzFrNy0w01DCSWv+PDjx5i6MmhTYTYI9MlSmVsPUGU3g0CV3MCVwUFu25jze
+AwZuPOe/vLyM/pOB42A8ibUCAwEAAQ==
+-----END PUBLIC KEY-----
+How the token field works
+
+To generate a KeyId, you must provide an activation code in the token field.
+Activation codes are disposable alphanumeric strings that are required for the authentication to our APIs.
+
+You can obtain these activation codes in two ways: through your Satispay Business Account for the production environment or directly provided by us for the sandbox environment.
+
+An example of an activation code is: 6N3ECU
+
+Once you followed the aforementioned steps, you're ready to make a POST request to obtain your KeyId.
+
+📘
+Production VS Sandbox codes
+
+Beware that all the activation codes generated from a production account will only work on production endpoints, while activation codes generated for the sandbox account will only work on sandbox endpoints.
+🚧
+The obtained KeyId must be saved in a safe place
+REQUEST
+BODY PARAMS
+public_key
+string
+required
+The RSA public key, in PEM format generated in the previous step.
+token
+string
+required
+The activation code required to authenticate the APIs.
+
+For more information read here
+RESPONSES
+
+
+200
+OK
+
+
+
+400
+400 Bad Request
+
+
+
+403
+403 Forbidden or invalid authorization header
+
+
+
+404
+404 Resource not found
+
