@@ -109,6 +109,7 @@ interface PaymentState {
   paymentMethod?: PaymentMethod;
   clientSecret?: string;
   paymentId?: string;
+  qrCode?: string;
   error?: string;
 }
 
@@ -119,7 +120,8 @@ export default function SecretariatPayment() {
     customerName: '',
     customerEmail: '',
     pendingServices: [],
-    totalAmount: 0
+    totalAmount: 0,
+    qrCode: undefined
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -265,7 +267,8 @@ export default function SecretariatPayment() {
       setPaymentState(prev => ({
         ...prev,
         step: 'satispay-payment',
-        paymentId: data.paymentId
+        paymentId: data.paymentId,
+        qrCode: data.qrCode
       }));
 
     } catch (error: any) {
@@ -527,18 +530,26 @@ export default function SecretariatPayment() {
                 </p>
               </div>
               
-              {/* QR Code Simulation */}
+              {/* QR Code from Satispay API */}
               <div className="flex items-center justify-center">
-                <div className="w-40 h-40 bg-white border-2 border-gray-300 flex items-center justify-center rounded-lg shadow-lg">
-                  <div className="grid grid-cols-8 gap-1 p-2">
-                    {Array.from({length: 64}).map((_, i) => (
-                      <div 
-                        key={i} 
-                        className={`w-2 h-2 ${Math.random() > 0.5 ? 'bg-black' : 'bg-white'}`}
-                      />
-                    ))}
+                {paymentState.qrCode ? (
+                  <img 
+                    src={paymentState.qrCode} 
+                    alt="QR Code Satispay" 
+                    className="w-40 h-40 rounded-lg shadow-lg"
+                  />
+                ) : (
+                  <div className="w-40 h-40 bg-white border-2 border-gray-300 flex items-center justify-center rounded-lg shadow-lg">
+                    <div className="grid grid-cols-8 gap-1 p-2">
+                      {Array.from({length: 64}).map((_, i) => (
+                        <div 
+                          key={i} 
+                          className={`w-2 h-2 ${Math.random() > 0.5 ? 'bg-black' : 'bg-white'}`}
+                        />
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               
               <div className="text-center space-y-2">

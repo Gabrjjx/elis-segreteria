@@ -1,0 +1,273 @@
+Create payment
+POST
+https://authservices.satispay.com/g_business/v1/payments
+The following guide explains how to create payments with the provided Satispay API.
+Depending on the selected flow, payments experience different lifecycles.
+
+Payment lifecycle
+
+MATCH_CODE, MATCH_USER
+
+These type of payments always begins in PENDING status.
+
+They can transition to:
+
+ACCEPTED if:
+the consumer accepts the payment via the Satispay App.
+CANCELED if:
+the payment expires.
+the user explicitly cancels the payment via the Satispay App.
+ACCEPTED and CANCELED are final statuses which cannot be changed.
+
+Show graph
+PRE_AUTHORIZED, HOTP_AUTH
+
+For this payment types, the payment will be created in ACCEPTED status.
+There are no transitional states, as if the charge on the user's wallet fails, the payment won't be generated, and you will receive a 4xx status code.
+
+FUND_LOCK
+
+This type of payment always begins in PENDING status.
+
+It can transition from PENDING to:
+
+AUTHORIZED if:
+the consumer authorizes the fund lock payment via the Satispay App.
+CANCELED if:
+the user explicitly cancels the payment via the Satispay App.
+the payment expires.
+Once the payment status is in AUTHORIZED, it can transition to:
+
+ACCEPTED if:
+the merchant accepts it via an ACCEPT action using the Update payment API.
+CANCELED if:
+the merchant cancels it via a CANCEL action using the Update payment API.
+the payment expires.
+ACCEPTED and CANCELED are final statuses which cannot be changed.
+
+Show graph
+PRE_AUTHORIZED_FUND_LOCK
+
+This type of payment always begins in AUTHORIZED status.
+There are no transitional states, as if the authorization on the user's wallet fails, the payment won't be generated, and you will receive a 4xx status code.
+
+It can transition from AUTHORIZED to:
+
+ACCEPTED if:
+the merchant accepts it via an ACCEPT action using the Update payment API.
+CANCELED if:
+the merchant cancels it via a CANCEL action using the Update payment API.
+the payment expires.
+ACCEPTED and CANCELED are final statuses which cannot be changed.
+
+Show graph
+
+Refunds
+
+Refunds can only be processed via our API.
+
+To perform refunds you need to create a new payment with the REFUND flow.
+You will need to send the parent_payment_uid with the payment id that you want to refund and the amount_unit that you want to refund for that specific payment.
+
+We suggest you to fill the external_code with your internal order id, in order to better reconcile refunds in your payment reports.
+This field will also be shown to the user via the Satispay app.
+
+Refund can only be created in ACCEPTED status.
+There are no transitional states, as if the refund fails, the refund won't be generated, and you will receive a 4xx status code.
+If the refund goes well, you can distinguish the refund payment by using the response type property, which will be REFUND_TO_BUSINESS.
+
+Refunds for payments with only e-money
+
+Refunds are only possible within 365 days from the payment creation date.
+It is possible to create multiple partial refunds until you reach the total amount of the payment that you want to refund.
+
+Refunds for payments with Meal Voucher
+
+Refunds are only possible on the same day of payment creation and for the total amount of the payment.
+Partial refunds in payments with Meal Voucher are not available.
+
+Refunds for payments with Fringe Benefits
+
+Refunds are only possible within the same month of the payment creation and must be for the total amount. Partial refunds for payments made with Fringe Benefits are not available.
+
+REQUEST
+BODY PARAMS
+flow
+string
+required
+The payment flow that you want to use.
+
+MATCH_CODE DOC
+This flow can be used generically for one-off payments.
+
+HOTP_AUTH DOC
+This flow can be used to perform one-off payments via HOTP tokens.
+To use this flow you must also include the token parameter.
+
+MATCH_USER DOC
+This flow can be used for one-off payments on a specific user.
+To use this flow you must also include the consumer_uid parameter.
+
+FUND_LOCK DOC
+This flow can be used for funds lock payments.
+
+PRE_AUTHORIZED DOC
+This flow can be used for automatic payments.
+To use this flow you must also include the token parameter.
+
+PRE_AUTHORIZED_FUND_LOCK DOC
+This flow can be used for automatic funds lock payments.
+To use this flow you must also include the token parameter.
+
+REFUND
+This flow can be used for refunds on a specific payment.
+To use this flow you must also include the parent_payment_uid and the amount_unit.
+amount_unit
+integer
+required
+The payment amount in cents.
+
+For example, to represent the amount €12.40, you should multiply it by 100, resulting in 1240 cents.
+currency
+string
+required
+Defaults to EUR
+The payment currency.
+
+Currently EUR is the only currency supported.
+token
+string
+The token required to charge the consumer wallet.
+It can be an automatic payment or HOTP token.
+
+Required with HOTP_AUTH, PRE_AUTHORIZED and PRE_AUTHORIZED_FUND_LOCK flows only.
+parent_payment_uid
+string
+The id of the payment that you want to refund.
+
+Required with REFUND flow only.
+external_code
+string
+The external order id or payment identifier.
+
+We highly recommend to use this field by populating it with your internal order id.
+This string will be included in your reports for reconciliation and shown to the Satispay consumer in-app.
+
+This field has a maximum length of 50 characters, including spaces.
+callback_url
+string
+The URL to be triggered via an HTTP GET request when there is a change in payment status.
+
+When the given callback_url is invoked, a GET request for payment details can be made to retrieve the updated payment status.
+
+Please note that {uuid} will be replaced with the generated payment id.
+e.g. https://example.com/satispay-callback?payment_id={uuid}
+
+You can read more here.
+redirect_url
+string
+This field specifies the URL where the user will be redirected after the payment flow from the Satispay app is completed.
+
+For instance, you can set this URL to ensure users are redirected to that specific page upon successful payment completion.
+e.g. https://example.com/payment-redirect?order_id=your_order_id
+
+Please note that this field doesn't support any placeholder.
+metadata
+object
+The additional metadata for the payment.
+
+This field supports up to 20 key-value pairs, with keys limited to 45 characters and values limited to 500 characters each.
+
+METADATA OBJECT
+expiration_date
+string
+The UTC payment expiration datetime.
+
+The format should be ISO 8601 like this yyyy-MM-dd'T'HH:mm:ss.SSSZ.
+
+By default:
+MATCH_CODE and MATCH_USER payments are valid for 2 hours.
+FUND_LOCK payments are valid for 10 days.
+PRE_AUTHORIZED_FUND_LOCK payments are valid for 5 days.
+
+This timeframe is calculated from the moment of creation.
+
+This parameter cannot be used with PRE_AUTHORIZED, HOTP_AUTH and REFUND flows.
+SHOW DEPRECATED
+HEADERS
+Content-Type
+string
+required
+Always send this header as application/json.
+Host
+string
+required
+The host declared in the signature.
+Date
+string
+required
+The date declared in the signature.
+Digest
+string
+required
+The digest declared in the signature.
+Authorization
+string
+required
+The request signature.
+Idempotency-Key
+string
+The idempotent request key.
+
+You can read more here.
+x-satispay-deviceinfo
+string
+The device information (e.g., hostname).
+x-satispay-devicetype
+string
+The device type.
+x-satispay-os
+string
+The Operating System name (e.g., Windows).
+x-satispay-osv
+string
+The Operating System version (e.g., 10).
+x-satispay-apph
+string
+The software house name (e.g., Satispay).
+x-satispay-appn
+string
+The software name (e.g., My awesome app).
+x-satispay-appv
+string
+The software version (e.g., v2.0.0).
+x-satispay-tracking-code
+string
+The tracking code used by Satispay commercial partners.
+
+Use this code only if explicitly required by Satispay.
+RESPONSES
+
+
+200
+OK
+
+
+
+400
+400 Bad Request
+
+
+
+401
+401 Unauthorized
+
+
+
+403
+403 Forbidden or invalid authorization header
+
+Updated 5 months ago
+
+PHP
+Get payment

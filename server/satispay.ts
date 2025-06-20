@@ -16,6 +16,7 @@ interface SatispayPayment {
   currency: string;
   status: string;
   description: string;
+  qr_code?: string;
   redirect_url?: string;
   callback_url?: string;
   metadata?: Record<string, string>;
@@ -249,6 +250,7 @@ export async function createSatispayPayment(req: Request, res: Response) {
       currency: payment.currency,
       description: payment.description,
       status: payment.status,
+      qrCode: payment.qr_code || null,
       redirectUrl: `/payment-processing?orderId=${payment.id}&method=satispay`
     });
 
