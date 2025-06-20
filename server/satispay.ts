@@ -173,7 +173,7 @@ export async function createSatispayPayment(req: Request, res: Response) {
 
       payment = await makeSatispayRequest(
         "POST", 
-        "/wally-services/protocol/tests/simulations", 
+        "/g_business/v1/payments", 
         paymentData
       );
       
@@ -257,7 +257,7 @@ export async function checkSatispayPaymentStatus(req: Request, res: Response) {
       // Get payment from real Satispay API
       payment = await makeSatispayRequest(
         "GET",
-        `/wally-services/protocol/tests/simulations/${paymentId}`
+        `/g_business/v1/payments/${paymentId}`
       );
       
       // Update local payment status based on Satispay response
