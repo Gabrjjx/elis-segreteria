@@ -199,7 +199,10 @@ export async function createSatispayPayment(req: Request, res: Response) {
       })
     });
 
-    const hasCredentials = process.env.SATISPAY_KEY_ID && 
+    // Force use of the new KeyId provided by user
+    const keyId = "53p1h1ejue2fu4ha3vc2lmb2k1kidqkj8s5n5nuqrt0k3g1f7nhfep41g7tvamlidortgl2nm2q66qb5as6b0abmn9kmr6ubc48hbdjnh5gfp7lpa9c5ul23i3n0l6a99rkvkvhhem19t93u1c2rna426uu6tp4inbk74a3r2q2n7eq8e8mpgav2t3k6csodnvsv5b82";
+    
+    const hasCredentials = keyId && 
                           process.env.SATISPAY_PRIVATE_KEY && 
                           process.env.SATISPAY_ACTIVATION_CODE;
 
@@ -281,7 +284,10 @@ export async function checkSatispayPaymentStatus(req: Request, res: Response) {
     }
 
     // Real Satispay integration: Try API call first, fallback to time-based processing
-    const hasCredentials = process.env.SATISPAY_KEY_ID && 
+    // Force use of the new KeyId provided by user
+    const keyId = "53p1h1ejue2fu4ha3vc2lmb2k1kidqkj8s5n5nuqrt0k3g1f7nhfep41g7tvamlidortgl2nm2q66qb5as6b0abmn9kmr6ubc48hbdjnh5gfp7lpa9c5ul23i3n0l6a99rkvkvhhem19t93u1c2rna426uu6tp4inbk74a3r2q2n7eq8e8mpgav2t3k6csodnvsv5b82";
+    
+    const hasCredentials = keyId && 
                           process.env.SATISPAY_PRIVATE_KEY && 
                           process.env.SATISPAY_ACTIVATION_CODE;
 
