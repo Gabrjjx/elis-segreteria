@@ -516,28 +516,69 @@ export default function SecretariatPayment() {
           <Card className="w-full max-w-md mx-auto">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5 text-orange-500" />
+                <Smartphone className="h-5 w-5 text-red-500" />
                 Pagamento Satispay
               </CardTitle>
               <CardDescription>
-                Apri l'app Satispay per completare il pagamento
+                Completa il pagamento tramite l'app Satispay
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 text-center">
-              <div className="p-6 bg-orange-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-600 mb-2">
-                  {formatCurrency(paymentState.totalAmount)}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  ID Pagamento: {paymentState.paymentId}
+            <CardContent className="space-y-4">
+              <div className="text-center p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border border-red-200">
+                <div className="text-4xl mb-3">📱</div>
+                <p className="font-semibold text-red-800">Apri l'app Satispay</p>
+                <p className="text-sm text-red-600 mt-1">
+                  Usa la funzione "Paga in negozio" per completare il pagamento
                 </p>
               </div>
               
-              <div className="space-y-2">
-                <p className="text-sm">1. Apri l'app Satispay sul tuo smartphone</p>
-                <p className="text-sm">2. Cerca il pagamento ELIS</p>
-                <p className="text-sm">3. Conferma il pagamento di {formatCurrency(paymentState.totalAmount)}</p>
+              {/* QR Code Simulation */}
+              <div className="flex items-center justify-center">
+                <div className="w-40 h-40 bg-white border-2 border-gray-300 flex items-center justify-center rounded-lg shadow-lg">
+                  <div className="grid grid-cols-8 gap-1 p-2">
+                    {Array.from({length: 64}).map((_, i) => (
+                      <div 
+                        key={i} 
+                        className={`w-2 h-2 ${Math.random() > 0.5 ? 'bg-black' : 'bg-white'}`}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
+              
+              <div className="text-center space-y-2">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="font-medium text-yellow-800">Istruzioni:</p>
+                  <ol className="text-sm text-yellow-700 mt-1 text-left space-y-1">
+                    <li>1. Apri l'app Satispay</li>
+                    <li>2. Tocca "Paga in negozio"</li>
+                    <li>3. Scansiona questo QR code</li>
+                    <li>4. Conferma il pagamento di €{paymentState.totalAmount.toFixed(2)}</li>
+                  </ol>
+                </div>
+              </div>
+              
+              <div className="text-center text-sm text-muted-foreground space-y-1 border-t pt-3">
+                <p className="font-medium">Importo: €{paymentState.totalAmount.toFixed(2)}</p>
+                <p className="text-xs">ID Pagamento: {paymentState.paymentId || 'Generazione...'}</p>
+                <p className="text-xs text-orange-600">⏰ Scade tra: 5 minuti</p>
+              </div>
+              
+              <Button 
+                onClick={() => startSatispayPayment()} 
+                className="w-full bg-red-500 hover:bg-red-600"
+              >
+                <Smartphone className="mr-2 h-4 w-4" />
+                Avvia Pagamento Satispay
+              </Button>
+              
+              <Button 
+                variant="outline"
+                onClick={() => setPaymentState(prev => ({ ...prev, step: 'method-selection' }))}
+                className="w-full"
+              >
+                Cambia Metodo di Pagamento
+              </Button>
             </CardContent>
           </Card>
         );
