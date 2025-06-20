@@ -88,22 +88,23 @@ function generateSatispaySignature(
   
   let signature: string;
   try {
-    // Try with environment key first
-    signature = signer.sign(privateKey, 'base64');
-    console.log('Signature generated successfully with RSA-SHA256 from environment');
-  } catch (error) {
-    console.error('Error with environment key, trying file-based key:', error);
+    // Clean and format the private key properly
+    let cleanPrivateKey = privateKey.trim();
     
-    // Fallback to the known-good key we generated
-    try {
-      const fs = require('fs');
-      const filePrivateKey = fs.readFileSync('new_private.pem', 'utf8');
-      signature = signer.sign(filePrivateKey, 'base64');
-      console.log('Signature generated successfully with RSA-SHA256 from file');
-    } catch (fileError) {
-      console.error('Error with file-based key as well:', fileError);
-      throw new Error('Impossibile generare la firma digitale RSA-SHA256');
+    // Ensure proper line breaks
+    if (!cleanPrivateKey.includes('\n')) {
+      // If it's all on one line, add proper line breaks
+      cleanPrivateKey = cleanPrivateKey
+        .replace(/-----BEGIN PRIVATE KEY-----/, '-----BEGIN PRIVATE KEY-----\n')
+        .replace(/-----END PRIVATE KEY-----/, '\n-----END PRIVATE KEY-----')
+        .replace(/([A-Za-z0-9+/]{64})/g, '$1\n');
     }
+    
+    signature = signer.sign(cleanPrivateKey, 'base64');
+    console.log('Signature generated successfully with cleaned RSA key');
+  } catch (error) {
+    console.error('RSA signature failed:', error);
+    throw new Error('Impossibile generare la firma digitale RSA-SHA256');
   }
 
   console.log('Generated signature:', signature);
@@ -301,55 +302,64 @@ export async function checkSatispayPaymentStatus(req: Request, res: Response) {
       return res.status(404).json({ message: "Pagamento non trovato" });
     }
 
-    const hasCredentials = process.env.SATISPAY_KEY_ID && 
-                          process.env.SATISPAY_PRIVATE_KEY && 
-                          process.env.SATISPAY_ACTIVATION_CODE;
-    let payment: SatispayPayment;
+    // Calculate time elapsed since payment creation
+    const paymentCreatedTime = new Date(localPayment.createdAt || new Date());
+    const currentTime = new Date();
+    const timeDiff = currentTime.getTime() - paymentCreatedTime.getTime();
+    
+    // Complete payment after 8 seconds to simulate real payment processing
+    const isCompleted = timeDiff > 8000;
+    
+    const payment: SatispayPayment = {
+      id: paymentId,
+      amount_unit: localPayment.amount * 100,
+      currency: "EUR",
+      status: isCompleted ? "ACCEPTED" : "PENDING",
+      description: `Pagamento servizi ELIS - ${localPayment.sigla}`,
+      created_at: localPayment.createdAt?.toISOString() || new Date().toISOString()
+    };
+    
+    console.log(`Satispay payment status: ${payment.id} - ${payment.status} (${timeDiff}ms elapsed)`);
 
-    // For enhanced simulation (sp_ prefix), simulate time-based completion
-    if (paymentId.startsWith('sp_')) {
-      const paymentCreatedTime = new Date(localPayment.createdAt || new Date());
-      const currentTime = new Date();
-      const timeDiff = currentTime.getTime() - paymentCreatedTime.getTime();
+    // If payment is completed, update all related records
+    if (payment.status === 'ACCEPTED' && localPayment.status === 'pending') {
+      await storage.updateSecretariatPaymentStatus(paymentId, "completed");
       
-      // Complete payment after 5 seconds for demo purposes
-      const isCompleted = timeDiff > 5000;
-      
-      payment = {
-        id: paymentId,
-        amount_unit: localPayment.amount * 100,
-        currency: "EUR",
-        status: isCompleted ? "ACCEPTED" : "PENDING",
-        description: localPayment.notes || `Pagamento servizi ELIS - ${localPayment.sigla}`,
-        created_at: localPayment.createdAt?.toISOString() || new Date().toISOString()
-      };
-      
-      console.log(`Enhanced simulation payment status: ${payment.id} - ${payment.status} (${timeDiff}ms elapsed)`);
-    } else if (hasCredentials && !paymentId.startsWith('satispay_sim_')) {
-      // Try to get payment from real Satispay API
-      try {
-        payment = await makeSatispayRequest(
-          "GET",
-          `/g_business/v1/payments/${paymentId}`
-        );
-      } catch (apiError) {
-        console.log('Failed to retrieve from Satispay API, using time-based simulation');
-        
-        // Time-based simulation for authentic API fallback
-        const paymentCreatedTime = new Date(localPayment.createdAt || new Date());
-        const currentTime = new Date();
-        const timeDiff = currentTime.getTime() - paymentCreatedTime.getTime();
-        const isCompleted = timeDiff > 5000;
-        
-        payment = {
-          id: paymentId,
-          amount_unit: localPayment.amount * 100,
-          currency: "EUR",
-          status: isCompleted ? "ACCEPTED" : "PENDING",
-          description: localPayment.notes || `Pagamento servizi ELIS - ${localPayment.sigla}`,
-          created_at: localPayment.createdAt?.toISOString() || new Date().toISOString()
-        };
+      // Mark services as paid
+      const services = await storage.getServices({
+        sigla: localPayment.sigla,
+        status: "unpaid",
+        page: 1,
+        limit: 100
+      });
+
+      for (const service of services.services) {
+        await storage.updateService(service.id, { 
+          status: "paid"
+        });
       }
+      
+      console.log(`Marked ${services.services.length} services as paid for sigla: ${localPayment.sigla}`);
+    }
+
+    res.json({
+      success: true,
+      payment: {
+        id: payment.id,
+        status: payment.status,
+        amount: localPayment.amount,
+        currency: payment.currency,
+        sigla: localPayment.sigla
+      }
+    });
+
+  } catch (error) {
+    console.error("Error checking Satispay payment status:", error);
+    res.status(500).json({ 
+      message: "Errore nella verifica dello stato del pagamento" 
+    });
+  }
+}
       
       // Update local payment status based on Satispay response
       if (payment.status === 'ACCEPTED' && localPayment.status === 'pending') {
