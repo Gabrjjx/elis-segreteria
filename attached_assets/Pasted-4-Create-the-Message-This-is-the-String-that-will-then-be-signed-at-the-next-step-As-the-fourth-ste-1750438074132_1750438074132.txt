@@ -1,0 +1,117 @@
+4. Create the Message
+This is the String that will then be signed at the next step
+As the fourth step, you should generate the message that will be used for creating the signature.
+This message must include the information of the request you are about to make.
+
+In order to create it, you need to compose the following message fragments by using the headers that will be sent.
+
+(request-target)
+
+To generate this message fragment, simply combine the lowercased HTTP verb and the request path.
+The request path must include, if available, route parameters and the query string.
+These values should be separated by a space, as illustrated in the examples below.
+
+Example 1
+Example 2
+Example 3
+
+(request-target): post /g_business/v1/payments
+host
+
+To create this message fragment, simply use the host where you intend to make your HTTP request.
+The host here must be the same sent in the Host header.
+
+For more details, please refer to: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host
+
+Example
+Example w/ port
+
+host: authservices.satispay.com
+🚧
+Beware
+
+Make sure to maintain coherence when specifying the port.
+If you include the port in the header, ensure that it is also included in the message and in the request.
+date
+
+To create this message fragment, just format the current date and time according to the following pattern.
+The date here must be the same sent in the Date header.
+
+The pattern is described in the RFC 2822.
+
+Pattern
+Example
+
+EEE, dd MMM yyyy HH:mm:ss Z
+digest
+
+To create this message fragment, just take the previously generated digest from the body that you're about to send.
+The digest here must be the same sent in the Digest header.
+
+Example
+
+digest: SHA-256=ZML76UQPYzw5yDTmhySnU1S8nmqGde/jhqOG5rpfVSI=
+Compose the Message
+
+To compose your message, arrange the message fragments, line by line, in the following order:
+(request-target), host, date, and digest, as demonstrated in the example below.
+
+HTTP request example
+Message example
+
+POST /g_business/v1/payments HTTP/1.1
+Host: staging.authservices.satispay.com
+Date: Mon, 18 Mar 2019 15:10:24 +0000
+Content-Type: application/json
+Content-Length: 123
+Digest: SHA-256=ZML76UQPYzw5yDTmhySnU1S8nmqGde/jhqOG5rpfVSI=
+{
+  "flow": "MATCH_CODE",
+  "amount_unit": 100,
+  "currency": "EUR"
+}
+🚧
+Notes
+
+Omit any leading or trailing optional whitespace in the header field value.
+
+When multiple instances of the same header field are present, combine their values by separating them with a comma and a space, and maintain the order in which they will appear in the transmitted HTTP message.
+Code sample 2/4
+
+PHP
+Node.js
+Java
+C# >= .NET 7
+Python
+Bash
+
+$bodyObject = [
+    'flow' => 'MATCH_CODE',
+    'amount_unit' => 100,
+    'currency' => 'EUR'
+];
+
+$body = json_encode($bodyObject);
+
+echo "body:\n";
+echo $body . "\n";
+
+$digest = "SHA-256=" . base64_encode(hash("sha256", $body, true));
+
+echo "\ndigest:\n";
+echo $digest . "\n";
+
+$date = date('r');
+
+echo "\ndate:\n";
+echo $date . "\n";
+
+$message = "(request-target): post /g_business/v1/payments
+host: staging.authservices.satispay.com
+date: $date
+digest: $digest";
+
+echo "\nmessage:\n";
+echo $message . "\n";
+🚧
+The message new lines must be treated as actual new line characters (creating a new line in the text) rather than as the literal string "\n".

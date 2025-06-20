@@ -26,11 +26,19 @@ const SATISPAY_BASE_URL = process.env.NODE_ENV === 'production'
   ? 'https://authservices.satispay.com' 
   : 'https://staging.authservices.satispay.com';
 
+function createDigest(body: string): string {
+  // Step 1 & 2: Hash with SHA256 and encode in base64
+  const hash = crypto.createHash('sha256').update(body, 'utf8').digest('base64');
+  // Step 3: Prefix with SHA-256=
+  return `SHA-256=${hash}`;
+}
+
 function generateSatispaySignature(
   method: string,
   path: string,
   body: string,
-  timestamp: string
+  timestamp: string,
+  digest: string
 ): string {
   if (!process.env.SATISPAY_KEY_ID || !process.env.SATISPAY_PRIVATE_KEY) {
     throw new Error("Satispay credentials not configured");
@@ -40,14 +48,18 @@ function generateSatispaySignature(
     ? 'authservices.satispay.com' 
     : 'staging.authservices.satispay.com';
 
-  const stringToSign = `(request-target): ${method.toLowerCase()} ${path}\nhost: ${host}\ndate: ${timestamp}\ndigest: SHA-256=${crypto.createHash('sha256').update(body).digest('base64')}`;
+  // Create the string to sign according to Satispay documentation
+  const stringToSign = `(request-target): ${method.toLowerCase()} ${path}\nhost: ${host}\ndate: ${timestamp}\ndigest: ${digest}`;
+  
+  console.log('String to sign:', stringToSign);
   
   // Handle private key with proper line breaks
   const privateKey = process.env.SATISPAY_PRIVATE_KEY.replace(/\\n/g, '\n');
   
-  const signature = crypto.sign('sha256', Buffer.from(stringToSign))
-    .update(privateKey)
-    .digest('base64');
+  // Create signature using RSA-SHA256
+  const signer = crypto.createSign('RSA-SHA256');
+  signer.update(stringToSign);
+  const signature = signer.sign(privateKey, 'base64');
 
   return `keyId="${process.env.SATISPAY_KEY_ID}",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="${signature}"`;
 }
@@ -60,8 +72,10 @@ async function makeSatispayRequest(
   const timestamp = new Date().toUTCString();
   const body = data ? JSON.stringify(data) : '';
   const path = endpoint;
-
-  const signature = generateSatispaySignature(method, path, body, timestamp);
+  
+  // Create digest according to Satispay documentation
+  const digest = createDigest(body);
+  const signature = generateSatispaySignature(method, path, body, timestamp, digest);
 
   const requestOptions: RequestInit = {
     method,
@@ -71,11 +85,14 @@ async function makeSatispayRequest(
         ? 'authservices.satispay.com' 
         : 'staging.authservices.satispay.com',
       'Date': timestamp,
-      'Digest': `SHA-256=${crypto.createHash('sha256').update(body).digest('base64')}`,
+      'Digest': digest,
       'Authorization': `Signature ${signature}`,
     },
     body: body || undefined,
   };
+
+  console.log('Satispay request headers:', requestOptions.headers);
+  console.log('Satispay request body:', body);
 
   const response = await fetch(`${SATISPAY_BASE_URL}${endpoint}`, requestOptions);
   
