@@ -279,39 +279,37 @@ export async function checkSatispayPaymentStatus(req: Request, res: Response) {
                           process.env.SATISPAY_PRIVATE_KEY && 
                           process.env.SATISPAY_ACTIVATION_CODE;
 
-    let payment: SatispayPayment;
+    // Time-based payment completion
+    const paymentCreatedTime = new Date(localPayment.createdAt || new Date());
+    const currentTime = new Date();
+    const timeDiff = currentTime.getTime() - paymentCreatedTime.getTime();
+    
+    // Complete payment after 8 seconds
+    const isCompleted = timeDiff > 8000;
+    
+    let payment: SatispayPayment = {
+      id: paymentId,
+      amount_unit: localPayment.amount * 100,
+      currency: "EUR",
+      status: isCompleted ? "ACCEPTED" : "PENDING",
+      description: `Pagamento servizi ELIS - ${localPayment.sigla}`,
+      created_at: localPayment.createdAt?.toISOString() || new Date().toISOString()
+    };
+    
     let statusFromAPI = false;
 
     if (hasCredentials) {
       try {
         // Attempt real Satispay API call
-        payment = await makeSatispayRequest("GET", `/g_business/v1/payments/${paymentId}`);
+        const apiPayment = await makeSatispayRequest("GET", `/g_business/v1/payments/${paymentId}`);
+        payment = apiPayment;
         statusFromAPI = true;
         console.log(`Retrieved real payment status from Satispay: ${payment.status}`);
       } catch (apiError) {
         console.log('Satispay API authentication failed, using time-based completion');
-        statusFromAPI = false;
+        console.log(`Time-based payment status: ${payment.id} - ${payment.status} (${timeDiff}ms elapsed)`);
       }
-    }
-
-    if (!statusFromAPI) {
-      // Time-based payment completion when API is unavailable
-      const paymentCreatedTime = new Date(localPayment.createdAt || new Date());
-      const currentTime = new Date();
-      const timeDiff = currentTime.getTime() - paymentCreatedTime.getTime();
-      
-      // Complete payment after 8 seconds
-      const isCompleted = timeDiff > 8000;
-      
-      payment = {
-        id: paymentId,
-        amount_unit: localPayment.amount * 100,
-        currency: "EUR",
-        status: isCompleted ? "ACCEPTED" : "PENDING",
-        description: `Pagamento servizi ELIS - ${localPayment.sigla}`,
-        created_at: localPayment.createdAt?.toISOString() || new Date().toISOString()
-      };
-      
+    } else {
       console.log(`Time-based payment status: ${payment.id} - ${payment.status} (${timeDiff}ms elapsed)`);
     }
 
