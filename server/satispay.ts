@@ -84,7 +84,12 @@ function generateSatispaySignature(
 
   console.log('Generated signature:', signature);
 
-  return `keyId="${process.env.SATISPAY_KEY_ID}",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="${signature}"`;
+  // Step 6: Compose the Authorization header according to Satispay specification
+  const authorizationHeader = `keyId="${process.env.SATISPAY_KEY_ID}", algorithm="rsa-sha256", headers="(request-target) host date digest", signature="${signature}"`;
+  
+  console.log('Authorization header created:', authorizationHeader);
+  
+  return authorizationHeader;
 }
 
 async function makeSatispayRequest(
