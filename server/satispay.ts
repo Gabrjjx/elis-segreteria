@@ -154,6 +154,13 @@ export async function createSatispayPayment(req: Request, res: Response) {
                           process.env.SATISPAY_PRIVATE_KEY && 
                           process.env.SATISPAY_ACTIVATION_CODE;
     
+    console.log('Satispay credentials check:', {
+      hasKeyId: !!process.env.SATISPAY_KEY_ID,
+      hasPrivateKey: !!process.env.SATISPAY_PRIVATE_KEY,
+      hasActivationCode: !!process.env.SATISPAY_ACTIVATION_CODE,
+      hasCredentials
+    });
+    
     let payment: SatispayPayment;
     
     if (hasCredentials) {
