@@ -1,465 +1,310 @@
-import { useState, useEffect } from "react";
-import { useLocation, useSearch } from "wouter";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Service, ServiceType } from "@shared/schema";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, CheckCircle, Search, Receipt, CalendarIcon, Filter } from "lucide-react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
 import { it } from "date-fns/locale";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Euro, 
+  Search, 
+  AlertTriangle, 
+  CheckCircle, 
+  Calendar,
+  User,
+  Hash
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { motion } from "framer-motion";
+
+interface Service {
+  id: number;
+  sigla: string;
+  cognome: string;
+  type: string;
+  amount: number;
+  status: string;
+  date: string;
+  notes?: string;
+}
 
 export default function PaymentsPage() {
-  const [, setLocation] = useLocation();
-  const search = useSearch();
-  const searchParams = new URLSearchParams(search);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
-  
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [totalAmount, setTotalAmount] = useState<number>(0);
-  
-  const [filters, setFilters] = useState({
-    query: searchParams.get("query") || "",
-    type: (searchParams.get("type") as string) || "all",
-    page: parseInt(searchParams.get("page") || "1"),
-    limit: parseInt(searchParams.get("limit") || "50") // Aumentato per vedere più pagamenti
-  });
-  
-  // Update filters when URL search params change
-  useEffect(() => {
-    const params = new URLSearchParams(search);
-    setFilters({
-      query: params.get("query") || "",
-      type: (params.get("type") as string) || "all",
-      page: parseInt(params.get("page") || "1"),
-      limit: parseInt(params.get("limit") || "50")
-    });
-  }, [search]);
+  const queryClient = useQueryClient();
 
-  // Create date filter for current month
-  const startDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
-  const endDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0, 23, 59, 59, 999);
-  
-  // Format dates for display
-  const formattedStartDate = format(startDate, "dd/MM/yyyy");
-  const formattedEndDate = format(endDate, "dd/MM/yyyy");
-  
-  // Format month for display in the header
-  const formattedMonth = format(selectedMonth, "MMMM yyyy", { locale: it });
-
-  // Fetch unpaid services with filters
-  const queryKey = ['/api/services', { ...filters, status: 'unpaid', startDate, endDate }];
-  
-  const { data, isLoading, refetch } = useQuery({
-    queryKey,
+  // Fetch unpaid services
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['/api/services', { status: 'unpaid', limit: 1000 }],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (filters.query) params.append("query", filters.query);
-      
-      // Verifica e stampa il valore di filters.type
-      console.log("Filtro per tipo:", filters.type);
-      
-      // Forza il filtro type per test
-      const typeToFilter = filters.type; // Usa il valore dai filtri
-      if (typeToFilter !== "all") {
-        params.append("type", typeToFilter);
-        console.log(`Filtrando servizi per tipo: ${typeToFilter}`);
+      const params = new URLSearchParams({
+        status: 'unpaid',
+        limit: '1000',
+        page: '1'
+      });
+      const response = await fetch(`/api/services?${params}`);
+      if (!response.ok) {
+        throw new Error('Errore nel caricamento dei pagamenti');
       }
-      
-      params.append("status", "unpaid");
-      params.append("page", filters.page.toString());
-      params.append("limit", filters.limit.toString());
-      params.append("startDate", startDate.toISOString());
-      params.append("endDate", endDate.toISOString());
-      
-      const url = `/api/services?${params.toString()}`;
-      console.log("Chiamata API:", url);
-      
-      // Log dettagliato dell'URL della richiesta
-      console.log(`Eseguendo richiesta a ${url}`);
-      console.log(`Filtri status=${params.get('status')}, type=${params.get('type')}`);
-      
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Errore nel caricamento dei pagamenti in sospeso");
-      
-      const data = await response.json();
-      
-      // Filtra i risultati lato client se necessario (dovrebbe essere già filtrato dal server)
-      if (typeToFilter !== "all") {
-        console.log(`Verifica risultati per tipo ${typeToFilter}:`, 
-          data.services.filter(s => s.type === typeToFilter).map(s => s.id));
-      }
-      
-      console.log("Risposta ricevuta:", data);
-      
-      return data;
+      return response.json();
     },
-    onSuccess: (data) => {
-      console.log('onSuccess chiamato con data:', data);
-      // Calcola il totale degli importi da pagare (solo servizi non pagati)
-      if (data && data.services) {
-        // Filtra solo i servizi con status="unpaid"
-        const unpaidServices = data.services.filter((service: Service) => service.status === 'unpaid');
-        console.log('Servizi non pagati:', unpaidServices);
-        
-        // Verifica se gli importi sono numeri validi
-        unpaidServices.forEach((service: Service) => {
-          console.log(`Servizio ${service.id}, importo: ${service.amount}, tipo: ${typeof service.amount}`);
-        });
-        
-        const total = unpaidServices.reduce((sum: number, service: Service) => {
-          const amount = typeof service.amount === 'number' ? service.amount : parseFloat(service.amount as any);
-          return sum + (isNaN(amount) ? 0 : amount);
-        }, 0);
-        
-        console.log('Totale calcolato:', total);
-        setTotalAmount(total);
-      } else {
-        console.log('Nessun dato valido, totale impostato a 0');
-        setTotalAmount(0);
-      }
-    }
   });
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Filtri applicati:", filters);
-    console.log("Intervallo di date:", { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
-    refetch();
-  };
-
-  // Marks a service as paid
-  const handleMarkAsPaid = async (id: number) => {
-    try {
-      await apiRequest("PATCH", `/api/services/${id}/mark-paid`);
-      
+  // Mark service as paid
+  const markAsPaidMutation = useMutation({
+    mutationFn: async (serviceId: number) => {
+      return apiRequest("PATCH", `/api/services/${serviceId}/mark-paid`, {});
+    },
+    onSuccess: () => {
       toast({
-        title: "Pagamento registrato",
-        description: "Il servizio è stato contrassegnato come pagato",
-        variant: "success",
+        title: "Pagamento confermato",
+        description: "Il servizio è stato marcato come pagato",
       });
-      
-      // Invalidate services queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['/api/services'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/pending-payments'] });
-    } catch (error) {
+    },
+    onError: (error) => {
       toast({
         title: "Errore",
         description: "Impossibile aggiornare lo stato del pagamento",
         variant: "destructive",
       });
-    }
-  };
+    },
+  });
 
-  // Get service type friendly name
-  const getServiceTypeName = (type: string): string => {
-    switch(type) {
-      case ServiceType.SIGLATURA: return "Siglatura";
-      case ServiceType.HAPPY_HOUR: return "Happy Hour";
-      case ServiceType.RIPARAZIONE: return "Riparazione";
+  const services = data?.services || [];
+  
+  // Filter services based on search term
+  const filteredServices = services.filter((service: Service) => 
+    service.sigla.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    service.cognome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    service.type.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Calculate totals
+  const totalAmount = filteredServices.reduce((sum: number, service: Service) => sum + service.amount, 0);
+  const totalServices = filteredServices.length;
+
+  const getServiceTypeLabel = (type: string) => {
+    switch (type) {
+      case 'siglatura': return 'Siglatura';
+      case 'happy_hour': return 'Happy Hour';
+      case 'riparazione': return 'Riparazione';
       default: return type;
     }
   };
 
+  const getServiceTypeBadge = (type: string) => {
+    switch (type) {
+      case 'siglatura':
+        return <Badge variant="default">Siglatura</Badge>;
+      case 'happy_hour':
+        return <Badge variant="secondary">Happy Hour</Badge>;
+      case 'riparazione':
+        return <Badge variant="destructive">Riparazione</Badge>;
+      default:
+        return <Badge variant="outline">{type}</Badge>;
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Errore nel caricamento dei dati</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <div className="mb-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-semibold text-gray-800">Gestione Pagamenti</h2>
-            <p className="text-gray-500 text-sm">Visualizza e gestisci i pagamenti in sospeso</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Pagamenti Pendenti</h1>
+            <p className="text-muted-foreground">
+              Gestisci i servizi in attesa di pagamento
+            </p>
           </div>
           
-          <div className="mt-4 md:mt-0 flex items-center">
-            <Popover open={showCalendar} onOpenChange={setShowCalendar}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-auto justify-start text-left font-normal py-2"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  <span className="capitalize">{formattedMonth}</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={selectedMonth}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedMonth(date);
-                      setShowCalendar(false);
-                      refetch();
-                    }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters section */}
-      <div className="bg-white shadow rounded-lg mb-6 overflow-hidden">
-        <div className="p-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Filtra pagamenti in sospeso</h3>
-          <p className="text-sm text-gray-500">
-            Periodo: <span className="font-medium">{formattedStartDate}</span> a <span className="font-medium">{formattedEndDate}</span>
-          </p>
-        </div>
-        
-        <div className="p-4">
-          <form onSubmit={handleSearchSubmit} className="space-y-3 md:space-y-0 md:flex md:items-end md:gap-4">
-            <div className="flex-1">
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700">Ricerca</label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-gray-400" />
-                </div>
-                <Input 
-                  id="search"
-                  placeholder="Cerca per sigla o altro..."
-                  className="pl-10"
-                  value={filters.query}
-                  onChange={(e) => setFilters(prev => ({ ...prev, query: e.target.value }))}
-                />
-              </div>
-            </div>
-            
-            <div className="w-full md:w-auto">
-              <label htmlFor="type" className="block text-sm font-medium text-gray-700">Tipologia</label>
-              <Select 
-                id="type"
-                value={filters.type}
-                onValueChange={(value) => {
-                  console.log("Selezionato tipo:", value);
-                  setFilters(prev => {
-                    const newFilters = { ...prev, type: value };
-                    console.log("Nuovi filtri impostati:", newFilters);
-                    return newFilters;
-                  });
-                  // Esegui immediatamente refetch quando cambia il tipo
-                  setTimeout(() => {
-                    console.log("Esecuzione refetch dopo cambio filtro tipo:", value);
-                    refetch();
-                  }, 100);
-                }}
-              >
-                <SelectTrigger className="w-full md:w-[180px] mt-1">
-                  <SelectValue placeholder="Tutte le tipologie" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutte le tipologie</SelectItem>
-                  <SelectItem value="siglatura">Siglatura</SelectItem>
-                  <SelectItem value="happy_hour">Happy Hour</SelectItem>
-                  <SelectItem value="riparazione">Riparazione</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <Button type="submit" className="w-full md:w-auto mt-1">
-              <Filter className="mr-2 h-4 w-4" />
-              Filtra
-            </Button>
-          </form>
-        </div>
-      </div>
-
-      {/* Riepilogo pagamenti */}
-      {!isLoading && data && data.services && data.services.length > 0 && (
-        <div className="bg-white shadow-md rounded-lg mb-6 overflow-hidden">
-          <div className="bg-blue-50 border-b border-blue-100 px-6 py-4">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <div>
-                <h3 className="text-lg font-semibold text-blue-900">Riepilogo pagamenti da riscuotere</h3>
-                <p className="text-sm text-blue-700 mt-1">
-                  Periodo: <span className="font-medium">{formattedMonth}</span>
-                </p>
-              </div>
-              <div className="mt-4 md:mt-0 bg-white shadow-sm rounded-md px-6 py-3 border border-blue-100">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700 mr-4">Totale da incassare:</span>
-                  <span className="text-xl font-bold text-destructive">
-                    €{(() => {
-                      // Calcola direttamente il totale qui per essere sicuri che sia aggiornato
-                      if (!data?.services) return "0.00";
-                      const unpaidServices = data.services.filter(s => s.status === 'unpaid');
-                      const total = unpaidServices.reduce((sum, s) => sum + Number(s.amount), 0);
-                      return total.toFixed(2);
-                    })()}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
-              <h4 className="text-sm font-medium text-gray-500">Totale servizi da pagare</h4>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {data?.services ? data.services.filter((service: Service) => service.status === 'unpaid').length : 0}
-              </p>
-            </div>
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
-              <h4 className="text-sm font-medium text-gray-500">Servizi visualizzati</h4>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {data?.services ? data.services.filter((service: Service) => service.status === 'unpaid').length : 0}
-              </p>
-            </div>
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
-              <h4 className="text-sm font-medium text-gray-500">Importo medio</h4>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {(() => {
-                  if (!data?.services) return "€0.00";
-                  const unpaidServices = data.services.filter(s => s.status === 'unpaid');
-                  const unpaidCount = unpaidServices.length;
-                  if (unpaidCount === 0) return "€0.00";
-                  
-                  // Calcola il totale direttamente per l'importo medio
-                  const total = unpaidServices.reduce((sum, s) => sum + Number(s.amount), 0);
-                  return `€${(total / unpaidCount).toFixed(2)}`;
-                })()}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Results section */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-4 py-5 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900">Pagamenti da riscuotere</h3>
-              <p className="text-sm text-gray-500">
-                {isLoading ? (
-                  "Caricamento pagamenti..."
-                ) : (
-                  (() => {
-                    const unpaidCount = data?.services ? data.services.filter((service: Service) => service.status === 'unpaid').length : 0;
-                    return unpaidCount ? 
-                      `${unpaidCount} pagamenti in sospeso su ${data?.total || 0} totali` : 
-                      "Nessun pagamento in sospeso";
-                  })()
-                )}
-              </p>
-            </div>
-            {(() => {
-              const unpaidCount = data?.services ? data.services.filter((service: Service) => service.status === 'unpaid').length : 0;
-              return unpaidCount > 0 ? (
-                <Badge variant="destructive" className="text-md px-3 py-1">
-                  <AlertTriangle className="mr-1 h-4 w-4" />
-                  {unpaidCount} pagamenti da riscuotere
-                </Badge>
-              ) : null;
-            })()}
-          </div>
-        </div>
-        
-        {isLoading ? (
-          <div className="p-6">
-            <Skeleton className="h-24 w-full mb-4" />
-            <Skeleton className="h-24 w-full mb-4" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {data?.services?.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Nessun pagamento in sospeso</h3>
-                <p className="text-gray-500 max-w-md">
-                  Tutti i servizi del periodo selezionato risultano pagati.
-                </p>
-              </div>
-            ) : (
-              data?.services?.filter((service: Service) => service.status === 'unpaid').map((service: Service) => (
-                <div key={service.id} className="p-6 hover:bg-gray-50 transition-colors">
-                  <div className="flex flex-col md:flex-row justify-between">
-                    <div className="flex flex-col mb-4 md:mb-0 md:pr-4 md:border-r md:border-gray-100 md:w-2/3">
-                      <div className="flex items-center mb-3">
-                        <div className="bg-red-50 text-destructive p-2 rounded-full mr-3">
-                          <AlertTriangle className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-lg font-medium text-gray-900">
-                            Sigla: {service.sigla}
-                          </h4>
-                          <span className="text-sm text-gray-500">
-                            {format(new Date(service.date), "dd MMMM yyyy", { locale: it })}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 mb-3">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <div className="flex items-center">
-                              <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
-                              <p className="text-sm font-medium text-gray-700">Tipologia</p>
-                            </div>
-                            <p className="mt-1 font-semibold pl-5">{getServiceTypeName(service.type)}</p>
-                          </div>
-                          <div>
-                            <div className="flex items-center">
-                              <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                              <p className="text-sm font-medium text-gray-700">N. Pezzi</p>
-                            </div>
-                            <p className="mt-1 font-semibold pl-5">{service.pieces}</p>
-                          </div>
-                          <div>
-                            <div className="flex items-center">
-                              <span className="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
-                              <p className="text-sm font-medium text-gray-700">Stato</p>
-                            </div>
-                            <p className="mt-1 font-semibold text-destructive pl-5">Non pagato</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {service.notes && (
-                        <div className="mt-2">
-                          <p className="text-sm font-medium text-gray-700 mb-1">Note:</p>
-                          <p className="text-sm text-gray-600 bg-yellow-50 p-2 rounded border border-yellow-100">
-                            {service.notes}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-col items-center md:items-end justify-center md:w-1/3 md:pl-4">
-                      <div className="bg-white shadow-sm rounded-lg p-5 border border-gray-100 mb-4 w-full md:w-auto text-center md:text-right">
-                        <p className="text-sm font-medium text-gray-500 mb-1">Importo da pagare</p>
-                        <p className="text-3xl font-bold text-destructive">€{service.amount.toFixed(2)}</p>
-                      </div>
-                      
-                      <Button 
-                        onClick={() => handleMarkAsPaid(service.id)}
-                        variant="default"
-                        size="lg"
-                        className="w-full md:w-auto font-semibold bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        <Receipt className="mr-2 h-5 w-5" />
-                        Segna come pagato
-                      </Button>
-                    </div>
+          {/* Summary Cards */}
+          <div className="flex space-x-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Hash className="h-4 w-4 text-blue-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Servizi</p>
+                    <p className="text-2xl font-bold">{totalServices}</p>
                   </div>
                 </div>
-              ))
-            )}
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Euro className="h-4 w-4 text-green-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Totale</p>
+                    <p className="text-2xl font-bold">€{totalAmount.toFixed(2)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        )}
-      </div>
-    </>
+        </div>
+      </motion.div>
+
+      {/* Search and Filters */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Search className="h-5 w-5" />
+              <span>Cerca Pagamenti</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex space-x-4">
+              <div className="flex-1">
+                <Input
+                  placeholder="Cerca per sigla, cognome o tipo servizio..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Services Table */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              <span>Servizi Non Pagati</span>
+            </CardTitle>
+            <CardDescription>
+              {totalServices} servizi per un totale di €{totalAmount.toFixed(2)}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-12 bg-muted animate-pulse rounded" />
+                ))}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Sigla</TableHead>
+                    <TableHead>Studente</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Importo</TableHead>
+                    <TableHead>Note</TableHead>
+                    <TableHead>Azioni</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredServices.map((service: Service) => (
+                    <TableRow key={service.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">
+                            {format(new Date(service.date), 'dd MMM yyyy', { locale: it })}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{service.sigla}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span>{service.cognome || 'N/A'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getServiceTypeBadge(service.type)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-1">
+                          <Euro className="h-4 w-4 text-green-600" />
+                          <span className="font-medium">€{service.amount.toFixed(2)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {service.notes || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          onClick={() => markAsPaidMutation.mutate(service.id)}
+                          disabled={markAsPaidMutation.isPending}
+                          className="flex items-center space-x-1"
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          <span>Marca Pagato</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            
+            {!isLoading && filteredServices.length === 0 && (
+              <div className="text-center py-8">
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Nessun pagamento pendente</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm ? 'Nessun risultato per la ricerca corrente' : 'Tutti i servizi sono stati pagati'}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
   );
 }

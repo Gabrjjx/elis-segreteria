@@ -29,7 +29,7 @@ export default function Header() {
     { name: "Servizi", href: "/services", icon: Shirt },
     { name: "Studenti", href: "/students", icon: Users },
     { name: "Manutenzioni", href: "/maintenance", icon: Wrench },
-    { name: "Pagamenti", href: "/secretariat-payment", icon: CreditCard },
+    { name: "Pagamenti", href: "/payments", icon: CreditCard },
     { name: "Report", href: "/reports", icon: FileText },
   ];
 
