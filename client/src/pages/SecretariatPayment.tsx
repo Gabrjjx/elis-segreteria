@@ -135,13 +135,46 @@ export default function SecretariatPayment() {
     },
   });
 
-  // Check for success parameter in URL
+  // Check for success parameter in URL and handle payment completion
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('success') === 'true') {
-      setPaymentState(prev => ({ ...prev, step: 'success' }));
+    const siglaParam = urlParams.get('sigla');
+    
+    if (urlParams.get('success') === 'true' && siglaParam) {
+      // Payment was successful, now we need to mark all services as paid
+      handlePaymentSuccess(siglaParam);
     }
   }, []);
+
+  const handlePaymentSuccess = async (sigla: string) => {
+    try {
+      // First get the pending services for this sigla
+      const response = await fetch(`/api/public/services/pending/${sigla}`);
+      const servicesData = await response.json();
+
+      if (response.ok && servicesData.pendingServices) {
+        // Mark all pending services as paid
+        const updatePromises = servicesData.pendingServices.map((service: any) =>
+          apiRequest("PATCH", `/api/services/${service.id}/mark-paid`, {})
+        );
+
+        await Promise.all(updatePromises);
+        
+        setPaymentState(prev => ({ 
+          ...prev, 
+          step: 'success',
+          sigla: sigla,
+          totalAmount: servicesData.totalAmount,
+          pendingServices: servicesData.pendingServices 
+        }));
+      } else {
+        setPaymentState(prev => ({ ...prev, step: 'success' }));
+      }
+    } catch (error) {
+      console.error("Errore nell'aggiornamento dei pagamenti:", error);
+      setPaymentState(prev => ({ ...prev, step: 'success' }));
+    }
+  };
 
   const handleFormSubmit = async (data: PaymentFormData) => {
     setIsLoading(true);
