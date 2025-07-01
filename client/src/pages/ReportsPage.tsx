@@ -57,11 +57,11 @@ interface DataPoint {
 }
 
 export default function ReportsPage() {
-  // Report filters state
+  // Report filters state - default to "all" to show all data
   const [filters, setFilters] = useState<ReportFilters>({
-    dateRange: "current_month",
-    startDate: startOfMonth(new Date()),
-    endDate: endOfMonth(new Date()),
+    dateRange: "all",
+    startDate: null,
+    endDate: null,
     serviceType: "all",
     paymentStatus: "all"
   });
@@ -421,12 +421,12 @@ export default function ReportsPage() {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="current_month">Mese corrente</SelectItem>
-                    <SelectItem value="last_month">Mese scorso</SelectItem>
-                    <SelectItem value="last_3_months">Ultimi 3 mesi</SelectItem>
-                    <SelectItem value="last_6_months">Ultimi 6 mesi</SelectItem>
-                    <SelectItem value="custom">Periodo personalizzato</SelectItem>
                     <SelectItem value="all">Tutti i periodi</SelectItem>
+                    <SelectItem value="last_6_months">Ultimi 6 mesi</SelectItem>
+                    <SelectItem value="last_3_months">Ultimi 3 mesi</SelectItem>
+                    <SelectItem value="last_month">Mese scorso</SelectItem>
+                    <SelectItem value="current_month">Mese corrente</SelectItem>
+                    <SelectItem value="custom">Periodo personalizzato</SelectItem>
                   </SelectContent>
                 </Select>
 
