@@ -210,29 +210,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard metrics
+  // Dashboard metrics - sempre mostra dati globali per overview
   app.get("/api/dashboard/metrics", async (req: Request, res: Response) => {
     try {
-      // Ottieni i parametri di filtro per le date se presenti
-      const filterParams: { startDate?: Date, endDate?: Date } = {};
-      
-      if (req.query.startDate) {
-        try {
-          filterParams.startDate = new Date(req.query.startDate as string);
-        } catch (e) {
-          console.error("Errore nella conversione della data di inizio:", e);
-        }
-      }
-      
-      if (req.query.endDate) {
-        try {
-          filterParams.endDate = new Date(req.query.endDate as string);
-        } catch (e) {
-          console.error("Errore nella conversione della data di fine:", e);
-        }
-      }
-      
-      const metrics = await storage.getServiceMetrics(filterParams);
+      // Per le metriche principali del dashboard, non usiamo filtri di data
+      // per mostrare sempre un overview completo del sistema
+      const metrics = await storage.getServiceMetrics();
       res.json(metrics);
     } catch (error) {
       console.error("Errore durante il recupero delle metriche:", error);

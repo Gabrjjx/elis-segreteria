@@ -36,12 +36,11 @@ export default function Dashboard() {
     return queryParams.toString();
   }, [filterPeriod]);
 
-  // Fetch dashboard metrics
+  // Fetch dashboard metrics - sempre globali per overview
   const { data: metrics, isLoading: isLoadingMetrics, error: metricsError } = useQuery({
-    queryKey: ['/api/dashboard/metrics', filterPeriod],
+    queryKey: ['/api/dashboard/metrics'],
     queryFn: async () => {
-      console.log('Fetching metrics with filter:', queryString);
-      const response = await fetch(`/api/dashboard/metrics?${queryString}`);
+      const response = await fetch('/api/dashboard/metrics');
       if (!response.ok) {
         throw new Error('Errore nel caricamento delle metriche');
       }
