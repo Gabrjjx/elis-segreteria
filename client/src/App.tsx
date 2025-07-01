@@ -8,6 +8,7 @@ import { LoadingProvider } from "@/contexts/loading-context";
 import { LanguageProvider } from "@/contexts/language-context";
 import { Loader2 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
+import Header from "@/components/layout/Header";
 import Dashboard from "@/pages/Dashboard";
 import ServicesPage from "@/pages/ServicesPage";
 import ServiceForm from "@/pages/ServiceForm";
@@ -95,29 +96,33 @@ function Router() {
           </PublicLayout>
         </Route>
         
-        {/* Rotte protette con MainLayout */}
+        {/* Rotte protette con nuovo layout moderno */}
         <Route>
-          <MainLayout>
-            <Switch>
-              <Route path="/dashboard" component={LazyDashboard} />
-              <Route path="/services" component={LazyServicesPage} />
-              <Route path="/services/new">
-                <LazyServiceForm />
-              </Route>
-              <Route path="/services/:id/edit">
-                {params => <ServiceForm id={params.id} />}
-              </Route>
-              <Route path="/payments" component={LazyPaymentsPage} />
-              <Route path="/reports" component={LazyReportsPage} />
-              <Route path="/reports/admin" component={LazyReportsAdmin} />
-              <Route path="/maintenance" component={LazyMaintenancePage} />
-              <Route path="/students" component={LazyStudentsPage} />
-              <Route path="/settings" component={LazySettingsPage} />
-              <Route path="/google-auth" component={LazyGoogleAuthPage} />
-              <Route path="/scanner" component={LazyQrScannerPage} />
-              <Route component={NotFound} />
-            </Switch>
-          </MainLayout>
+          <div className="min-h-screen bg-background">
+            <Header />
+            <main className="container mx-auto px-4 py-6">
+              <Switch>
+                <Route path="/" component={LazyDashboard} />
+                <Route path="/dashboard" component={LazyDashboard} />
+                <Route path="/services" component={LazyServicesPage} />
+                <Route path="/services/new">
+                  <LazyServiceForm />
+                </Route>
+                <Route path="/services/:id/edit">
+                  {params => <ServiceForm id={params.id} />}
+                </Route>
+                <Route path="/payments" component={LazyPaymentsPage} />
+                <Route path="/reports" component={LazyReportsPage} />
+                <Route path="/reports/admin" component={LazyReportsAdmin} />
+                <Route path="/maintenance" component={LazyMaintenancePage} />
+                <Route path="/students" component={LazyStudentsPage} />
+                <Route path="/settings" component={LazySettingsPage} />
+                <Route path="/google-auth" component={LazyGoogleAuthPage} />
+                <Route path="/scanner" component={LazyQrScannerPage} />
+                <Route component={NotFound} />
+              </Switch>
+            </main>
+          </div>
         </Route>
       </Switch>
     </Suspense>
