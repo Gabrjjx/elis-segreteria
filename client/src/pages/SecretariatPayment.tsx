@@ -26,12 +26,16 @@ const paymentSchema = z.object({
 
 type PaymentFormData = z.infer<typeof paymentSchema>;
 
+// Helper function for currency formatting
+const formatCurrency = (amount: number) => `€${amount.toFixed(2)}`;
+
 // Stripe Checkout Form Component
-function CheckoutForm({ clientSecret, onSuccess, onError, amount }: { 
+function CheckoutForm({ clientSecret, onSuccess, onError, amount, sigla }: { 
   clientSecret: string; 
   onSuccess: () => void; 
   onError: (error: string) => void;
   amount: number;
+  sigla: string;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -49,7 +53,7 @@ function CheckoutForm({ clientSecret, onSuccess, onError, amount }: {
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/secretariat-payment?success=true`,
+        return_url: `${window.location.origin}/secretariat-payment?success=true&sigla=${encodeURIComponent(sigla)}`,
       },
       redirect: "if_required",
     });
@@ -165,7 +169,8 @@ export default function SecretariatPayment() {
           step: 'success',
           sigla: sigla,
           totalAmount: servicesData.totalAmount,
-          pendingServices: servicesData.pendingServices 
+          pendingServices: servicesData.pendingServices,
+          paymentMethod: 'stripe'
         }));
       } else {
         setPaymentState(prev => ({ ...prev, step: 'success' }));
@@ -534,6 +539,7 @@ export default function SecretariatPayment() {
                 <CheckoutForm
                   clientSecret={paymentState.clientSecret}
                   amount={paymentState.totalAmount}
+                  sigla={paymentState.sigla}
                   onSuccess={() => setPaymentState(prev => ({ ...prev, step: 'success' }))}
                   onError={(error) => setPaymentState(prev => ({ ...prev, step: 'error', error }))}
                 />
@@ -675,10 +681,25 @@ export default function SecretariatPayment() {
                 </AlertDescription>
               </Alert>
               
-              <div className="space-y-2 text-sm">
-                <p>✓ {paymentState.pendingServices.length} servizi pagati</p>
-                <p>✓ Importo: {formatCurrency(paymentState.totalAmount)}</p>
-                <p>✓ Metodo: {paymentState.paymentMethod === 'stripe' ? 'Carta di Credito' : 'Satispay'}</p>
+              <div className="space-y-3 text-sm">
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="font-medium mb-2">Riepilogo pagamento:</p>
+                  <p>✓ Sigla: {paymentState.sigla}</p>
+                  <p>✓ {paymentState.pendingServices?.length || 0} servizi pagati</p>
+                  <p>✓ Importo totale: {formatCurrency(paymentState.totalAmount)}</p>
+                  <p>✓ Metodo: {paymentState.paymentMethod === 'stripe' ? 'Carta di Credito' : 'Satispay'}</p>
+                </div>
+                
+                {paymentState.pendingServices && paymentState.pendingServices.length > 0 && (
+                  <div className="bg-green-50 p-3 rounded-lg">
+                    <p className="font-medium text-green-800 mb-2">Servizi pagati:</p>
+                    {paymentState.pendingServices.map((service: any, index: number) => (
+                      <p key={index} className="text-green-700 text-xs">
+                        • {service.type} - {formatCurrency(service.amount)}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <Button onClick={() => window.location.href = '/'} className="w-full">

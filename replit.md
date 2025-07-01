@@ -119,6 +119,13 @@ This is a comprehensive web application for managing a residence's tailoring ser
 
 ## Changelog
 
+- July 01, 2025: Sistema versione 1.0.5 completato
+  - ✓ Implementato aggiornamento automatico database dopo pagamenti Stripe
+  - ✓ Sistema ora aggiorna automaticamente servizi da "unpaid" a "paid" post-pagamento
+  - ✓ Migliorata pagina di successo con dettagli completi sui servizi pagati
+  - ✓ Risolto problema filtri report - ora mostra "Tutti i periodi" come default
+  - ✓ Flusso di pagamento completamente funzionale e automatizzato
+
 - July 01, 2025: Sistema versione 1.0.4 completato
   - ✓ Risolto problema pagamento Roberto Martines (ID 57) aggiornato a "paid"
   - ✓ Migliorato webhook Satispay per aggiornamenti automatici di pagamento
