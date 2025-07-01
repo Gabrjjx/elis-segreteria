@@ -119,7 +119,16 @@ This is a comprehensive web application for managing a residence's tailoring ser
 
 ## Changelog
 
-- July 01, 2025. Initial setup
+- July 01, 2025: Sistema versione 1.0.4 completato
+  - ✓ Risolto problema pagamento Roberto Martines (ID 57) aggiornato a "paid"
+  - ✓ Migliorato webhook Satispay per aggiornamenti automatici di pagamento
+  - ✓ Nuovo header moderno con navigazione migliorata
+  - ✓ Dashboard ridisegnata con card animate e design moderno
+  - ✓ Interfaccia completamente responsive e ottimizzata
+  - ✓ Animazioni smooth con Framer Motion integrate
+  - ✓ Layout pulito e professionale pronto per produzione
+
+- July 01, 2025: Initial setup
 
 ## User Preferences
 
