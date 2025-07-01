@@ -377,7 +377,29 @@ export async function handleSatispayWebhook(req: Request, res: Response) {
       const paymentData = webhookData.data;
       
       if (paymentData.status === 'ACCEPTED') {
+        console.log(`✓ Webhook: Payment ${paymentData.id} ACCEPTED`);
+        
+        // Update payment status
         await storage.updateSecretariatPaymentStatus(paymentData.id, "completed");
+
+        // Find and update related services
+        const payment = await storage.getSecretariatPayment(paymentData.id);
+        if (payment && payment.sigla) {
+          const services = await storage.getServices({
+            sigla: payment.sigla,
+            status: "unpaid",
+            page: 1,
+            limit: 100
+          });
+
+          for (const service of services.services) {
+            await storage.updateService(service.id, { 
+              status: "paid"
+            });
+          }
+          
+          console.log(`✓ Webhook: Updated ${services.services.length} services to paid for ${payment.sigla}`);
+        }
         
         // Get payment details to update services
         const localPayment = await storage.getSecretariatPaymentByOrderId(paymentData.id);
