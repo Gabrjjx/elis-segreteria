@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle, CreditCard, User, Euro, AlertCircle, Loader2, X, Smartphone } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import ELISLoader, { ELISLoadingOverlay } from "@/components/ELISLoader";
 
 // Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -481,10 +482,12 @@ export default function SecretariatPayment() {
                   />
                   <Button type="submit" disabled={isLoading} className="w-full">
                     {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <div className="flex items-center gap-2">
+                        <div className="scale-75">
+                          <ELISLoader size="sm" text="" />
+                        </div>
                         Verifica...
-                      </>
+                      </div>
                     ) : (
                       "Continua"
                     )}
