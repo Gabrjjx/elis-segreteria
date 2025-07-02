@@ -9,6 +9,7 @@ import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
 import ServiceList from "@/components/services/ServicesList";
 import { Plus, Search, Filter, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import ELISLoader, { ELISInlineLoader } from "@/components/ELISLoader";
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import html2pdf from "html2pdf.js";
@@ -243,10 +244,86 @@ export default function Dashboard() {
 
       {/* Dashboard Metrics */}
       {isLoadingMetrics ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white rounded-lg shadow p-5 border-t-4 border-gray-300">
-              <Skeleton className="h-6 w-32 mb-2" />
+        <ELISInlineLoader 
+          text="Caricamento metriche dashboard..." 
+          size="lg"
+          className="py-12"
+        />
+      ) : metricsError ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p className="text-red-800">Errore nel caricamento delle metriche</p>
+        </div>
+      ) : (
+        <DashboardMetrics metrics={metrics} />
+      )}
+
+      {/* Servizi Recenti */}
+      <div className="bg-white rounded-lg shadow mb-6">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">
+            Servizi Recenti - {format(filterPeriod.startDate, 'dd/MM/yyyy')} - {format(filterPeriod.endDate, 'dd/MM/yyyy')}
+          </h3>
+        </div>
+        
+        {isLoadingServices ? (
+          <ELISInlineLoader 
+            text="Caricamento servizi recenti..." 
+            size="md"
+            className="py-8"
+          />
+        ) : servicesError ? (
+          <div className="p-6">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800">Errore nel caricamento dei servizi</p>
+            </div>
+          </div>
+        ) : services && services.length > 0 ? (
+          <div className="overflow-x-auto">
+            <ServiceList services={services} showActions={true} />
+          </div>
+        ) : (
+          <div className="p-6 text-center text-gray-500">
+            <p>Nessun servizio trovato per il periodo selezionato</p>
+          </div>
+        )}
+      </div>
+
+      {/* Pagamenti Pendenti */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">Pagamenti Pendenti</h3>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleExportToPDF}
+            className="ml-2"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Esporta PDF
+          </Button>
+        </div>
+        
+        {isLoadingPendingPayments ? (
+          <ELISInlineLoader 
+            text="Caricamento pagamenti pendenti..." 
+            size="md"
+            className="py-8"
+          />
+        ) : pendingPaymentsError ? (
+          <div className="p-6">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800">Errore nel caricamento dei pagamenti pendenti</p>
+            </div>
+          </div>
+        ) : pendingPayments && pendingPayments.length > 0 ? (
+          <div className="overflow-x-auto">
+            <ServiceList services={pendingPayments} showActions={true} />
+          </div>
+        ) : (
+          <div className="p-6 text-center text-gray-500">
+            <p>Nessun pagamento pendente trovato</p>
+          </div>
+        )}
               <Skeleton className="h-8 w-16 mb-3" />
               <Skeleton className="h-4 w-24" />
             </div>

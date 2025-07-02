@@ -776,11 +776,11 @@ export default function SecretariatPayment() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-center">
-              <Alert className="bg-green-50 border-green-200">
-                <AlertCircle className="h-4 w-4 text-green-600" />
-                <AlertTitle className="text-green-800">SumUp - Configurazione Completa</AlertTitle>
-                <AlertDescription className="text-green-700">
-                  Integrazione completamente configurata! API Key, Merchant Code (MCTXASKY) e credenziali pronte per pagamenti reali.
+              <Alert className="bg-amber-50 border-amber-200">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800">SumUp - Configurazione in Corso</AlertTitle>
+                <AlertDescription className="text-amber-700">
+                  Credenziali SumUp configurate (API Key, Client ID, Client Secret, Merchant Code MCTXASKY). Sistema pronto, attivazione account in corso.
                 </AlertDescription>
               </Alert>
               
