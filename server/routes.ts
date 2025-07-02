@@ -35,6 +35,16 @@ import {
   checkSatispayPaymentStatus,
   handleSatispayWebhook
 } from "./satispay";
+import {
+  createRevolutPayment,
+  checkRevolutPaymentStatus,
+  handleRevolutWebhook
+} from "./revolut";
+import {
+  createSumUpPayment,
+  checkSumUpPaymentStatus,
+  handleSumUpWebhook
+} from "./sumup";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes

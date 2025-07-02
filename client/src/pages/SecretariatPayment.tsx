@@ -714,6 +714,104 @@ export default function SecretariatPayment() {
           </Card>
         );
 
+      case 'revolut-payment':
+        return (
+          <Card className="w-full max-w-md mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-600">
+                <CreditCard className="h-5 w-5" />
+                Pagamento Revolut
+              </CardTitle>
+              <CardDescription>
+                Completa il pagamento tramite Revolut
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+              <Alert className="bg-blue-50 border-blue-200">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <AlertTitle className="text-blue-800">Integrazione Revolut</AlertTitle>
+                <AlertDescription className="text-blue-700">
+                  L'integrazione con Revolut sarà disponibile a breve. Per ora, utilizza Stripe o Satispay.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="text-center text-sm text-muted-foreground space-y-1 border-t pt-3">
+                <p className="font-medium">Importo: €{paymentState.totalAmount.toFixed(2)}</p>
+                <p className="text-xs">Metodo: Revolut</p>
+              </div>
+              
+              <Button 
+                onClick={() => setPaymentState(prev => ({ 
+                  ...prev, 
+                  step: 'success',
+                  paymentMethod: 'revolut'
+                }))}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Simula Pagamento Completato
+              </Button>
+              
+              <Button 
+                variant="outline"
+                onClick={() => setPaymentState(prev => ({ ...prev, step: 'method-selection' }))}
+                className="w-full"
+              >
+                Cambia Metodo di Pagamento
+              </Button>
+            </CardContent>
+          </Card>
+        );
+
+      case 'sumup-payment':
+        return (
+          <Card className="w-full max-w-md mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-teal-600">
+                <CreditCard className="h-5 w-5" />
+                Pagamento SumUp
+              </CardTitle>
+              <CardDescription>
+                Completa il pagamento tramite SumUp
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+              <Alert className="bg-teal-50 border-teal-200">
+                <AlertCircle className="h-4 w-4 text-teal-600" />
+                <AlertTitle className="text-teal-800">Integrazione SumUp</AlertTitle>
+                <AlertDescription className="text-teal-700">
+                  L'integrazione con SumUp sarà disponibile a breve. Per ora, utilizza Stripe o Satispay.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="text-center text-sm text-muted-foreground space-y-1 border-t pt-3">
+                <p className="font-medium">Importo: €{paymentState.totalAmount.toFixed(2)}</p>
+                <p className="text-xs">Metodo: SumUp</p>
+              </div>
+              
+              <Button 
+                onClick={() => setPaymentState(prev => ({ 
+                  ...prev, 
+                  step: 'success',
+                  paymentMethod: 'sumup'
+                }))}
+                className="w-full bg-teal-600 hover:bg-teal-700"
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Simula Pagamento Completato
+              </Button>
+              
+              <Button 
+                variant="outline"
+                onClick={() => setPaymentState(prev => ({ ...prev, step: 'method-selection' }))}
+                className="w-full"
+              >
+                Cambia Metodo di Pagamento
+              </Button>
+            </CardContent>
+          </Card>
+        );
+
       case 'processing':
         return (
           <Card className="w-full max-w-md mx-auto">
@@ -761,7 +859,13 @@ export default function SecretariatPayment() {
                   <p>✓ Sigla: {paymentState.sigla}</p>
                   <p>✓ {paymentState.pendingServices?.length || 0} servizi pagati</p>
                   <p>✓ Importo totale: {formatCurrency(paymentState.totalAmount)}</p>
-                  <p>✓ Metodo: {paymentState.paymentMethod === 'stripe' ? 'Carta di Credito' : 'Satispay'}</p>
+                  <p>✓ Metodo: {
+                    paymentState.paymentMethod === 'stripe' ? 'Carta di Credito' :
+                    paymentState.paymentMethod === 'satispay' ? 'Satispay' :
+                    paymentState.paymentMethod === 'revolut' ? 'Revolut' :
+                    paymentState.paymentMethod === 'sumup' ? 'SumUp' :
+                    'Non specificato'
+                  }</p>
                 </div>
                 
                 {paymentState.pendingServices && paymentState.pendingServices.length > 0 && (
