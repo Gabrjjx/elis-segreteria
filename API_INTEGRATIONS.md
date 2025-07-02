@@ -65,23 +65,28 @@ Questo documento descrive le integrazioni dei metodi di pagamento implementati n
   - Verifica: `/api/public/sumup-status/:paymentId`
   - Webhook: `/api/sumup/webhook`
 
-#### TODO per implementazione reale SumUp:
-1. **Registrazione Merchant Account**:
-   - Creare account business su SumUp
-   - Ottenere API credentials (Client ID, Client Secret, API Key)
-   
-2. **API Integration**:
-   - Sostituire mock con chiamate reali a SumUp API
-   - Implementare OAuth2 flow per autenticazione
-   - Configurare checkout flow con redirect URL
+#### Status attuale SumUp:
+- **Credenziali configurate**: API Key aggiornata (sup_sk_uDiN9VvfuPxWvzwmw7Nye7MamPGZsRvcW)
+- **Problema**: Errore 401 "Unauthorized" dall'API SumUp 
+- **Causa possibile**: Potrebbe essere necessario attivare l'account merchant o utilizzare un endpoint diverso
+- **Framework pronto**: Il codice è configurato per passare automaticamente alla vera API quando l'autenticazione funzionerà
 
-3. **Environment Variables richieste**:
+#### TODO per implementazione reale SumUp:
+1. **Autenticazione OAuth2**:
+   - Implementare OAuth2 flow per ottenere access token
+   - Utilizzare Client ID e Client Secret per generare token
+   
+2. **Environment Variables disponibili**:
    ```
-   SUMUP_API_KEY=your_api_key_here
-   SUMUP_CLIENT_ID=your_client_id_here
-   SUMUP_CLIENT_SECRET=your_client_secret_here
-   SUMUP_ENVIRONMENT=sandbox|production
+   SUMUP_CLIENT_ID=cc_classic_qnryshy761l79cY1g14dhi1Z8OuOs
+   SUMUP_CLIENT_SECRET=sup_sk_uDiN9VvfuPxWvzwmw7Nye7MamPGZsRvcW
+   SUMUP_API_KEY=sup_pk_dtyTM642aHsLzV2l6YULjbzokZGsS68ov
    ```
+
+3. **Prossimi step**:
+   - Implementare OAuth2 token exchange
+   - Utilizzare access token per le chiamate API
+   - Testare con credenziali di produzione
 
 4. **Documentazione API**:
    - [SumUp REST API Documentation](https://developer.sumup.com/docs/)

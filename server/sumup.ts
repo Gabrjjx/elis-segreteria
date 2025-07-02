@@ -74,7 +74,7 @@ export async function createSumUpPayment(req: Request, res: Response) {
       const response = await fetch(`${apiBaseUrl}/v0.1/checkouts`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.SUMUP_CLIENT_SECRET}`,
+          'Authorization': `Bearer ${process.env.SUMUP_API_KEY}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(checkoutData)
