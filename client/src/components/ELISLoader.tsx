@@ -156,3 +156,37 @@ export function ELISInlineLoader({
     </div>
   );
 }
+
+// Table Loading Component for Service Lists
+export function ELISTableLoader({ 
+  rows = 5,
+  text = "Caricamento servizi..."
+}: {
+  rows?: number;
+  text?: string;
+}) {
+  return (
+    <div className="p-6">
+      <div className="flex items-center justify-center mb-6">
+        <ELISLoader size="md" text={text} />
+      </div>
+      
+      <div className="space-y-3">
+        {Array.from({ length: rows }).map((_, i) => (
+          <motion.div
+            key={i}
+            className="h-16 bg-gray-100 rounded-lg"
+            animate={{
+              opacity: [0.5, 1, 0.5]
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              delay: i * 0.1
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}

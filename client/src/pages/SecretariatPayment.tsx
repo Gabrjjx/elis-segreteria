@@ -956,6 +956,13 @@ export default function SecretariatPayment() {
         </div>
         {renderStep()}
       </div>
+      
+      {/* Loading overlay during payment processing */}
+      <ELISLoadingOverlay 
+        isVisible={isLoading && paymentState.step === 'method-selection'} 
+        text="Elaborazione pagamento in corso..."
+        size="lg"
+      />
     </div>
   );
 }
