@@ -96,10 +96,10 @@ interface PendingService {
   date: string;
 }
 
-type PaymentMethod = 'stripe' | 'satispay';
+type PaymentMethod = 'stripe' | 'satispay' | 'revolut' | 'sumup';
 
 interface PaymentState {
-  step: 'input' | 'services' | 'method-selection' | 'stripe-payment' | 'satispay-payment' | 'processing' | 'success' | 'error';
+  step: 'input' | 'services' | 'method-selection' | 'stripe-payment' | 'satispay-payment' | 'revolut-payment' | 'sumup-payment' | 'processing' | 'success' | 'error';
   sigla: string;
   customerName: string;
   customerEmail: string;
@@ -235,6 +235,10 @@ export default function SecretariatPayment() {
       initializeStripePayment();
     } else if (method === 'satispay') {
       initializeSatispayPayment();
+    } else if (method === 'revolut') {
+      initializeRevolutPayment();
+    } else if (method === 'sumup') {
+      initializeSumUpPayment();
     }
   };
 
@@ -354,6 +358,54 @@ export default function SecretariatPayment() {
         }));
       }
     }, 300000);
+  };
+
+  const initializeRevolutPayment = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Per Revolut, temporaneamente utilizzo un approccio simile a Stripe
+      // In futuro si può integrare la Revolut Merchant API
+      setPaymentState(prev => ({
+        ...prev,
+        step: 'revolut-payment',
+        paymentMethod: 'revolut'
+      }));
+
+    } catch (error: any) {
+      console.error("Errore nel pagamento Revolut:", error);
+      setPaymentState(prev => ({
+        ...prev,
+        step: 'error',
+        error: error.message || 'Errore nella creazione del pagamento Revolut'
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const initializeSumUpPayment = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Per SumUp, temporaneamente utilizzo un approccio simile
+      // In futuro si può integrare la SumUp API
+      setPaymentState(prev => ({
+        ...prev,
+        step: 'sumup-payment',
+        paymentMethod: 'sumup'
+      }));
+
+    } catch (error: any) {
+      console.error("Errore nel pagamento SumUp:", error);
+      setPaymentState(prev => ({
+        ...prev,
+        step: 'error',
+        error: error.message || 'Errore nella creazione del pagamento SumUp'
+      }));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const formatCurrency = (amount: number) => `€${amount.toFixed(2)}`;
@@ -500,6 +552,28 @@ export default function SecretariatPayment() {
                   <div className="text-left">
                     <div className="font-semibold">Satispay</div>
                     <div className="text-sm text-orange-100">Pagamento mobile</div>
+                  </div>
+                </Button>
+
+                <Button
+                  onClick={() => handlePaymentMethodSelection('revolut')}
+                  className="flex items-center justify-center gap-2 h-16 bg-blue-600 hover:bg-blue-700"
+                >
+                  <CreditCard className="h-6 w-6" />
+                  <div className="text-left">
+                    <div className="font-semibold text-white">Revolut</div>
+                    <div className="text-sm text-blue-100">Pagamento digitale</div>
+                  </div>
+                </Button>
+
+                <Button
+                  onClick={() => handlePaymentMethodSelection('sumup')}
+                  className="flex items-center justify-center gap-2 h-16 bg-teal-600 hover:bg-teal-700"
+                >
+                  <CreditCard className="h-6 w-6" />
+                  <div className="text-left">
+                    <div className="font-semibold text-white">SumUp</div>
+                    <div className="text-sm text-teal-100">Pagamento veloce</div>
                   </div>
                 </Button>
               </div>
