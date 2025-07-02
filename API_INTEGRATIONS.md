@@ -86,6 +86,10 @@ Questo documento descrive le integrazioni dei metodi di pagamento implementati n
 4. **Documentazione API**:
    - [SumUp REST API Documentation](https://developer.sumup.com/docs/)
 
+5. **URL di Redirect**:
+   - Per l'app in produzione: `https://your-replit-domain.replit.app/payment-success`
+   - Per sviluppo locale: `http://localhost:5000/payment-success`
+
 ## Architettura Frontend
 
 ### Interfaccia Utente

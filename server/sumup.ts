@@ -48,7 +48,7 @@ export async function createSumUpPayment(req: Request, res: Response) {
       checkout_reference: `checkout_${Math.random().toString(36).substr(2, 9)}`,
       next_step: {
         action: 'redirect',
-        url: `${req.protocol}://${req.get('host')}/secretariat-payment?success=true&sigla=${sigla}`
+        url: `${req.protocol}://${req.get('host')}/payment-success?payment_id=${`sumup_${Date.now()}`}&method=sumup&amount=${amount}&sigla=${sigla}`
       },
       metadata: {
         sigla: sigla,

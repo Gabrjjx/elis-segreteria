@@ -36,6 +36,7 @@ const LazySecretariatPayment = lazy(() => import("@/pages/SecretariatPayment"));
 const LazyReportsAdmin = lazy(() => import("@/pages/ReportsAdmin"));
 const LazySatispayPayment = lazy(() => import("@/pages/SatispayPayment"));
 const LazyPaymentSelection = lazy(() => import("@/pages/PaymentSelection"));
+const LazyPaymentSuccess = lazy(() => import("@/pages/PaymentSuccess"));
 
 function LoadingFallback() {
   return null; // Nessun indicatore di caricamento
@@ -93,6 +94,13 @@ function Router() {
         <Route path="/payment">
           <PublicLayout>
             <LazyPaymentSelection />
+          </PublicLayout>
+        </Route>
+
+        {/* Rotta pubblica per la pagina di successo pagamento */}
+        <Route path="/payment-success">
+          <PublicLayout>
+            <LazyPaymentSuccess />
           </PublicLayout>
         </Route>
         
