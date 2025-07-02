@@ -292,9 +292,10 @@ export default function Dashboard() {
       )}
 
       {/* Servizi Recenti */}
-      <div className="bg-white rounded-lg shadow mb-6">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
+      <div className="premium-card rounded-2xl mb-8 overflow-hidden">
+        <div className="px-8 py-6 bg-gradient-to-r from-blue-50/50 to-indigo-50/30 border-b border-blue-100/40">
+          <h3 className="text-xl leading-6 font-bold text-gray-800 flex items-center">
+            <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
             Servizi Recenti - {format(filterPeriod.startDate, 'dd/MM/yyyy')} - {format(filterPeriod.endDate, 'dd/MM/yyyy')}
           </h3>
         </div>
@@ -323,14 +324,15 @@ export default function Dashboard() {
       </div>
 
       {/* Pagamenti Pendenti */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">Pagamenti Pendenti</h3>
+      <div className="premium-card rounded-2xl overflow-hidden">
+        <div className="px-8 py-6 bg-gradient-to-r from-amber-50/50 to-orange-50/30 border-b border-amber-100/40 flex justify-between items-center">
+          <h3 className="text-xl leading-6 font-bold text-gray-800 flex items-center">
+            <span className="w-2 h-2 bg-amber-500 rounded-full mr-3"></span>
+            Pagamenti Pendenti
+          </h3>
           <Button 
-            variant="outline" 
-            size="sm" 
             onClick={handleExportToPDF}
-            className="ml-2"
+            className="btn-premium text-sm"
           >
             <Download className="h-4 w-4 mr-2" />
             Esporta PDF

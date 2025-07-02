@@ -2,6 +2,133 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Advanced gradients and modern design */
+@layer base {
+  * {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  body {
+    @apply font-sans antialiased;
+    background: linear-gradient(135deg, 
+      hsl(var(--background)) 0%, 
+      hsl(217, 40%, 98%) 25%,
+      hsl(210, 40%, 96%) 50%,
+      hsl(217, 40%, 98%) 75%,
+      hsl(var(--background)) 100%
+    );
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  /* Glass morphism effect */
+  .glass {
+    @apply backdrop-blur-xl bg-white/80 border border-white/20 shadow-xl;
+  }
+  
+  .glass-dark {
+    @apply backdrop-blur-xl bg-gray-900/80 border border-gray-700/20 shadow-xl;
+  }
+  
+  /* Premium card styles */
+  .premium-card {
+    @apply bg-gradient-to-br from-white via-white to-blue-50/30 
+           border border-blue-100/50 shadow-lg shadow-blue-100/20
+           hover:shadow-xl hover:shadow-blue-200/30 hover:border-blue-200/60
+           transform hover:-translate-y-1;
+  }
+  
+  /* Advanced button styles */
+  .btn-premium {
+    @apply bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600
+           text-white font-semibold px-6 py-3 rounded-xl
+           shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-600/40
+           transform hover:-translate-y-0.5 hover:scale-105
+           border border-blue-400/30;
+  }
+  
+  .btn-success {
+    @apply bg-gradient-to-r from-emerald-600 via-green-500 to-teal-600
+           text-white font-semibold px-6 py-3 rounded-xl
+           shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-600/40
+           transform hover:-translate-y-0.5 hover:scale-105
+           border border-emerald-400/30;
+  }
+  
+  .btn-warning {
+    @apply bg-gradient-to-r from-amber-600 via-orange-500 to-red-500
+           text-white font-semibold px-6 py-3 rounded-xl
+           shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-600/40
+           transform hover:-translate-y-0.5 hover:scale-105
+           border border-amber-400/30;
+  }
+  
+  /* Status indicators with glow */
+  .status-paid {
+    @apply bg-gradient-to-r from-emerald-500 to-green-600 text-white
+           shadow-lg shadow-emerald-500/30 border border-emerald-400/40;
+  }
+  
+  .status-unpaid {
+    @apply bg-gradient-to-r from-red-500 to-rose-600 text-white
+           shadow-lg shadow-red-500/30 border border-red-400/40;
+  }
+  
+  .status-pending {
+    @apply bg-gradient-to-r from-amber-500 to-orange-600 text-white
+           shadow-lg shadow-amber-500/30 border border-amber-400/40;
+  }
+  
+  /* Enhanced table styles */
+  .premium-table {
+    @apply bg-white/90 backdrop-blur-sm border border-gray-100/60 shadow-xl;
+  }
+  
+  .premium-table th {
+    @apply bg-gradient-to-r from-gray-50 to-blue-50/50 text-gray-700 font-semibold
+           border-b border-gray-200/60;
+  }
+  
+  .premium-table tr:hover {
+    @apply bg-gradient-to-r from-blue-50/30 to-indigo-50/20 transform scale-[1.001];
+  }
+  
+  /* Floating action styles */
+  .floating-action {
+    @apply fixed bottom-8 right-8 z-50
+           bg-gradient-to-r from-blue-600 to-indigo-600
+           text-white p-4 rounded-full shadow-2xl shadow-blue-600/40
+           hover:shadow-3xl hover:shadow-blue-700/50
+           transform hover:scale-110 hover:-translate-y-1
+           border-2 border-blue-400/30;
+  }
+  
+  /* Advanced input styles */
+  .premium-input {
+    @apply bg-gradient-to-r from-white to-blue-50/20
+           border border-blue-200/40 focus:border-blue-400/60
+           focus:shadow-lg focus:shadow-blue-200/30
+           rounded-xl px-4 py-3;
+  }
+  
+  /* Navigation enhancements */
+  .premium-nav {
+    @apply bg-gradient-to-r from-white via-white to-blue-50/30
+           backdrop-blur-xl border-b border-blue-100/40
+           shadow-lg shadow-blue-100/20;
+  }
+  
+  /* Metric card enhancements */
+  .metric-card {
+    @apply bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/20
+           border border-blue-100/50 shadow-lg shadow-blue-100/20
+           hover:shadow-xl hover:shadow-blue-200/30
+           transform hover:-translate-y-1 hover:scale-[1.02]
+           rounded-2xl p-6;
+  }
+}
+
 :root {
   /* Base colors */
   --background: 0 0% 100%;

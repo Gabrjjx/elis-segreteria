@@ -40,16 +40,26 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4">
-        {/* Logo */}
-        <div className="flex items-center space-x-2">
+    <header className="premium-nav sticky top-0 z-50 w-full">
+      <div className="container flex h-20 items-center justify-between px-6">
+        {/* Enhanced Logo */}
+        <div className="flex items-center space-x-3">
           <Link href="/">
-            <div className="flex items-center space-x-2 cursor-pointer">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-                <Shirt className="h-4 w-4 text-white" />
+            <div className="flex items-center space-x-3 cursor-pointer group">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 
+                            flex items-center justify-center shadow-lg group-hover:shadow-xl 
+                            transform group-hover:scale-105 transition-all duration-300
+                            border-2 border-white/20">
+                <Shirt className="h-6 w-6 text-white" />
               </div>
-              <span className="font-bold text-xl">ELIS Admin</span>
+              <div className="flex flex-col">
+                <span className="font-black text-2xl bg-gradient-to-r from-gray-800 to-blue-600 bg-clip-text text-transparent">
+                  ELIS
+                </span>
+                <span className="text-sm font-medium text-gray-500 -mt-1">
+                  Administration
+                </span>
+              </div>
             </div>
           </Link>
         </div>
