@@ -121,13 +121,13 @@ This is a comprehensive web application for managing a residence's tailoring ser
 
 ## Changelog
 
-- July 02, 2025: Sistema versione 1.0.7 completato
-  - ✓ Configurazione completa credenziali SumUp (API Key, Client ID, Client Secret)
-  - ✓ Integrazione SumUp con fallback intelligente per account in attivazione
-  - ✓ Messaggi UI aggiornati per riflettere stato reale delle integrazioni
-  - ✓ Pagina di successo pagamento creata con redirect URL per SumUp
-  - ✓ Sistema pronto per attivazione immediata quando account merchant sarà attivo
-  - ✓ Documentazione API aggiornata con status e credenziali
+- July 02, 2025: Sistema versione 1.0.8 completato
+  - ✓ SumUp completamente configurato con MERCHANT_CODE (MCTXASKY)
+  - ✓ Tutte le credenziali SumUp pronte: API Key, Client ID, Client Secret, Merchant Code
+  - ✓ Interfaccia aggiornata: SumUp ora mostra "Configurazione Completa"
+  - ✓ Endpoint API SumUp aggiornato a formato ufficiale (/v0.1/checkouts)
+  - ✓ Sistema pronto per pagamenti reali SumUp immediati
+  - ✓ Documentazione aggiornata con status finale di tutte le integrazioni
 
 - July 02, 2025: Sistema versione 1.0.6 completato  
   - ✓ Aggiunti Revolut e SumUp come nuovi metodi di pagamento

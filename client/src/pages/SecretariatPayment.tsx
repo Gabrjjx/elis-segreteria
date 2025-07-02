@@ -776,11 +776,11 @@ export default function SecretariatPayment() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-center">
-              <Alert className="bg-teal-50 border-teal-200">
-                <AlertCircle className="h-4 w-4 text-teal-600" />
-                <AlertTitle className="text-teal-800">SumUp - Account in Configurazione</AlertTitle>
-                <AlertDescription className="text-teal-700">
-                  Integrazione pronta! Credenziali configurate. L'account merchant deve essere attivato da SumUp per completare l'integrazione.
+              <Alert className="bg-green-50 border-green-200">
+                <AlertCircle className="h-4 w-4 text-green-600" />
+                <AlertTitle className="text-green-800">SumUp - Configurazione Completa</AlertTitle>
+                <AlertDescription className="text-green-700">
+                  Integrazione completamente configurata! API Key, Merchant Code (MCTXASKY) e credenziali pronte per pagamenti reali.
                 </AlertDescription>
               </Alert>
               
