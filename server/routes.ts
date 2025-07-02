@@ -1843,6 +1843,66 @@ RifID: ${hashId}`
     }
   });
 
+  // Endpoint pubblico per creare un pagamento Revolut
+  app.post("/api/public/revolut-payment", async (req: Request, res: Response) => {
+    try {
+      await createRevolutPayment(req, res);
+    } catch (error) {
+      console.error("Errore nella creazione del pagamento Revolut:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Endpoint per verificare lo stato del pagamento Revolut
+  app.get("/api/public/revolut-status/:paymentId", async (req: Request, res: Response) => {
+    try {
+      await checkRevolutPaymentStatus(req, res);
+    } catch (error) {
+      console.error("Errore nella verifica del pagamento Revolut:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Webhook Revolut
+  app.post("/api/revolut/webhook", async (req: Request, res: Response) => {
+    try {
+      await handleRevolutWebhook(req, res);
+    } catch (error) {
+      console.error("Errore nel webhook Revolut:", error);
+      res.status(500).json({ message: "Errore nell'elaborazione del webhook" });
+    }
+  });
+
+  // Endpoint pubblico per creare un pagamento SumUp
+  app.post("/api/public/sumup-payment", async (req: Request, res: Response) => {
+    try {
+      await createSumUpPayment(req, res);
+    } catch (error) {
+      console.error("Errore nella creazione del pagamento SumUp:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Endpoint per verificare lo stato del pagamento SumUp
+  app.get("/api/public/sumup-status/:paymentId", async (req: Request, res: Response) => {
+    try {
+      await checkSumUpPaymentStatus(req, res);
+    } catch (error) {
+      console.error("Errore nella verifica del pagamento SumUp:", error);
+      res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Webhook SumUp
+  app.post("/api/sumup/webhook", async (req: Request, res: Response) => {
+    try {
+      await handleSumUpWebhook(req, res);
+    } catch (error) {
+      console.error("Errore nel webhook SumUp:", error);
+      res.status(500).json({ message: "Errore nell'elaborazione del webhook" });
+    }
+  });
+
   // Endpoint per verificare lo stato del pagamento
   app.get("/api/public/payment-status/:orderId", async (req: Request, res: Response) => {
     try {

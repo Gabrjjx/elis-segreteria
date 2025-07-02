@@ -34,6 +34,8 @@ This is a comprehensive web application for managing a residence's tailoring ser
   - PayPal SDK integration for online payments
   - Stripe integration for credit card processing
   - Satispay API for mobile payments (Italian market)
+  - Revolut integration (development framework ready)
+  - SumUp integration (development framework ready)
 - **Public Payment Interface**: Self-service payment portal for students
 - **Receipt Generation**: Automated HTML receipt generation with PDF export capability
 
@@ -118,6 +120,13 @@ This is a comprehensive web application for managing a residence's tailoring ser
 - **Port Configuration**: Optimized for Replit's hosting environment
 
 ## Changelog
+
+- July 02, 2025: Sistema versione 1.0.6 completato
+  - ✓ Aggiunti Revolut e SumUp come nuovi metodi di pagamento
+  - ✓ Interfaccia utente aggiornata con 4 opzioni di pagamento: Stripe, Satispay, Revolut, SumUp
+  - ✓ Framework backend preparato per future integrazioni API reali
+  - ✓ Mock payment implementations pronte per testing
+  - ✓ Route API complete per tutti i metodi di pagamento
 
 - July 01, 2025: Sistema versione 1.0.5 completato
   - ✓ Implementato aggiornamento automatico database dopo pagamenti Stripe
