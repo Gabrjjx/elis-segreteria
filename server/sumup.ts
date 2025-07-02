@@ -1,5 +1,12 @@
 import { Request, Response } from "express";
 
+// Helper function to extract sigla from description
+function extractSiglaFromDescription(description: string): string | null {
+  // Look for patterns like "Pagamento servizi ELIS - 157"
+  const match = description.match(/(?:sigla|ELIS)\s*-?\s*(\d+)/i);
+  return match ? match[1] : null;
+}
+
 interface SumUpPaymentRequest {
   sigla: string;
   amount: number;
@@ -38,34 +45,63 @@ export async function createSumUpPayment(req: Request, res: Response) {
       });
     }
 
-    // Mock payment creation - replace with actual SumUp API call
-    const mockPayment: SumUpPayment = {
-      id: `sumup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      amount: amount,
+    if (!process.env.SUMUP_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        message: "Configurazione SumUp non completa"
+      });
+    }
+
+    // Determine the API base URL (sandbox vs production)
+    const apiBaseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://api.sumup.com' 
+      : 'https://api.sandbox.sumup.com';
+
+    // Real SumUp API call
+    const checkoutData = {
+      amount: parseFloat(amount.toFixed(2)),
       currency: 'EUR',
-      status: 'PENDING',
       description: description || `Pagamento servizi ELIS - ${sigla}`,
-      checkout_reference: `checkout_${Math.random().toString(36).substr(2, 9)}`,
-      next_step: {
-        action: 'redirect',
-        url: `${req.protocol}://${req.get('host')}/payment-success?payment_id=${`sumup_${Date.now()}`}&method=sumup&amount=${amount}&sigla=${sigla}`
-      },
-      metadata: {
-        sigla: sigla,
-        customerName: customerName
-      },
-      created_at: new Date().toISOString()
+      return_url: `${req.protocol}://${req.get('host')}/payment-success?payment_id=sumup_checkout&method=sumup&amount=${amount}&sigla=${sigla}`,
+      personal_details: {
+        first_name: customerName.split(' ')[0] || customerName,
+        last_name: customerName.split(' ').slice(1).join(' ') || '',
+        email: `${sigla}@elis.org`
+      }
     };
 
-    console.log('SumUp payment created (mock):', mockPayment);
+    console.log('Creating SumUp checkout with data:', checkoutData);
+    console.log('Using SumUp API URL:', `${apiBaseUrl}/v0.1/checkouts`);
+
+    const response = await fetch(`${apiBaseUrl}/v0.1/checkouts`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SUMUP_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(checkoutData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('SumUp API error:', response.status, errorData);
+      return res.status(response.status).json({
+        success: false,
+        message: `Errore SumUp API: ${response.status}`,
+        details: errorData
+      });
+    }
+
+    const checkoutResponse = await response.json();
+    console.log('SumUp checkout created:', checkoutResponse);
 
     res.json({
       success: true,
-      paymentId: mockPayment.id,
-      checkout_reference: mockPayment.checkout_reference,
-      redirect_url: mockPayment.next_step?.url,
-      status: mockPayment.status,
-      message: "Pagamento SumUp creato con successo (modalità sviluppo)"
+      paymentId: checkoutResponse.id,
+      checkout_reference: checkoutResponse.checkout_reference,
+      redirect_url: checkoutResponse.checkout_url || checkoutResponse.next_step?.url,
+      status: checkoutResponse.status,
+      message: "Pagamento SumUp creato con successo"
     });
 
   } catch (error: any) {
@@ -93,22 +129,49 @@ export async function checkSumUpPaymentStatus(req: Request, res: Response) {
       });
     }
 
-    // Mock status check - replace with actual SumUp API call
-    const mockStatus = {
-      id: paymentId,
-      status: 'PAID', // SumUp uses 'PAID' for successful payments
-      localStatus: 'completed',
-      amount: 0, // This would come from the actual API
-      currency: 'EUR',
-      date: new Date().toISOString(),
-      transaction_code: `txn_${Math.random().toString(36).substr(2, 9)}`
-    };
+    if (!process.env.SUMUP_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        message: "Configurazione SumUp non completa"
+      });
+    }
 
-    console.log('SumUp payment status check (mock):', mockStatus);
+    // Real SumUp API call to check checkout status
+    const response = await fetch(`https://api.sumup.com/v0.1/checkouts/${paymentId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${process.env.SUMUP_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('SumUp status check error:', response.status, errorData);
+      return res.status(response.status).json({
+        success: false,
+        message: `Errore verifica stato SumUp: ${response.status}`,
+        details: errorData
+      });
+    }
+
+    const checkoutStatus = await response.json();
+    console.log('SumUp payment status:', checkoutStatus);
+
+    // Transform SumUp status to our format
+    const status = {
+      id: paymentId,
+      status: checkoutStatus.status,
+      localStatus: checkoutStatus.status === 'PAID' ? 'completed' : 'pending',
+      amount: checkoutStatus.amount,
+      currency: checkoutStatus.currency,
+      date: checkoutStatus.date,
+      transaction_code: checkoutStatus.transaction_code
+    };
 
     res.json({
       success: true,
-      ...mockStatus
+      ...status
     });
 
   } catch (error: any) {
@@ -131,11 +194,37 @@ export async function handleSumUpWebhook(req: Request, res: Response) {
     
     console.log('SumUp webhook received (mock):', webhookData);
 
-    // Mock webhook processing
-    // In a real implementation, you would:
-    // 1. Verify the webhook signature
-    // 2. Process the payment status update
-    // 3. Update the database accordingly
+    // Real SumUp webhook processing
+    console.log('SumUp webhook received:', webhookData);
+
+    // SumUp webhook events typically include: checkout.updated, transaction.created
+    if (webhookData.event_type === 'checkout.updated' || webhookData.event_type === 'transaction.created') {
+      const checkout = webhookData.checkout || webhookData.data;
+      
+      if (checkout && checkout.status === 'PAID') {
+        // Extract sigla from checkout metadata or description
+        const sigla = checkout.metadata?.sigla || extractSiglaFromDescription(checkout.description);
+        
+        if (sigla) {
+          try {
+            // Import storage for database operations
+            const { storage } = await import('./storage');
+            
+            // Mark services as paid for this sigla
+            const services = await storage.getServices({ sigla, status: 'unpaid' });
+            for (const service of services.data) {
+              await storage.updateService(service.id, { 
+                status: 'paid', 
+                paymentMethod: 'sumup' 
+              });
+            }
+            console.log(`SumUp payment completed for sigla: ${sigla}`);
+          } catch (dbError) {
+            console.error('Error updating database from SumUp webhook:', dbError);
+          }
+        }
+      }
+    }
 
     res.status(200).json({
       success: true,
