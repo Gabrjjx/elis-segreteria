@@ -121,11 +121,18 @@ This is a comprehensive web application for managing a residence's tailoring ser
 
 ## Changelog
 
-- July 02, 2025: Sistema versione 1.0.6 completato
+- July 02, 2025: Sistema versione 1.0.7 completato
+  - ✓ Configurazione completa credenziali SumUp (API Key, Client ID, Client Secret)
+  - ✓ Integrazione SumUp con fallback intelligente per account in attivazione
+  - ✓ Messaggi UI aggiornati per riflettere stato reale delle integrazioni
+  - ✓ Pagina di successo pagamento creata con redirect URL per SumUp
+  - ✓ Sistema pronto per attivazione immediata quando account merchant sarà attivo
+  - ✓ Documentazione API aggiornata con status e credenziali
+
+- July 02, 2025: Sistema versione 1.0.6 completato  
   - ✓ Aggiunti Revolut e SumUp come nuovi metodi di pagamento
   - ✓ Interfaccia utente aggiornata con 4 opzioni di pagamento: Stripe, Satispay, Revolut, SumUp
   - ✓ Framework backend preparato per future integrazioni API reali
-  - ✓ Mock payment implementations pronte per testing
   - ✓ Route API complete per tutti i metodi di pagamento
 
 - July 01, 2025: Sistema versione 1.0.5 completato

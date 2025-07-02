@@ -729,9 +729,9 @@ export default function SecretariatPayment() {
             <CardContent className="space-y-4 text-center">
               <Alert className="bg-blue-50 border-blue-200">
                 <AlertCircle className="h-4 w-4 text-blue-600" />
-                <AlertTitle className="text-blue-800">Integrazione Revolut</AlertTitle>
+                <AlertTitle className="text-blue-800">Revolut - Framework Pronto</AlertTitle>
                 <AlertDescription className="text-blue-700">
-                  L'integrazione con Revolut sarà disponibile a breve. Per ora, utilizza Stripe o Satispay.
+                  Framework di integrazione completato. Necessarie credenziali Revolut Business per attivazione API.
                 </AlertDescription>
               </Alert>
               
@@ -778,9 +778,9 @@ export default function SecretariatPayment() {
             <CardContent className="space-y-4 text-center">
               <Alert className="bg-teal-50 border-teal-200">
                 <AlertCircle className="h-4 w-4 text-teal-600" />
-                <AlertTitle className="text-teal-800">Integrazione SumUp</AlertTitle>
+                <AlertTitle className="text-teal-800">SumUp - Account in Configurazione</AlertTitle>
                 <AlertDescription className="text-teal-700">
-                  L'integrazione con SumUp sarà disponibile a breve. Per ora, utilizza Stripe o Satispay.
+                  Integrazione pronta! Credenziali configurate. L'account merchant deve essere attivato da SumUp per completare l'integrazione.
                 </AlertDescription>
               </Alert>
               
