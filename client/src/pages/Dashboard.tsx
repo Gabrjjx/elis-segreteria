@@ -82,10 +82,36 @@ export default function Dashboard() {
     }
   });
 
-
+  // Fetch pending payments
+  const { data: pendingPayments, isLoading: isLoadingPendingPayments, error: pendingPaymentsError } = useQuery({
+    queryKey: ['/api/dashboard/pending-payments', filterPeriod],
+    queryFn: async () => {
+      const response = await fetch(`/api/dashboard/pending-payments?${queryString}`);
+      if (!response.ok) {
+        throw new Error('Errore nel caricamento dei pagamenti pendenti');
+      }
+      return response.json();
+    },
+    retry: 1,
+    retryDelay: 2000
+  });
 
   const handleAddNewService = () => {
     setLocation("/services/new");
+  };
+
+  const handleExportToPDF = async () => {
+    try {
+      // Generate and download PDF report
+      await handleExportServices();
+    } catch (error) {
+      console.error('Errore durante l\'export PDF:', error);
+      toast({
+        title: "Errore nell'export",
+        description: "Si è verificato un errore durante la generazione del PDF.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleExportServices = async () => {
@@ -254,7 +280,15 @@ export default function Dashboard() {
           <p className="text-red-800">Errore nel caricamento delle metriche</p>
         </div>
       ) : (
-        <DashboardMetrics metrics={metrics} />
+        <DashboardMetrics metrics={metrics || {
+          totalServices: 0,
+          pendingPayments: 0,
+          siglaturaCount: 0,
+          happyHourCount: 0,
+          repairCount: 0,
+          totalAmount: 0,
+          pendingAmount: 0
+        }} />
       )}
 
       {/* Servizi Recenti */}
@@ -277,9 +311,9 @@ export default function Dashboard() {
               <p className="text-red-800">Errore nel caricamento dei servizi</p>
             </div>
           </div>
-        ) : services && services.length > 0 ? (
+        ) : recentServices && Array.isArray(recentServices) && recentServices.length > 0 ? (
           <div className="overflow-x-auto">
-            <ServiceList services={services} showActions={true} />
+            <ServiceList services={recentServices} />
           </div>
         ) : (
           <div className="p-6 text-center text-gray-500">
@@ -315,9 +349,9 @@ export default function Dashboard() {
               <p className="text-red-800">Errore nel caricamento dei pagamenti pendenti</p>
             </div>
           </div>
-        ) : pendingPayments && pendingPayments.length > 0 ? (
+        ) : pendingPayments && Array.isArray(pendingPayments) && pendingPayments.length > 0 ? (
           <div className="overflow-x-auto">
-            <ServiceList services={pendingPayments} showActions={true} />
+            <ServiceList services={pendingPayments} />
           </div>
         ) : (
           <div className="p-6 text-center text-gray-500">
