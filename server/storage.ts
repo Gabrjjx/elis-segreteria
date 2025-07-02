@@ -1026,7 +1026,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPendingPayments(dateFilter?: { startDate?: Date, endDate?: Date }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]> {
-    let query = db.select({
+    // Build the conditions array
+    const conditions = [eq(services.status, PaymentStatus.UNPAID)];
+    
+    // Add date filters if present
+    if (dateFilter?.startDate) {
+      conditions.push(gte(services.date, dateFilter.startDate));
+    }
+    if (dateFilter?.endDate) {
+      conditions.push(lte(services.date, dateFilter.endDate));
+    }
+    
+    const query = db.select({
       service: services,
       student: {
         // Map the database snake_case to camelCase for frontend
@@ -1036,17 +1047,10 @@ export class DatabaseStorage implements IStorage {
     })
     .from(services)
     .leftJoin(students, eq(services.sigla, students.sigla))
-    .where(eq(services.status, PaymentStatus.UNPAID));
+    .where(and(...conditions))
+    .orderBy(desc(services.date));
     
-    // Applicare i filtri di data se presenti
-    if (dateFilter?.startDate) {
-      query = query.where(gte(services.date, dateFilter.startDate));
-    }
-    if (dateFilter?.endDate) {
-      query = query.where(lte(services.date, dateFilter.endDate));
-    }
-    
-    const results = await query.orderBy(desc(services.date));
+    const results = await query;
     
     // Trasforma i risultati nel formato atteso
     return results.map(result => ({
