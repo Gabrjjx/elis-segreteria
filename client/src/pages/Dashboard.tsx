@@ -10,6 +10,7 @@ import ServiceList from "@/components/services/ServicesList";
 import { Plus, Search, Filter, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import ELISLoader, { ELISInlineLoader } from "@/components/ELISLoader";
+import FloatingActionButton from "@/components/ui/floating-action-button";
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import html2pdf from "html2pdf.js";
@@ -361,6 +362,9 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      
+      {/* Floating Action Button */}
+      <FloatingActionButton />
     </>
   );
 }
