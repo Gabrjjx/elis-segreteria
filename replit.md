@@ -121,7 +121,15 @@ This is a comprehensive web application for managing a residence's tailoring ser
 
 ## Changelog
 
-- July 02, 2025: Sistema versione 1.0.9 completato - FINALE
+- July 02, 2025: Sistema versione 1.1.0 completato - LOADING ANIMATIONS
+  - ✓ ELIS Loading Components: Mascotte animata ELIS College con simboli accademici
+  - ✓ Spinner personalizzati: Design rotating con lettere "E" stilizzate e pallini animati
+  - ✓ Componenti multipli: ELISLoader, ELISLoadingOverlay, ELISInlineLoader, ELISTableLoader
+  - ✓ Integrazione completa: Payment forms, dashboard, processing states
+  - ✓ Animazioni smooth: Framer Motion per transizioni professionali
+  - ✓ Sistema user experience elevato con brand identity ELIS
+  
+- July 02, 2025: Sistema versione 1.0.9 completato
   - ✓ SumUp: Tutte le credenziali configurate (API Key, Client ID, Client Secret, MERCHANT_CODE MCTXASKY)
   - ✓ SumUp: Endpoint aggiornato a formato ufficiale API (/v0.1/checkouts)
   - ✓ SumUp: Fallback intelligente attivo durante attivazione account merchant
