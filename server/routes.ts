@@ -1966,6 +1966,16 @@ RifID: ${hashId}`
     }
   });
 
+  // Debug endpoint for SumUp environment variables
+  app.get("/api/sumup-env-debug", async (req: Request, res: Response) => {
+    res.json({
+      SUMUP_API_KEY: process.env.SUMUP_API_KEY ? 'Present' : 'Missing',
+      SUMUP_CLIENT_ID: process.env.SUMUP_CLIENT_ID ? 'Present' : 'Missing', 
+      SUMUP_CLIENT_SECRET: process.env.SUMUP_CLIENT_SECRET ? 'Present' : 'Missing',
+      SUMUP_MERCHANT_CODE: process.env.SUMUP_MERCHANT_CODE ? `Present: ${process.env.SUMUP_MERCHANT_CODE}` : 'Missing'
+    });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
