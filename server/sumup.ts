@@ -48,25 +48,36 @@ export async function createSumUpPayment(req: Request, res: Response) {
     if (!process.env.SUMUP_API_KEY) {
       return res.status(500).json({
         success: false,
-        message: "Configurazione SumUp non completa"
+        message: "Configurazione SumUp non completa - API Key mancante"
       });
+    }
+
+    // Check if merchant_code is available (required by SumUp API)
+    const merchantCode = process.env.SUMUP_MERCHANT_CODE;
+    if (!merchantCode) {
+      console.log('SUMUP_MERCHANT_CODE not configured, using fallback mode');
     }
 
     // Real SumUp API Integration
     const apiBaseUrl = 'https://api.sumup.com';
     
-    // Prepare checkout data for SumUp API
-    const checkoutData = {
+    // Generate unique checkout reference
+    const checkoutReference = `elis_${sigla}_${Date.now()}`;
+    
+    // Prepare checkout data according to SumUp API documentation
+    const checkoutData: any = {
+      checkout_reference: checkoutReference,
       amount: parseFloat(amount.toFixed(2)),
       currency: 'EUR',
       description: description || `Pagamento servizi ELIS - ${sigla}`,
-      return_url: `${req.protocol}://${req.get('host')}/payment-success?payment_id=sumup_checkout&method=sumup&amount=${amount}&sigla=${sigla}`,
-      personal_details: {
-        first_name: customerName.split(' ')[0] || customerName,
-        last_name: customerName.split(' ').slice(1).join(' ') || '',
-        email: `${sigla}@elis.org`
-      }
+      return_url: `${req.protocol}://${req.get('host')}/payment-success?payment_id=${checkoutReference}&method=sumup&amount=${amount}&sigla=${sigla}`,
+      redirect_url: `${req.protocol}://${req.get('host')}/payment-success?payment_id=${checkoutReference}&method=sumup&amount=${amount}&sigla=${sigla}`
     };
+
+    // Add merchant_code if available
+    if (merchantCode) {
+      checkoutData.merchant_code = merchantCode;
+    }
 
     console.log('Creating SumUp checkout with data:', checkoutData);
 

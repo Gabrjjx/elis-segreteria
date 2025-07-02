@@ -1,0 +1,408 @@
+umUp REST API
+
+SumUp’s REST API operates with JSON HTTP requests and responses. The request bodies are sent through resource-oriented URLs and use the standard HTTP response codes.
+You can experiment and work on your integration in a sandbox that doesn't affect your regular data and doesn't process real transactions. To create a sandbox merchant account visit the dashboard. To use the sandbox when interacting with SumUp APIs create an API key and use it for authentication.
+Server URL
+https://api.sumup.com
+Checkouts
+
+Accept payments from your end users by adding the Checkouts model to your platform. SumUp supports standard and single payment 3DS checkout flows.
+The Checkout model allows creating, listing, retrieving, processing and deactivating checkouts. A payment is completed by creating a checkout and then processing the checkout.
+The Checkout object
+
+Details of the payment checkout.
+Attributes
+checkout_reference  string
+Unique ID of the payment checkout specified by the client application when creating the checkout resource.
+amount  number
+Amount of the payment.
+Example: 10.1
+currency  string
+Three-letter ISO4217 code of the currency for the amount. Currently supported currency values are enumerated above.
+Example: "EUR"
+pay_to_email  string
+pay_to_email is deprecated, use merchant_code instead.
+Email address of the registered user (merchant) to whom the payment is made.
+merchant_code  string
+Unique identifying code of the merchant profile.
+description  string
+Short description of the checkout visible in the SumUp dashboard. The description can contribute to reporting, allowing easier identification of a checkout.
+return_url  string
+URL to which the SumUp platform sends the processing status of the payment checkout.
+id  string
+Unique ID of the checkout resource.
+Example: "4e425463-3e1b-431d-83fa-1e51c2925e99"
+status  string
+Options: 
+PENDING
+FAILED
+PAID
+Current status of the checkout.
+date  string
+Date and time of the creation of the payment checkout. Response format expressed according to ISO8601 code.
+Example: "2020-02-29T10:56:56+00:00"
+valid_until  string
+Date and time of the checkout expiration before which the client application needs to send a processing request. If no value is present, the checkout does not have an expiration time.
+Example: "2020-02-29T10:56:56+00:00"
+customer_id  string
+Unique identification of a customer. If specified, the checkout session and payment instrument are associated with the referenced customer.
+Example: "831ff8d4cd5958ab5670"
+mandate  object
+Created mandate
+ Show attributes
+Example: {"type":"recurrent","status":"active","merchant_code":"MDASYTPD"}
+transactions  []object
+List of transactions related to the payment.
+ Show attributes
+The Checkout object
+{
+  "checkout_reference": null,
+  "amount": 10.1,
+  "currency": "EUR",
+  "pay_to_email": null,
+  "merchant_code": null,
+  "description": null,
+  "return_url": null,
+  "id": "4e425463-3e1b-431d-83fa-1e51c2925e99",
+  "status": null,
+  "date": "2020-02-29T10:56:56+00:00",
+  "valid_until": "2020-02-29T10:56:56+00:00",
+  "customer_id": "831ff8d4cd5958ab5670",
+  "mandate": {
+    "type": "recurrent",
+    "status": "active",
+    "merchant_code": "MDASYTPD"
+  },
+  "transactions": [
+    {
+      "id": "6b425463-3e1b-431d-83fa-1e51c2925e99",
+      "transaction_code": "TEENSK4W2K",
+      "amount": 10.1,
+      "currency": "EUR",
+      "timestamp": "2020-02-29T10:56:56.876Z",
+      "status": null,
+      "payment_type": null,
+      "installments_count": null,
+      "merchant_code": "MH4H92C7",
+      "vat_amount": 6,
+      "tip_amount": 3,
+      "entry_mode": null,
+      "auth_code": "053201",
+      "internal_id": 1763892018
+    }
+  ]
+}
+Checkouts
+List checkouts
+
+Lists created checkout resources according to the applied checkout_reference.
+Scopes: payments
+Query Parameters
+checkout_reference  string
+Response 200
+ []object
+ Show attributes
+Response 401
+GET  /v0.1/checkouts
+curl https://api.sumup.com/v0.1/checkouts
+List checkouts response
+[
+  {
+    "checkout_reference": null,
+    "amount": 10.1,
+    "currency": "EUR",
+    "pay_to_email": null,
+    "merchant_code": null,
+    "description": null,
+    "return_url": null,
+    "id": "4e425463-3e1b-431d-83fa-1e51c2925e99",
+    "status": null,
+    "date": "2020-02-29T10:56:56+00:00",
+    "valid_until": "2020-02-29T10:56:56+00:00",
+    "customer_id": "831ff8d4cd5958ab5670",
+    "mandate": {
+      "type": "recurrent",
+      "status": "active",
+      "merchant_code": "MDASYTPD"
+    },
+    "transactions": [
+      {
+        "id": "6b425463-3e1b-431d-83fa-1e51c2925e99",
+        "transaction_code": "TEENSK4W2K",
+        "amount": 10.1,
+        "currency": "EUR",
+        "timestamp": "2020-02-29T10:56:56.876Z",
+        "status": null,
+        "payment_type": null,
+        "installments_count": null,
+        "merchant_code": "MH4H92C7",
+        "vat_amount": 6,
+        "tip_amount": 3,
+        "entry_mode": null,
+        "auth_code": "053201",
+        "internal_id": 1763892018
+      }
+    ],
+    "transaction_code": "TEENSK4W2K",
+    "transaction_id": "410fc44a-5956-44e1-b5cc-19c6f8d727a4",
+    "merchant_name": "Sample Merchant",
+    "redirect_url": "https://mysite.com/completed_purchase",
+    "payment_instrument": {
+      "token": "e76d7e5c-9375-4fac-a7e7-b19dc5302fbc"
+    }
+  }
+]
+Checkouts
+Create a checkout
+
+Creates a new payment checkout resource. The unique checkout_reference created by this request, is used for further manipulation of the checkout.
+For 3DS checkouts, add the redirect_url parameter to your request body schema.
+Follow by processing a checkout to charge the provided payment instrument.
+Scopes: payments
+Body Parameters
+checkout_reference  string  required
+Unique ID of the payment checkout specified by the client application when creating the checkout resource.
+amount  number  required
+Amount of the payment.
+currency  string  required
+Three-letter ISO4217 code of the currency for the amount. Currently supported currency values are enumerated above.
+Example: "EUR"
+merchant_code  string  required
+Unique identifying code of the merchant profile.
+pay_to_email  string
+pay_to_email is deprecated, use merchant_code instead.
+Email address of the registered user (merchant) to whom the payment is made.
+description  string
+Short description of the checkout visible in the SumUp dashboard. The description can contribute to reporting, allowing easier identification of a checkout.
+return_url  string
+URL to which the SumUp platform sends the processing status of the payment checkout.
+customer_id  string
+Unique identification of a customer. If specified, the checkout session and payment instrument are associated with the referenced customer.
+purpose  string
+Options: 
+CHECKOUT
+SETUP_RECURRING_PAYMENT
+Purpose of the checkout.
+id  string
+Unique ID of the checkout resource.
+status  string
+Options: 
+PENDING
+FAILED
+PAID
+Current status of the checkout.
+date  string
+Date and time of the creation of the payment checkout. Response format expressed according to ISO8601 code.
+Example: "2020-02-29T10:56:56+00:00"
+valid_until  string
+Date and time of the checkout expiration before which the client application needs to send a processing request. If no value is present, the checkout does not have an expiration time.
+Example: "2020-02-29T10:56:56+00:00"
+transactions  []object
+List of transactions related to the payment.
+ Show attributes
+redirect_url  string
+Required for APMs and recommended for card payments. Refers to a url where the end user is redirected once the payment processing completes. If not specified, the Payment Widget renders 3DS challenge within an iframe instead of performing a full-page redirect.
+Example: "https://mysite.com/completed_purchase"
+Response 201
+checkout_reference  string
+Unique ID of the payment checkout specified by the client application when creating the checkout resource.
+amount  number
+Amount of the payment.
+Example: 10.1
+currency  string
+Three-letter ISO4217 code of the currency for the amount. Currently supported currency values are enumerated above.
+Example: "EUR"
+pay_to_email  string
+pay_to_email is deprecated, use merchant_code instead.
+Email address of the registered user (merchant) to whom the payment is made.
+merchant_code  string
+Unique identifying code of the merchant profile.
+description  string
+Short description of the checkout visible in the SumUp dashboard. The description can contribute to reporting, allowing easier identification of a checkout.
+return_url  string
+URL to which the SumUp platform sends the processing status of the payment checkout.
+id  string
+Unique ID of the checkout resource.
+Example: "4e425463-3e1b-431d-83fa-1e51c2925e99"
+status  string
+Options: 
+PENDING
+FAILED
+PAID
+Current status of the checkout.
+date  string
+Date and time of the creation of the payment checkout. Response format expressed according to ISO8601 code.
+Example: "2020-02-29T10:56:56+00:00"
+valid_until  string
+Date and time of the checkout expiration before which the client application needs to send a processing request. If no value is present, the checkout does not have an expiration time.
+Example: "2020-02-29T10:56:56+00:00"
+customer_id  string
+Unique identification of a customer. If specified, the checkout session and payment instrument are associated with the referenced customer.
+Example: "831ff8d4cd5958ab5670"
+mandate  object
+Created mandate
+ Show attributes
+Example: {"type":"recurrent","status":"active","merchant_code":"MDASYTPD"}
+transactions  []object
+List of transactions related to the payment.
+ Show attributes
+Response 400
+Response 401
+Response 403
+Response 409
+POST  /v0.1/checkouts
+curl https://api.sumup.com/v0.1/checkouts
+Response
+
+Standard response body for a successfully created checkout
+{
+  "checkout_reference": "8ea25ec3-3293-40e9-a165-6d7f3b3073c5",
+  "amount": 10.1,
+  "currency": "EUR",
+  "merchant_code": "MCNPLE22",
+  "merchant_country": "DE",
+  "description": "My Checkout",
+  "return_url": "http://example.com",
+  "id": "88fcf8de-304d-4820-8f1c-ec880290eb92",
+  "status": "PENDING",
+  "date": "2020-02-29T10:56:56+00:00",
+  "valid_until": "2020-02-29T10:56:56+00:00",
+  "customer_id": "831ff8d4cd5958ab5670",
+  "mandate": {
+    "type": "recurrent",
+    "status": "active",
+    "merchant_code": "MDASYTPD"
+  },
+  "transactions": [
+    {
+      "id": "410fc44a-5956-44e1-b5cc-19c6f8d727a4",
+      "transaction_code": "TEENSK4W2K",
+      "amount": 10.1,
+      "currency": "EUR",
+      "timestamp": "2020-02-29T10:56:56.876Z",
+      "status": "SUCCESSFUL",
+      "payment_type": "ECOM",
+      "installments_count": 1,
+      "merchant_code": "MH4H92C7",
+      "vat_amount": 6,
+      "tip_amount": 3,
+      "entry_mode": "CUSTOMER_ENTRY",
+      "auth_code": "012345",
+      "internal_id": 0
+    }
+  ]
+}
+Checkouts
+Retrieve a checkout
+
+Retrieves an identified checkout resource. Use this request after processing a checkout to confirm its status and inform the end user respectively.
+Scopes: payments
+Path Parameters
+id  string  required
+Response 200
+checkout_reference  string
+Unique ID of the payment checkout specified by the client application when creating the checkout resource.
+amount  number
+Amount of the payment.
+Example: 10.1
+currency  string
+Three-letter ISO4217 code of the currency for the amount. Currently supported currency values are enumerated above.
+Example: "EUR"
+pay_to_email  string
+pay_to_email is deprecated, use merchant_code instead.
+Email address of the registered user (merchant) to whom the payment is made.
+merchant_code  string
+Unique identifying code of the merchant profile.
+description  string
+Short description of the checkout visible in the SumUp dashboard. The description can contribute to reporting, allowing easier identification of a checkout.
+return_url  string
+URL to which the SumUp platform sends the processing status of the payment checkout.
+id  string
+Unique ID of the checkout resource.
+Example: "4e425463-3e1b-431d-83fa-1e51c2925e99"
+status  string
+Options: 
+PENDING
+FAILED
+PAID
+Current status of the checkout.
+date  string
+Date and time of the creation of the payment checkout. Response format expressed according to ISO8601 code.
+Example: "2020-02-29T10:56:56+00:00"
+valid_until  string
+Date and time of the checkout expiration before which the client application needs to send a processing request. If no value is present, the checkout does not have an expiration time.
+Example: "2020-02-29T10:56:56+00:00"
+customer_id  string
+Unique identification of a customer. If specified, the checkout session and payment instrument are associated with the referenced customer.
+Example: "831ff8d4cd5958ab5670"
+mandate  object
+Created mandate
+ Show attributes
+Example: {"type":"recurrent","status":"active","merchant_code":"MDASYTPD"}
+transactions  []object
+List of transactions related to the payment.
+ Show attributes
+transaction_code  string
+Transaction code of the successful transaction with which the payment for the checkout is completed.
+Example: "TEENSK4W2K"
+transaction_id  string
+Transaction ID of the successful transaction with which the payment for the checkout is completed.
+Example: "410fc44a-5956-44e1-b5cc-19c6f8d727a4"
+merchant_name  string
+Name of the merchant
+Example: "Sample Merchant"
+redirect_url  string
+Refers to a url where the end user is redirected once the payment processing completes.
+Example: "https://mysite.com/completed_purchase"
+payment_instrument  object
+Object containing token information for the specified payment instrument
+ Show attributes
+Response 401
+Response 404
+GET  /v0.1/checkouts/{id}
+curl https://api.sumup.com/v0.1/checkouts/{id}
+Retrieve a checkout response
+{
+  "checkout_reference": null,
+  "amount": 10.1,
+  "currency": "EUR",
+  "pay_to_email": null,
+  "merchant_code": null,
+  "description": null,
+  "return_url": null,
+  "id": "4e425463-3e1b-431d-83fa-1e51c2925e99",
+  "status": null,
+  "date": "2020-02-29T10:56:56+00:00",
+  "valid_until": "2020-02-29T10:56:56+00:00",
+  "customer_id": "831ff8d4cd5958ab5670",
+  "mandate": {
+    "type": "recurrent",
+    "status": "active",
+    "merchant_code": "MDASYTPD"
+  },
+  "transactions": [
+    {
+      "id": "6b425463-3e1b-431d-83fa-1e51c2925e99",
+      "transaction_code": "TEENSK4W2K",
+      "amount": 10.1,
+      "currency": "EUR",
+      "timestamp": "2020-02-29T10:56:56.876Z",
+      "status": null,
+      "payment_type": null,
+      "installments_count": null,
+      "merchant_code": "MH4H92C7",
+      "vat_amount": 6,
+      "tip_amount": 3,
+      "entry_mode": null,
+      "auth_code": "053201",
+      "internal_id": 1763892018
+    }
+  ],
+  "transaction_code": "TEENSK4W2K",
+  "transaction_id": "410fc44a-5956-44e1-b5cc-19c6f8d727a4",
+  "merchant_name": "Sample Merchant",
+  "redirect_url": "https://mysite.com/completed_purchase",
+  "payment_instrument": {
+    "token": "e76d7e5c-9375-4fac-a7e7-b19dc5302fbc"
+  }
+}

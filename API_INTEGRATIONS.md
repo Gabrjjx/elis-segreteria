@@ -57,8 +57,8 @@ Questo documento descrive le integrazioni dei metodi di pagamento implementati n
 4. **Documentazione API**:
    - [Revolut Business API Documentation](https://developer.revolut.com/docs/business-api/)
 
-### 4. SumUp (🚧 FRAMEWORK PRONTO)
-- **Status**: Mock implementation attiva
+### 4. SumUp (⚠️ CONFIGURAZIONE INCOMPLETA)
+- **Status**: Framework pronto, credenziali parziali
 - **File**: `server/sumup.ts`
 - **Endpoints**:
   - Creazione: `/api/public/sumup-payment`
