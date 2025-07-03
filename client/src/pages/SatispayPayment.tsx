@@ -133,6 +133,8 @@ export default function SatispayPayment() {
 
       // Generate code_identifier from paymentId for QR code
       const codeIdentifier = data.codeIdentifier || `S6Y-PAY--${data.paymentId.toUpperCase()}`;
+      console.log('🎯 Code identifier for QR:', codeIdentifier);
+      console.log('🎯 Full payment data:', data);
       
       // Generate QR code
       let qrCodeDataUrl: string | undefined;
@@ -145,8 +147,9 @@ export default function SatispayPayment() {
             light: '#FFFFFF'
           }
         });
+        console.log('✅ QR code generated successfully');
       } catch (qrError) {
-        console.warn('Failed to generate QR code:', qrError);
+        console.error('❌ Failed to generate QR code:', qrError);
       }
 
       setPaymentState(prev => ({
