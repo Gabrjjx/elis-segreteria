@@ -161,8 +161,10 @@ export default function SatispayPayment() {
         isLive: data.isLive
       }));
 
-      // Start polling for payment status
-      startPaymentPolling(data.paymentId);
+      // Start polling for payment status after a delay to show QR code first
+      setTimeout(() => {
+        startPaymentPolling(data.paymentId);
+      }, 5000); // Wait 5 seconds to show QR code
 
     } catch (error: any) {
       console.error("Errore nel pagamento:", error);
@@ -384,13 +386,18 @@ export default function SatispayPayment() {
                 </div>
               )}
 
-              <Button 
-                variant="outline" 
-                onClick={() => startPaymentPolling(paymentState.paymentId!)}
-                className="w-full"
-              >
-                Controlla Stato Pagamento
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => startPaymentPolling(paymentState.paymentId!)}
+                  className="w-full"
+                >
+                  Controlla Stato Pagamento
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Il controllo automatico inizierà tra 5 secondi
+                </p>
+              </div>
             </CardContent>
           </Card>
         );
