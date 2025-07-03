@@ -553,24 +553,24 @@ export default function SecretariatPayment() {
                 </Button>
 
                 <Button
-                  onClick={() => handlePaymentMethodSelection('revolut')}
-                  className="flex items-center justify-center gap-2 h-16 bg-blue-600 hover:bg-blue-700"
+                  disabled
+                  className="flex items-center justify-center gap-2 h-16 bg-gray-400 cursor-not-allowed opacity-60"
                 >
-                  <CreditCard className="h-6 w-6" />
+                  <CreditCard className="h-6 w-6 text-gray-600" />
                   <div className="text-left">
-                    <div className="font-semibold text-white">Revolut</div>
-                    <div className="text-sm text-blue-100">Pagamento digitale</div>
+                    <div className="font-semibold text-gray-600">Revolut</div>
+                    <div className="text-sm text-gray-500">In fase di test</div>
                   </div>
                 </Button>
 
                 <Button
-                  onClick={() => handlePaymentMethodSelection('sumup')}
-                  className="flex items-center justify-center gap-2 h-16 bg-teal-600 hover:bg-teal-700"
+                  disabled
+                  className="flex items-center justify-center gap-2 h-16 bg-gray-400 cursor-not-allowed opacity-60"
                 >
-                  <CreditCard className="h-6 w-6" />
+                  <CreditCard className="h-6 w-6 text-gray-600" />
                   <div className="text-left">
-                    <div className="font-semibold text-white">SumUp</div>
-                    <div className="text-sm text-teal-100">Pagamento veloce</div>
+                    <div className="font-semibold text-gray-600">SumUp</div>
+                    <div className="text-sm text-gray-500">In fase di test</div>
                   </div>
                 </Button>
               </div>
