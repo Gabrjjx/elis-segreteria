@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Smartphone, Euro, Clock, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
+import QRCode from 'qrcode';
 
 interface PendingService {
   id: number;
@@ -28,6 +29,9 @@ interface PaymentState {
   pendingServices: PendingService[];
   totalAmount: number;
   paymentId?: string;
+  codeIdentifier?: string;
+  qrCodeDataUrl?: string;
+  isLive?: boolean;
   error?: string;
 }
 
@@ -127,10 +131,31 @@ export default function SatispayPayment() {
         throw new Error(data.message || "Errore nella creazione del pagamento");
       }
 
+      // Generate code_identifier from paymentId for QR code
+      const codeIdentifier = data.codeIdentifier || `S6Y-PAY--${data.paymentId.toUpperCase()}`;
+      
+      // Generate QR code
+      let qrCodeDataUrl: string | undefined;
+      try {
+        qrCodeDataUrl = await QRCode.toDataURL(codeIdentifier, {
+          width: 256,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        });
+      } catch (qrError) {
+        console.warn('Failed to generate QR code:', qrError);
+      }
+
       setPaymentState(prev => ({
         ...prev,
         step: 'payment',
-        paymentId: data.paymentId
+        paymentId: data.paymentId,
+        codeIdentifier: codeIdentifier,
+        qrCodeDataUrl: qrCodeDataUrl,
+        isLive: data.isLive
       }));
 
       // Start polling for payment status
@@ -316,19 +341,45 @@ export default function SatispayPayment() {
                 <p className="text-sm text-muted-foreground">
                   ID Pagamento: {paymentState.paymentId}
                 </p>
+                {paymentState.isLive && (
+                  <Badge variant="default" className="bg-green-600 hover:bg-green-700 mt-2">
+                    🚀 Sistema LIVE Attivo
+                  </Badge>
+                )}
               </div>
-              
-              <div className="space-y-2">
-                <p className="text-sm">
-                  1. Apri l'app Satispay sul tuo smartphone
-                </p>
-                <p className="text-sm">
-                  2. Cerca il pagamento ELIS
-                </p>
-                <p className="text-sm">
-                  3. Conferma il pagamento di {formatCurrency(paymentState.totalAmount)}
-                </p>
-              </div>
+
+              {/* QR Code Section */}
+              {paymentState.qrCodeDataUrl ? (
+                <div className="space-y-3">
+                  <div className="p-4 bg-white border-2 border-dashed border-orange-300 rounded-lg">
+                    <img 
+                      src={paymentState.qrCodeDataUrl} 
+                      alt="QR Code Satispay" 
+                      className="mx-auto mb-2"
+                      style={{ width: '200px', height: '200px' }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Scansiona con l'app Satispay
+                    </p>
+                  </div>
+                  
+                  <div className="text-sm space-y-1">
+                    <p className="font-medium">📱 Scansiona il QR Code</p>
+                    <p>oppure cerca il pagamento ELIS nell'app</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="animate-pulse p-4 bg-gray-100 rounded-lg">
+                    <div className="text-sm text-gray-600">QR code in generazione...</div>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <p>1. Apri l'app Satispay sul tuo smartphone</p>
+                    <p>2. Cerca il pagamento ELIS</p>
+                    <p>3. Conferma il pagamento di {formatCurrency(paymentState.totalAmount)}</p>
+                  </div>
+                </div>
+              )}
 
               <Button 
                 variant="outline" 
