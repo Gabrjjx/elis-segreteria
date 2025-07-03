@@ -64,29 +64,8 @@ function Router() {
             <LazyWelcomePage />
           </PublicLayout>
         </Route>
-        
-        {/* Rotta pubblica per i pagamenti */}
-        <Route path="/pay">
-          <PublicLayout>
-            <LazyPublicPaymentPage />
-          </PublicLayout>
-        </Route>
-        
-        {/* Rotta pubblica per la segnalazione di manutenzione */}
-        <Route path="/maintenance-request">
-          <PublicLayout>
-            <LazyPublicMaintenanceRequest />
-          </PublicLayout>
-        </Route>
-        
-        {/* Rotta pubblica per il pagamento del servizio segreteria */}
-        <Route path="/secretariat-payment">
-          <PublicLayout>
-            <LazySecretariatPayment />
-          </PublicLayout>
-        </Route>
-        
-        {/* Nuove rotte per i pagamenti specifici */}
+
+        {/* Rotte specifiche per i pagamenti (devono essere prima della rotta generica) */}
         <Route path="/secretariat-payment/satispay/:sigla?">
           <PublicLayout>
             <LazySatispayPayment />
@@ -108,6 +87,27 @@ function Router() {
         <Route path="/secretariat-payment/sumup/:sigla?">
           <PublicLayout>
             <LazySumupPayment />
+          </PublicLayout>
+        </Route>
+        
+        {/* Rotta generica per il pagamento del servizio segreteria */}
+        <Route path="/secretariat-payment">
+          <PublicLayout>
+            <LazySecretariatPayment />
+          </PublicLayout>
+        </Route>
+        
+        {/* Rotta pubblica per i pagamenti */}
+        <Route path="/pay">
+          <PublicLayout>
+            <LazyPublicPaymentPage />
+          </PublicLayout>
+        </Route>
+        
+        {/* Rotta pubblica per la segnalazione di manutenzione */}
+        <Route path="/maintenance-request">
+          <PublicLayout>
+            <LazyPublicMaintenanceRequest />
           </PublicLayout>
         </Route>
         

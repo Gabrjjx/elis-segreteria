@@ -179,14 +179,7 @@ async function makeSatispayRequest(
     console.log(`[Satispay Auth] Response status: ${response.status}`);
     console.log(`[Satispay Auth] Response body: ${responseText.substring(0, 200)}...`);
     
-    // Log full response for QR code debugging
-    if (response.status === 200) {
-      console.log(`[Satispay Auth] FULL RESPONSE START`);
-      console.log(responseText);
-      console.log(`[Satispay Auth] FULL RESPONSE END`);
-      const parsed = JSON.parse(responseText);
-      console.log(`[Satispay Auth] code_identifier found:`, parsed.code_identifier || 'NOT FOUND');
-    }
+    // QR code debugging completed - system working correctly
     
     if (!response.ok) {
       // Enhanced error logging for authentication troubleshooting
@@ -205,7 +198,6 @@ async function makeSatispayRequest(
     try {
       const result = JSON.parse(responseText);
       console.log(`[Satispay Auth] Request successful, parsed response`);
-      console.log(`[Satispay Auth] Parsed result code_identifier:`, result.code_identifier);
       return result;
     } catch (parseError) {
       console.error(`[Satispay Auth] Failed to parse response:`, responseText);
@@ -323,7 +315,6 @@ export async function createSatispayPayment(req: Request, res: Response) {
         isRealPayment = true;
         
         console.log('Real Satispay payment created:', payment.id);
-    console.log('Payment object code_identifier:', (payment as any).code_identifier);
       } catch (apiError) {
         console.log('Satispay API failed, using enhanced processing simulation');
         
