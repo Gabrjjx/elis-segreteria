@@ -161,10 +161,7 @@ export default function SatispayPayment() {
         isLive: data.isLive
       }));
 
-      // Start polling for payment status after a delay to show QR code first
-      setTimeout(() => {
-        startPaymentPolling(data.paymentId);
-      }, 5000); // Wait 5 seconds to show QR code
+      // No automatic polling - let user scan QR code first
 
     } catch (error: any) {
       console.error("Errore nel pagamento:", error);
@@ -386,17 +383,24 @@ export default function SatispayPayment() {
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => startPaymentPolling(paymentState.paymentId!)}
+                  className="w-full bg-orange-600 hover:bg-orange-700"
+                >
+                  Ho Completato il Pagamento
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Clicca dopo aver scansionato il QR code e confermato il pagamento su Satispay
+                </p>
                 <Button 
                   variant="outline" 
-                  onClick={() => startPaymentPolling(paymentState.paymentId!)}
+                  onClick={() => setPaymentState(prev => ({ ...prev, step: 'services' }))}
                   className="w-full"
                 >
-                  Controlla Stato Pagamento
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Annulla Pagamento
                 </Button>
-                <p className="text-xs text-muted-foreground">
-                  Il controllo automatico inizierà tra 5 secondi
-                </p>
               </div>
             </CardContent>
           </Card>
