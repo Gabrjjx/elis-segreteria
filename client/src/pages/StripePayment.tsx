@@ -108,7 +108,7 @@ export default function StripePayment() {
     setIsLoading(true);
     
     try {
-      // Redirect to Stripe Checkout
+      // Create Stripe payment intent
       const response = await fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: {

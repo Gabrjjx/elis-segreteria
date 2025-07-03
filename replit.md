@@ -121,13 +121,13 @@ This is a comprehensive web application for managing a residence's tailoring ser
 
 ## Changelog
 
-- July 03, 2025: Sistema versione 1.5.0 completato - QR CODE SATISPAY FUNZIONANTE
-  - ✅ QR CODE GENERATION IMPLEMENTATO: QR codes funzionanti generati dal code_identifier di Satispay
-  - ✅ Code_Identifier Integration: Estrazione automatica dal paymentId (formato S6Y-PAY--{UUID})
-  - ✅ Client-Side QR Generation: Libreria qrcode per generazione QR in tempo reale (200x200px)
-  - ✅ Enhanced UI/UX: Display QR code con bordo tratteggiato e istruzioni scansione
-  - ✅ URL Redirect Fix: /secretariat-payment reindirizza correttamente alla homepage
-  - ✅ Complete Debug System: Log completi per verifica autenticità code_identifier
+- July 03, 2025: Sistema versione 1.6.0 completato - SISTEMA PAGAMENTI MULTI-METODO COMPLETO
+  - ✅ RISOLTI PROBLEMI ROUTING URL: Eliminazione conflitti routing e navigazione corretta
+  - ✅ STRIPE PAYMENT INTENT ENDPOINT: Creato /api/create-payment-intent funzionante
+  - ✅ CHECKOUT PAGE INTEGRATA: Pagina Stripe Elements con PaymentElement completo
+  - ✅ AUTO-LOAD SIGLA DA URL: Pattern matching corretto per pre-popolamento sigla
+  - ✅ SISTEMA 4 METODI COMPLETO: Satispay QR + Stripe + Revolut + SumUp tutti operativi
+  - ✅ NAVIGAZIONE WOUTER: Router client-side per /secretariat-payment/[metodo]/[sigla]
 
 - July 03, 2025: Sistema versione 1.4.0 completato - LIVE SATISPAY + URL ROUTING
   - ✅ SATISPAY LIVE COMPLETAMENTE FUNZIONANTE: Produzione endpoint attivo con pagamenti reali

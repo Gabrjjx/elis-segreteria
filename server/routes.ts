@@ -14,6 +14,7 @@ import {
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { getMaintenanceRequestsCSV, readGoogleSheet, isSheetLoaded, findRequestRowInGoogleSheet, updateGoogleSheetStatus } from "./services/googleSheets";
+import Stripe from "stripe";
 import { semanticSearch, analyzeSearchQuery } from "./services/aiService";
 import { 
   hasOAuth2Credentials, 
@@ -45,6 +46,14 @@ import {
   checkSumUpPaymentStatus,
   handleSumUpWebhook
 } from "./sumup";
+
+// Initialize Stripe
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2025-05-28.basil",
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -1800,6 +1809,26 @@ RifID: ${hashId}`
     } catch (error) {
       console.error("Errore nel recupero servizi pendenti:", error);
       res.status(500).json({ message: "Errore interno del server" });
+    }
+  });
+
+  // Endpoint per creare un payment intent Stripe generico
+  app.post("/api/create-payment-intent", async (req: Request, res: Response) => {
+    try {
+      const { amount } = req.body;
+      
+      // Initialize Stripe instance within the request context
+      const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+        apiVersion: "2025-05-28.basil",
+      });
+      
+      const paymentIntent = await stripeInstance.paymentIntents.create({
+        amount: Math.round(amount * 100), // Convert to cents
+        currency: "eur",
+      });
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error creating payment intent: " + error.message });
     }
   });
 
