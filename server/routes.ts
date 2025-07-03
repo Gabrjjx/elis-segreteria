@@ -1833,6 +1833,22 @@ RifID: ${hashId}`
     }
   });
 
+  // Test Satispay authentication
+  app.get("/api/satispay/test-auth", async (req: Request, res: Response) => {
+    try {
+      const { testSatispayAuthentication } = await import("./satispay");
+      const result = await testSatispayAuthentication();
+      res.json(result);
+    } catch (error) {
+      console.error("Errore nel test autenticazione Satispay:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Errore nel test di autenticazione",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Webhook Satispay
   app.post("/api/satispay/webhook", async (req: Request, res: Response) => {
     try {

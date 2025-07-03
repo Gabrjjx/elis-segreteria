@@ -23,12 +23,14 @@ interface SatispayPayment {
   created_at: string;
 }
 
-// Create SHA-256 digest for request body
+// Step 3: Create the Digest of the body (SHA-256)
 function createDigest(body: string): string {
-  return crypto.createHash('sha256').update(body, 'utf8').digest('base64');
+  const hash = crypto.createHash('sha256').update(body, 'utf8').digest('base64');
+  console.log(`[Satispay Auth] Step 3 - Digest created: SHA-256=${hash.substring(0, 20)}...`);
+  return hash;
 }
 
-// Create the signature message according to Satispay specs
+// Step 4: Create the Message to be signed
 function createSignatureMessage(
   method: string,
   path: string,
@@ -36,30 +38,37 @@ function createSignatureMessage(
   date: string,
   digest?: string
 ): string {
+  console.log(`[Satispay Auth] Step 4 - Creating signature message for ${method} ${path}`);
+  
   const requestTarget = `(request-target): ${method.toLowerCase()} ${path}`;
   const hostHeader = `host: ${host}`;
   const dateHeader = `date: ${date}`;
   
   let message = `${requestTarget}\n${hostHeader}\n${dateHeader}`;
+  let headers = "(request-target) host date";
   
   if (digest) {
     const digestHeader = `digest: SHA-256=${digest}`;
     message += `\n${digestHeader}`;
+    headers += " digest";
   }
   
+  console.log(`[Satispay Auth] Signature message created with headers: ${headers}`);
   return message;
 }
 
-// Generate RSA-SHA256 signature
+// Step 5: Create the Signature using RSA-SHA256
 function generateSatispaySignature(
   messageToSign: string,
   privateKey: string
 ): string {
+  console.log(`[Satispay Auth] Step 5 - Generating RSA-SHA256 signature`);
+  
   try {
-    // Clean and format the private key properly
+    // Clean and format the private key properly for Node.js crypto
     let cleanPrivateKey = privateKey.trim();
     
-    // If the key doesn't have line breaks, format it properly
+    // Ensure proper PEM format with line breaks
     if (!cleanPrivateKey.includes('\n')) {
       cleanPrivateKey = cleanPrivateKey
         .replace(/-----BEGIN PRIVATE KEY-----/, '-----BEGIN PRIVATE KEY-----\n')
@@ -68,70 +77,84 @@ function generateSatispaySignature(
         .replace(/\n\n/g, '\n');
     }
 
+    // Create RSA-SHA256 signature as per Satispay specification
     const signer = crypto.createSign('RSA-SHA256');
     signer.update(messageToSign, 'utf8');
     const signature = signer.sign(cleanPrivateKey, 'base64');
     
-    console.log('RSA signature generated successfully');
+    console.log(`[Satispay Auth] RSA-SHA256 signature generated successfully: ${signature.substring(0, 20)}...`);
     return signature;
   } catch (error) {
-    console.error('RSA signature failed:', error);
+    console.error('[Satispay Auth] Primary signature generation failed:', error);
     
-    // Try reading from file as fallback
+    // Fallback: try reading private key from file
     try {
+      console.log('[Satispay Auth] Attempting fallback: reading private key from file');
       const filePrivateKey = fs.readFileSync('new_private.pem', 'utf8');
       const signer = crypto.createSign('RSA-SHA256');
       signer.update(messageToSign, 'utf8');
       const signature = signer.sign(filePrivateKey, 'base64');
-      console.log('RSA signature generated from file');
+      console.log('[Satispay Auth] Fallback signature generation successful');
       return signature;
     } catch (fileError) {
-      console.error('File-based signature also failed:', fileError);
-      throw new Error('Impossibile generare la firma digitale RSA-SHA256');
+      console.error('[Satispay Auth] Fallback signature generation also failed:', fileError);
+      throw new Error('Unable to generate RSA-SHA256 signature. Please check private key configuration.');
     }
   }
 }
 
-// Make authenticated request to Satispay API
+// Step 6: Compose the authentication header and make API request
 async function makeSatispayRequest(
   method: string,
   endpoint: string,
   body?: any
 ): Promise<any> {
+  console.log(`[Satispay Auth] Starting authenticated request: ${method} ${endpoint}`);
+  
+  // Use production environment for authentic integration
   const host = process.env.NODE_ENV === 'production' 
     ? "authservices.satispay.com" 
     : "staging.authservices.satispay.com";
   const url = `https://${host}${endpoint}`;
   const date = new Date().toUTCString();
   
+  console.log(`[Satispay Auth] Target host: ${host}`);
+  console.log(`[Satispay Auth] Request date: ${date}`);
+  
   let digest: string | undefined;
   let bodyString = "";
+  let headersToSign = "(request-target) host date";
   
+  // Step 3: Create digest for POST/PUT requests
   if (body && (method === "POST" || method === "PUT")) {
     bodyString = JSON.stringify(body);
     digest = createDigest(bodyString);
+    headersToSign += " digest";
   }
   
+  // Step 4: Create message to sign
   const messageToSign = createSignatureMessage(method, endpoint, host, date, digest);
-  console.log("Signature message created:");
-  console.log(messageToSign);
   
+  // Get credentials
   const privateKey = process.env.SATISPAY_PRIVATE_KEY;
-  // Use the new KeyId directly until environment variables are properly reloaded
-  const keyId = "53p1h1ejue2fu4ha3vc2lmb2k1kidqkj8s5n5nuqrt0k3g1f7nhfep41g7tvamlidortgl2nm2q66qb5as6b0abmn9kmr6ubc48hbdjnh5gfp7lpa9c5ul23i3n0l6a99rkvkvhhem19t93u1c2rna426uu6tp4inbk74a3r2q2n7eq8e8mpgav2t3k6csodnvsv5b82";
+  const keyId = process.env.SATISPAY_KEY_ID || "53p1h1ejue2fu4ha3vc2lmb2k1kidqkj8s5n5nuqrt0k3g1f7nhfep41g7tvamlidortgl2nm2q66qb5as6b0abmn9kmr6ubc48hbdjnh5gfp7lpa9c5ul23i3n0l6a99rkvkvhhem19t93u1c2rna426uu6tp4inbk74a3r2q2n7eq8e8mpgav2t3k6csodnvsv5b82";
   
-  console.log("KeyId being used:", keyId?.substring(0, 20) + "...");
+  console.log(`[Satispay Auth] Using KeyId: ${keyId?.substring(0, 30)}...`);
   
   if (!privateKey || !keyId) {
-    throw new Error("Credenziali Satispay mancanti");
+    throw new Error("Missing Satispay credentials: SATISPAY_PRIVATE_KEY and SATISPAY_KEY_ID required");
   }
   
+  // Step 5: Generate signature
   const signature = generateSatispaySignature(messageToSign, privateKey);
+  
+  // Step 6: Compose authentication header
+  const authorizationHeader = `Signature keyId="${keyId}", algorithm="rsa-sha256", headers="${headersToSign}", signature="${signature}"`;
   
   const headers: Record<string, string> = {
     "Host": host,
     "Date": date,
-    "Authorization": `Signature keyId="${keyId}", algorithm="rsa-sha256", headers="(request-target) host date${digest ? ' digest' : ''}", signature="${signature}"`,
+    "Authorization": authorizationHeader,
     "Content-Type": "application/json"
   };
   
@@ -139,28 +162,83 @@ async function makeSatispayRequest(
     headers["Digest"] = `SHA-256=${digest}`;
   }
   
+  console.log(`[Satispay Auth] Step 6 - Authorization header composed`);
+  console.log(`[Satispay Auth] Headers to sign: ${headersToSign}`);
+  
   const requestOptions: RequestInit = {
     method,
     headers,
     body: bodyString || undefined
   };
   
-  console.log("Making request to:", url);
-  console.log("Headers:", headers);
-  
-  const response = await fetch(url, requestOptions);
-  const responseText = await response.text();
-  
-  if (!response.ok) {
-    console.error("Satispay API error:", response.status, responseText);
-    throw new Error(`Errore API Satispay: ${response.status} - ${responseText}`);
-  }
+  console.log(`[Satispay Auth] Making authenticated request to: ${url}`);
   
   try {
-    return JSON.parse(responseText);
-  } catch (parseError) {
-    console.error("Failed to parse response:", responseText);
-    throw new Error("Risposta API Satispay non valida");
+    const response = await fetch(url, requestOptions);
+    const responseText = await response.text();
+    
+    console.log(`[Satispay Auth] Response status: ${response.status}`);
+    console.log(`[Satispay Auth] Response body: ${responseText.substring(0, 200)}...`);
+    
+    if (!response.ok) {
+      // Enhanced error logging for authentication troubleshooting
+      console.error(`[Satispay Auth] API Error ${response.status}:`, responseText);
+      
+      if (response.status === 401) {
+        console.error(`[Satispay Auth] Unauthorized - possible issues:`);
+        console.error(`- KeyId might not be activated with Satispay`);
+        console.error(`- Private key doesn't match the one used to generate KeyId`);
+        console.error(`- Signature generation might have errors`);
+      }
+      
+      throw new Error(`Satispay API Error: ${response.status} - ${responseText}`);
+    }
+    
+    try {
+      const result = JSON.parse(responseText);
+      console.log(`[Satispay Auth] Request successful, parsed response`);
+      return result;
+    } catch (parseError) {
+      console.error(`[Satispay Auth] Failed to parse response:`, responseText);
+      throw new Error("Invalid Satispay API response format");
+    }
+  } catch (networkError) {
+    console.error(`[Satispay Auth] Network error:`, networkError);
+    throw networkError;
+  }
+}
+
+// Test authentication endpoint as recommended by Satispay documentation
+export async function testSatispayAuthentication(): Promise<{ success: boolean; message: string; details?: any }> {
+  try {
+    console.log(`[Satispay Auth Test] Starting authentication test...`);
+    
+    const keyId = process.env.SATISPAY_KEY_ID || "53p1h1ejue2fu4ha3vc2lmb2k1kidqkj8s5n5nuqrt0k3g1f7nhfep41g7tvamlidortgl2nm2q66qb5as6b0abmn9kmr6ubc48hbdjnh5gfp7lpa9c5ul23i3n0l6a99rkvkvhhem19t93u1c2rna426uu6tp4inbk74a3r2q2n7eq8e8mpgav2t3k6csodnvsv5b82";
+    const privateKey = process.env.SATISPAY_PRIVATE_KEY;
+    
+    if (!keyId || !privateKey) {
+      return {
+        success: false,
+        message: "Missing Satispay credentials: SATISPAY_KEY_ID and SATISPAY_PRIVATE_KEY required"
+      };
+    }
+    
+    // Use the test endpoint recommended in Satispay docs
+    const testPayload = { test: true };
+    const result = await makeSatispayRequest("POST", "/wally-services/protocol/tests/signature", testPayload);
+    
+    return {
+      success: true,
+      message: "Satispay authentication test successful",
+      details: result
+    };
+  } catch (error: any) {
+    console.error(`[Satispay Auth Test] Authentication test failed:`, error);
+    return {
+      success: false,
+      message: `Authentication test failed: ${error?.message || 'Unknown error'}`,
+      details: error
+    };
   }
 }
 
@@ -211,18 +289,27 @@ export async function createSatispayPayment(req: Request, res: Response) {
 
     if (hasCredentials) {
       try {
-        // Create real Satispay payment
-        payment = await makeSatispayRequest("POST", "/g_business/v1/payments", {
-          flow: "MATCH_CODE",
-          amount_unit: Math.round(amount * 100),
-          currency: "EUR",
-          description: description || `Pagamento servizi ELIS - ${sigla}`,
-          callback_url: `${process.env.VITE_APP_URL || 'http://localhost:5173'}/api/satispay/webhook`,
+        console.log(`[Satispay Payment] Creating authentic payment for ${sigla}: €${amount}`);
+        
+        // Create real Satispay payment following official API documentation
+        const paymentPayload = {
+          flow: "MATCH_CODE", // For one-off QR code payments
+          amount_unit: Math.round(amount * 100), // Amount in cents as per API spec
+          currency: "EUR", // Only EUR supported
+          external_code: `ELIS-${sigla}-${Date.now()}`, // Internal order ID for reconciliation (max 50 chars)
+          callback_url: `${process.env.VITE_APP_URL || 'http://localhost:5173'}/api/satispay/webhook?payment_id={uuid}`,
+          redirect_url: `${process.env.VITE_APP_URL || 'http://localhost:5173'}/payment-success?orderId=${paymentId}&method=satispay`,
           metadata: {
-            sigla,
-            paymentId
+            sigla: sigla,
+            customer_name: customerName,
+            description: description || `Pagamento servizi ELIS - ${sigla}`,
+            payment_id: paymentId
           }
-        });
+        };
+        
+        console.log(`[Satispay Payment] Creating payment with official API payload:`, paymentPayload);
+        
+        payment = await makeSatispayRequest("POST", "/g_business/v1/payments", paymentPayload);
         
         console.log('Real Satispay payment created:', payment.id);
       } catch (apiError) {
