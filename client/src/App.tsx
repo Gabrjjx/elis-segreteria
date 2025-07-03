@@ -40,6 +40,7 @@ const LazyRevolutPayment = lazy(() => import("@/pages/RevolutPayment"));
 const LazySumupPayment = lazy(() => import("@/pages/SumupPayment"));
 const LazyPaymentSelection = lazy(() => import("@/pages/PaymentSelection"));
 const LazyPaymentSuccess = lazy(() => import("@/pages/PaymentSuccess"));
+const LazyCheckout = lazy(() => import("@/pages/Checkout"));
 
 function LoadingFallback() {
   return null; // Nessun indicatore di caricamento
@@ -129,6 +130,13 @@ function Router() {
         <Route path="/payment-success">
           <PublicLayout>
             <LazyPaymentSuccess />
+          </PublicLayout>
+        </Route>
+        
+        {/* Rotta pubblica per il checkout Stripe */}
+        <Route path="/checkout">
+          <PublicLayout>
+            <LazyCheckout />
           </PublicLayout>
         </Route>
         

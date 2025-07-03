@@ -37,7 +37,7 @@ interface PaymentState {
 
 export default function SatispayPayment() {
   const [, navigate] = useLocation();
-  const [match, params] = useRoute("/satispay-payment/:sigla?");
+  const [match, params] = useRoute("/secretariat-payment/satispay/:sigla?");
   const { toast } = useToast();
   
   const [paymentState, setPaymentState] = useState<PaymentState>({
@@ -51,10 +51,10 @@ export default function SatispayPayment() {
 
   // Auto-load services if sigla is provided in URL
   useEffect(() => {
-    if (params?.sigla && paymentState.step === 'input') {
+    if (params?.sigla && paymentState.step === 'input' && !isLoading) {
       handleSiglaSubmit(params.sigla);
     }
-  }, [params?.sigla]);
+  }, [params?.sigla, paymentState.step]);
 
   const handleSiglaSubmit = async (sigla?: string) => {
     const targetSigla = sigla || paymentState.sigla;
