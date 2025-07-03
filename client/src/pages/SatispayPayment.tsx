@@ -425,8 +425,16 @@ export default function SatispayPayment() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                Non chiudere questa pagina
+                Controllo automatico in corso... (timeout: 5 minuti)
               </p>
+              <Button 
+                variant="outline" 
+                onClick={() => setPaymentState(prev => ({ ...prev, step: 'payment' }))}
+                className="w-full"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Annulla Controllo
+              </Button>
             </CardContent>
           </Card>
         );
