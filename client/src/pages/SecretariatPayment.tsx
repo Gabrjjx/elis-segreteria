@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle, CreditCard, User, Euro, AlertCircle, Loader2, X, Smartphone } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import ELISLoader, { ELISLoadingOverlay } from "@/components/ELISLoader";
+import { useLocation } from "wouter";
 
 // Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -226,22 +227,13 @@ export default function SecretariatPayment() {
     }
   };
 
+  const [location, setLocation] = useLocation();
+  
   const handlePaymentMethodSelection = (method: PaymentMethod) => {
-    setPaymentState(prev => ({
-      ...prev,
-      step: 'method-selection',
-      paymentMethod: method
-    }));
-
-    if (method === 'stripe') {
-      initializeStripePayment();
-    } else if (method === 'satispay') {
-      initializeSatispayPayment();
-    } else if (method === 'revolut') {
-      initializeRevolutPayment();
-    } else if (method === 'sumup') {
-      initializeSumUpPayment();
-    }
+    // Navigate to specific payment page with sigla
+    const baseUrl = `/secretariat-payment/${method}`;
+    const urlWithSigla = paymentState.sigla ? `${baseUrl}/${paymentState.sigla}` : baseUrl;
+    setLocation(urlWithSigla);
   };
 
   const initializeStripePayment = async () => {
