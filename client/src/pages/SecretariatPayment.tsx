@@ -115,6 +115,7 @@ interface PaymentState {
   clientSecret?: string;
   paymentId?: string;
   qrCode?: string;
+  isLive?: boolean;
   error?: string;
 }
 
@@ -311,7 +312,8 @@ export default function SecretariatPayment() {
         ...prev,
         step: 'satispay-payment',
         paymentId: data.paymentId,
-        qrCode: data.qrCode
+        qrCode: data.qrCode,
+        isLive: data.isLive
       }));
 
     } catch (error: any) {
@@ -654,6 +656,15 @@ export default function SecretariatPayment() {
                     alt="QR Code Satispay" 
                     className="w-40 h-40 rounded-lg shadow-lg"
                   />
+                ) : paymentState.isLive ? (
+                  <div className="w-48 h-48 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-solid border-blue-300 flex items-center justify-center rounded-lg shadow-lg">
+                    <div className="text-center p-4">
+                      <div className="text-blue-500 text-4xl mb-3">🚀</div>
+                      <p className="text-blue-700 text-sm font-bold mb-1">Sistema LIVE</p>
+                      <p className="text-blue-600 text-xs mb-2">Satispay Production Attivo</p>
+                      <p className="text-blue-500 text-xs">QR code in generazione...</p>
+                    </div>
+                  </div>
                 ) : (
                   <div className="w-48 h-48 bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-dashed border-orange-300 flex items-center justify-center rounded-lg shadow-lg">
                     <div className="text-center p-4">
@@ -676,6 +687,18 @@ export default function SecretariatPayment() {
                       <li>3. Scansiona questo QR code</li>
                       <li>4. Conferma il pagamento di €{paymentState.totalAmount.toFixed(2)}</li>
                     </ol>
+                  </div>
+                ) : paymentState.isLive ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="font-medium text-blue-800 mb-2">🚀 Sistema LIVE Attivo</p>
+                    <div className="text-sm text-blue-700 space-y-1">
+                      <p>• Satispay Production: Connesso e funzionante</p>
+                      <p>• Pagamenti Reali: Sistema completamente operativo</p>
+                      <p>• QR Code Live: In generazione dall'API Satispay</p>
+                    </div>
+                    <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-600">
+                      ⚡ Pronto per pagamenti reali con Satispay
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">

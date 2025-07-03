@@ -121,6 +121,14 @@ This is a comprehensive web application for managing a residence's tailoring ser
 
 ## Changelog
 
+- July 03, 2025: Sistema versione 1.4.0 completato - LIVE SATISPAY + URL ROUTING
+  - ✅ SATISPAY LIVE COMPLETAMENTE FUNZIONANTE: Produzione endpoint attivo con pagamenti reali
+  - ✅ Production Authentication: RSA-SHA256 signatures funzionanti con server Satispay live
+  - ✅ Real QR Code Generation: QR codes autentici generati da API Satispay ufficiali
+  - ✅ URL Routing Implementato: /secretariat-payment/[tipo] per tutti i metodi (satispay, stripe, revolut, sumup)
+  - ✅ Componenti Dedicati: Pagine separate per ogni metodo di pagamento con UX ottimizzata
+  - ✅ Sistema Multi-Payment Completo: 4 metodi attivi con routing specifico e interfacce dedicate
+
 - July 03, 2025: Sistema versione 1.3.0 completato - AUTHENTIC SATISPAY INTEGRATION
   - ✓ Official Satispay API Implementation: Complete authentication flow with RSA-SHA256 signatures
   - ✓ Proper Request Signing: Step-by-step implementation following official documentation

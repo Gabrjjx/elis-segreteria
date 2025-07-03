@@ -35,6 +35,9 @@ const LazyPublicMaintenanceRequest = lazy(() => import("@/pages/PublicMaintenanc
 const LazySecretariatPayment = lazy(() => import("@/pages/SecretariatPayment"));
 const LazyReportsAdmin = lazy(() => import("@/pages/ReportsAdmin"));
 const LazySatispayPayment = lazy(() => import("@/pages/SatispayPayment"));
+const LazyStripePayment = lazy(() => import("@/pages/StripePayment"));
+const LazyRevolutPayment = lazy(() => import("@/pages/RevolutPayment"));
+const LazySumupPayment = lazy(() => import("@/pages/SumupPayment"));
 const LazyPaymentSelection = lazy(() => import("@/pages/PaymentSelection"));
 const LazyPaymentSuccess = lazy(() => import("@/pages/PaymentSuccess"));
 
@@ -83,7 +86,32 @@ function Router() {
           </PublicLayout>
         </Route>
         
-        {/* Rotta pubblica per il pagamento Satispay */}
+        {/* Nuove rotte per i pagamenti specifici */}
+        <Route path="/secretariat-payment/satispay/:sigla?">
+          <PublicLayout>
+            <LazySatispayPayment />
+          </PublicLayout>
+        </Route>
+        
+        <Route path="/secretariat-payment/stripe/:sigla?">
+          <PublicLayout>
+            <LazyStripePayment />
+          </PublicLayout>
+        </Route>
+        
+        <Route path="/secretariat-payment/revolut/:sigla?">
+          <PublicLayout>
+            <LazyRevolutPayment />
+          </PublicLayout>
+        </Route>
+        
+        <Route path="/secretariat-payment/sumup/:sigla?">
+          <PublicLayout>
+            <LazySumupPayment />
+          </PublicLayout>
+        </Route>
+        
+        {/* Rotta pubblica per il pagamento Satispay (retrocompatibilità) */}
         <Route path="/satispay-payment/:sigla?">
           <PublicLayout>
             <LazySatispayPayment />

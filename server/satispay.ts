@@ -111,10 +111,8 @@ async function makeSatispayRequest(
 ): Promise<any> {
   console.log(`[Satispay Auth] Starting authenticated request: ${method} ${endpoint}`);
   
-  // Use production environment for authentic integration
-  const host = process.env.NODE_ENV === 'production' 
-    ? "authservices.satispay.com" 
-    : "staging.authservices.satispay.com";
+  // Force production environment for live credentials
+  const host = "authservices.satispay.com";
   const url = `https://${host}${endpoint}`;
   const date = new Date().toUTCString();
   
@@ -137,7 +135,7 @@ async function makeSatispayRequest(
   
   // Get credentials
   const privateKey = process.env.SATISPAY_PRIVATE_KEY;
-  const keyId = process.env.SATISPAY_KEY_ID || "53p1h1ejue2fu4ha3vc2lmb2k1kidqkj8s5n5nuqrt0k3g1f7nhfep41g7tvamlidortgl2nm2q66qb5as6b0abmn9kmr6ubc48hbdjnh5gfp7lpa9c5ul23i3n0l6a99rkvkvhhem19t93u1c2rna426uu6tp4inbk74a3r2q2n7eq8e8mpgav2t3k6csodnvsv5b82";
+  const keyId = process.env.SATISPAY_KEY_ID;
   
   console.log(`[Satispay Auth] Using KeyId: ${keyId?.substring(0, 30)}...`);
   
@@ -213,7 +211,7 @@ export async function testSatispayAuthentication(): Promise<{ success: boolean; 
   try {
     console.log(`[Satispay Auth Test] Starting authentication test...`);
     
-    const keyId = process.env.SATISPAY_KEY_ID || "53p1h1ejue2fu4ha3vc2lmb2k1kidqkj8s5n5nuqrt0k3g1f7nhfep41g7tvamlidortgl2nm2q66qb5as6b0abmn9kmr6ubc48hbdjnh5gfp7lpa9c5ul23i3n0l6a99rkvkvhhem19t93u1c2rna426uu6tp4inbk74a3r2q2n7eq8e8mpgav2t3k6csodnvsv5b82";
+    const keyId = process.env.SATISPAY_KEY_ID;
     const privateKey = process.env.SATISPAY_PRIVATE_KEY;
     
     if (!keyId || !privateKey) {
@@ -286,6 +284,7 @@ export async function createSatispayPayment(req: Request, res: Response) {
                           process.env.SATISPAY_ACTIVATION_CODE;
 
     let payment: SatispayPayment;
+    let isRealPayment = false;
 
     if (hasCredentials) {
       try {
@@ -310,6 +309,7 @@ export async function createSatispayPayment(req: Request, res: Response) {
         console.log(`[Satispay Payment] Creating payment with official API payload:`, paymentPayload);
         
         payment = await makeSatispayRequest("POST", "/g_business/v1/payments", paymentPayload);
+        isRealPayment = true;
         
         console.log('Real Satispay payment created:', payment.id);
       } catch (apiError) {
@@ -336,7 +336,7 @@ export async function createSatispayPayment(req: Request, res: Response) {
       };
     }
 
-    res.json({
+    const responsePayload = {
       success: true,
       paymentId: payment.id,
       amount: amount,
@@ -344,8 +344,12 @@ export async function createSatispayPayment(req: Request, res: Response) {
       description: payment.description,
       status: payment.status,
       qrCode: payment.qr_code || null,
-      redirectUrl: `/payment-processing?orderId=${payment.id}&method=satispay`
-    });
+      redirectUrl: `/payment-processing?orderId=${payment.id}&method=satispay`,
+      isLive: isRealPayment
+    };
+    
+    console.log('Satispay Response Payload:', JSON.stringify(responsePayload, null, 2));
+    res.json(responsePayload);
 
   } catch (error) {
     console.error("Error creating Satispay payment:", error);
