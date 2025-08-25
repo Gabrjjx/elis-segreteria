@@ -19,8 +19,8 @@ import NotFound from "@/pages/not-found";
 import { Suspense, lazy, useState, useEffect } from "react";
 
 // Utilizzo React.lazy per caricare i componenti in modo asincrono
-const LazyDashboard = lazy(() => import("@/pages/Dashboard"));
-const LazyServicesPage = lazy(() => import("@/pages/ServicesPage"));
+const LazyDashboard = lazy(() => import("@/pages/ModernDashboard"));
+const LazyServicesPage = lazy(() => import("@/pages/ModernServicesPage"));
 const LazyServiceForm = lazy(() => import("@/pages/ServiceForm"));
 const LazyPaymentsPage = lazy(() => import("@/pages/PaymentsPage"));
 const LazyReportsPage = lazy(() => import("@/pages/ReportsPage"));
