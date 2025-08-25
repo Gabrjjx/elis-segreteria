@@ -518,7 +518,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         <footer className="border-t py-2 mt-auto">
           <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              &copy;GabHub - Segreteria Elis College
+              ©GabrieleIngrosso - ElisCollege 2025
             </p>
             <div className="flex items-center gap-1">
               <ThemeToggle />

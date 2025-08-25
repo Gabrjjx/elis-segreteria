@@ -265,7 +265,7 @@ export class ReportService {
     doc.setTextColor(102, 102, 102);
     const footerText = `Report generato automaticamente il ${new Date().toLocaleString('it-IT')}`;
     doc.text(footerText, pageWidth / 2, pageHeight - 15, { align: 'center' });
-    doc.text('Sistema ELIS - Amministrazione Residenza', pageWidth / 2, pageHeight - 10, { align: 'center' });
+    doc.text('©GabrieleIngrosso - ElisCollege 2025', pageWidth / 2, pageHeight - 10, { align: 'center' });
 
     return Buffer.from(doc.output('arraybuffer'));
   }

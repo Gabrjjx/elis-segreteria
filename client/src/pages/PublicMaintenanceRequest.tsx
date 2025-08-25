@@ -37,7 +37,7 @@ export default function PublicMaintenanceRequest() {
           
           <footer className="mt-12 text-center text-sm text-gray-500 dark:text-gray-400">
             <p>
-              &copy; {new Date().getFullYear()} ELIS College. Tutti i diritti riservati.
+              ©GabrieleIngrosso - ElisCollege 2025
             </p>
           </footer>
         </div>

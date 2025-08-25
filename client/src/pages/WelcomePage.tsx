@@ -171,7 +171,7 @@ export default function WelcomePage() {
       {/* Footer */}
       <footer className="py-4 border-t border-border">
         <div className="container mx-auto text-center text-sm text-muted-foreground">
-          <p>&copy;GabHub - Segreteria Elis College</p>
+          <p>©GabrieleIngrosso - ElisCollege 2025</p>
         </div>
       </footer>
     </div>

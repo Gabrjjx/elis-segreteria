@@ -67,7 +67,7 @@ export async function generateReceiptPDF(receipt: Receipt, serviceDetails?: any)
         
         <div class="receipt-footer">
           <p>Grazie per aver utilizzato i nostri servizi.</p>
-          <p>ELIS Sartoria - Servizi di sartoria per gli studenti ELIS</p>
+          <p>©GabrieleIngrosso - ElisCollege 2025</p>
         </div>
       </div>
     </body>
