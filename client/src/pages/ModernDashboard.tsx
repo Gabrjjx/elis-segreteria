@@ -67,6 +67,38 @@ export default function ModernDashboard() {
     endDate: endOfMonth(currentDate)
   });
 
+  // Handler per il cambio periodo
+  const handlePeriodChange = (period: string) => {
+    setSelectedPeriod(period);
+    const now = new Date();
+    let startDate: Date, endDate: Date;
+
+    switch (period) {
+      case 'week':
+        startDate = new Date(now.setDate(now.getDate() - 7));
+        endDate = new Date();
+        break;
+      case 'month':
+        startDate = startOfMonth(new Date());
+        endDate = endOfMonth(new Date());
+        break;
+      case 'quarter':
+        const quarterStart = Math.floor(new Date().getMonth() / 3) * 3;
+        startDate = new Date(new Date().getFullYear(), quarterStart, 1);
+        endDate = new Date(new Date().getFullYear(), quarterStart + 3, 0);
+        break;
+      default:
+        startDate = startOfMonth(new Date());
+        endDate = endOfMonth(new Date());
+    }
+
+    setFilterPeriod({ startDate, endDate });
+    toast({
+      title: "Filtro applicato",
+      description: `Periodo: ${period === 'week' ? 'Settimana' : period === 'month' ? 'Mese' : 'Trimestre'}`,
+    });
+  };
+
   // Parametri per le query
   const queryString = useMemo(() => {
     const queryParams = new URLSearchParams();
@@ -205,7 +237,7 @@ export default function ModernDashboard() {
             </div>
             
             <div className="mt-6 lg:mt-0 flex flex-wrap gap-3">
-              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+              <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
                 <SelectTrigger className="w-40 bg-white/80 border-gray-200/60">
                   <SelectValue />
                 </SelectTrigger>
