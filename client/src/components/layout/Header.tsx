@@ -17,7 +17,8 @@ import {
   FileText, 
   Menu,
   CreditCard,
-  Search
+  Search,
+  History
 } from "lucide-react";
 
 export default function Header() {
@@ -30,6 +31,7 @@ export default function Header() {
     { name: "Studenti", href: "/students", icon: Users },
     { name: "Manutenzioni", href: "/maintenance", icon: Wrench },
     { name: "Pagamenti", href: "/payments", icon: CreditCard },
+    { name: "Dati Storici", href: "/historical-data", icon: History },
     { name: "Report", href: "/reports", icon: FileText },
   ];
 

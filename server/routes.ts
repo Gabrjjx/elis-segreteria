@@ -58,6 +58,140 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
   
+  // Historical data endpoint
+  app.get("/api/historical-data", async (req: Request, res: Response) => {
+    try {
+      const year = req.query.year as string || new Date().getFullYear().toString();
+      const search = req.query.search as string || '';
+      const serviceType = req.query.serviceType as string || '';
+      const status = req.query.status as string || '';
+
+      // Build date range for the year
+      const startDate = `${year}-01-01`;
+      const endDate = `${year}-12-31`;
+
+      // Get services for the year
+      const servicesResult = await storage.getServices({
+        query: search,
+        type: serviceType === 'all' ? undefined : serviceType as any,
+        status: status === 'all' ? undefined : status as any,
+        startDate,
+        endDate,
+        page: 1,
+        limit: 1000 // Get all records for the year
+      });
+
+      // Get maintenance requests for the year
+      const maintenanceResult = await storage.getMaintenanceRequests({
+        query: search,
+        status: status === 'all' ? undefined : status as any,
+        startDate,
+        endDate,
+        page: 1,
+        limit: 1000
+      });
+
+      // Get payments for the year (secretariat payments)
+      const payments = await storage.getSecretariatPayments({
+        year: parseInt(year),
+        search,
+        status: status === 'all' ? undefined : status
+      });
+
+      res.json({
+        services: servicesResult.services,
+        maintenanceRequests: maintenanceResult.requests,
+        payments: payments || [],
+        totalServices: servicesResult.total,
+        totalMaintenanceRequests: maintenanceResult.total,
+        totalPayments: payments?.length || 0
+      });
+    } catch (error) {
+      console.error("Error fetching historical data:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Enhanced dashboard metrics endpoint
+  app.get("/api/dashboard/enhanced-metrics", async (req: Request, res: Response) => {
+    try {
+      const period = req.query.period as string || 'month';
+      
+      // Calculate date ranges based on period
+      const now = new Date();
+      const currentPeriodStart = period === 'week' ? 
+        new Date(now.setDate(now.getDate() - 7)) :
+        period === 'month' ?
+        new Date(now.getFullYear(), now.getMonth(), 1) :
+        period === 'quarter' ?
+        new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1) :
+        new Date(now.getFullYear(), 0, 1);
+      
+      const previousPeriodStart = period === 'week' ?
+        new Date(now.setDate(now.getDate() - 14)) :
+        period === 'month' ?
+        new Date(now.getFullYear(), now.getMonth() - 1, 1) :
+        period === 'quarter' ?
+        new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 - 3, 1) :
+        new Date(now.getFullYear() - 1, 0, 1);
+
+      // Get current period metrics
+      const currentMetrics = await storage.getServiceMetrics({
+        startDate: currentPeriodStart,
+        endDate: new Date()
+      });
+
+      // Get previous period metrics for comparison
+      const previousMetrics = await storage.getServiceMetrics({
+        startDate: previousPeriodStart,
+        endDate: currentPeriodStart
+      });
+
+      // Calculate growth percentages
+      const servicesGrowth = previousMetrics.totalServices > 0 ? 
+        ((currentMetrics.totalServices - previousMetrics.totalServices) / previousMetrics.totalServices) * 100 : 0;
+      
+      const revenueGrowth = previousMetrics.totalAmount > 0 ?
+        ((currentMetrics.totalAmount - previousMetrics.totalAmount) / previousMetrics.totalAmount) * 100 : 0;
+
+      // Get maintenance metrics
+      const maintenanceMetrics = await storage.getMaintenanceMetrics();
+
+      const enhancedMetrics = {
+        totalServices: currentMetrics.totalServices,
+        weeklyServices: period === 'week' ? currentMetrics.totalServices : 0,
+        monthlyServices: period === 'month' ? currentMetrics.totalServices : 0,
+        totalRevenue: currentMetrics.totalAmount,
+        weeklyRevenue: period === 'week' ? currentMetrics.totalAmount : 0,
+        monthlyRevenue: period === 'month' ? currentMetrics.totalAmount : 0,
+        pendingPayments: currentMetrics.pendingPayments,
+        completedPayments: currentMetrics.totalServices - currentMetrics.pendingPayments,
+        averageServiceValue: currentMetrics.totalServices > 0 ? currentMetrics.totalAmount / currentMetrics.totalServices : 0,
+        servicesByType: {
+          siglatura: currentMetrics.siglaturaCount,
+          riparazione: currentMetrics.repairCount,
+          happy_hour: currentMetrics.happyHourCount,
+        },
+        maintenanceStats: {
+          total: maintenanceMetrics.totalRequests,
+          pending: maintenanceMetrics.pendingRequests,
+          inProgress: maintenanceMetrics.inProgressRequests,
+          completed: maintenanceMetrics.completedRequests,
+        },
+        trendData: {
+          servicesGrowth,
+          revenueGrowth,
+          maintenanceGrowth: 0 // Placeholder for maintenance growth calculation
+        }
+      };
+
+      res.json(enhancedMetrics);
+    } catch (error) {
+      console.error("Error fetching enhanced metrics:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
   // Get all services with filtering and pagination
   app.get("/api/services", async (req: Request, res: Response) => {
     try {

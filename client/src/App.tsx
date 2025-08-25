@@ -41,6 +41,7 @@ const LazySumupPayment = lazy(() => import("@/pages/SumupPayment"));
 const LazyPaymentSelection = lazy(() => import("@/pages/PaymentSelection"));
 const LazyPaymentSuccess = lazy(() => import("@/pages/PaymentSuccess"));
 const LazyCheckout = lazy(() => import("@/pages/Checkout"));
+const LazyHistoricalDataPage = lazy(() => import("@/pages/HistoricalDataPage"));
 
 function LoadingFallback() {
   return null; // Nessun indicatore di caricamento
@@ -160,6 +161,7 @@ function Router() {
                 <Route path="/reports/admin" component={LazyReportsAdmin} />
                 <Route path="/maintenance" component={LazyMaintenancePage} />
                 <Route path="/students" component={LazyStudentsPage} />
+                <Route path="/historical-data" component={LazyHistoricalDataPage} />
                 <Route path="/settings" component={LazySettingsPage} />
                 <Route path="/google-auth" component={LazyGoogleAuthPage} />
                 <Route path="/scanner" component={LazyQrScannerPage} />

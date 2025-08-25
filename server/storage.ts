@@ -118,6 +118,7 @@ export interface IStorage {
   getSecretariatPaymentByOrderId(orderId: string): Promise<SecretariatPayment | undefined>;
   getSecretariatPaymentByPaymentIntentId(paymentIntentId: string): Promise<SecretariatPayment | undefined>;
   updateSecretariatPaymentStatus(orderId: string, status: string, paymentDate?: Date): Promise<SecretariatPayment | undefined>;
+  getSecretariatPayments(filters: { year?: number, search?: string, status?: string }): Promise<SecretariatPayment[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1516,6 +1517,40 @@ GIUSEPPE,PALMIERI,119`;
       .returning();
     
     return updated || undefined;
+  }
+
+  async getSecretariatPayments(filters: { year?: number, search?: string, status?: string }): Promise<SecretariatPayment[]> {
+    let query = db.select().from(secretariatPayments);
+    
+    const conditions: any[] = [];
+    
+    // Filter by year
+    if (filters.year) {
+      const startDate = new Date(`${filters.year}-01-01`);
+      const endDate = new Date(`${filters.year}-12-31T23:59:59`);
+      conditions.push(gte(secretariatPayments.createdAt, startDate));
+      conditions.push(lte(secretariatPayments.createdAt, endDate));
+    }
+    
+    // Filter by search term (sigla or customer name)
+    if (filters.search) {
+      const searchConditions = [
+        like(secretariatPayments.sigla, `%${filters.search}%`),
+        like(secretariatPayments.customerName, `%${filters.search}%`)
+      ];
+      conditions.push(or(...searchConditions));
+    }
+    
+    // Filter by status
+    if (filters.status && filters.status !== 'all') {
+      conditions.push(eq(secretariatPayments.status, filters.status));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.orderBy(desc(secretariatPayments.createdAt));
   }
 }
 
