@@ -52,6 +52,9 @@ export const services = pgTable("services", {
   status: text("status").notNull(),
   paymentMethod: text("payment_method"),  // Metodo di pagamento utilizzato
   notes: text("notes"),
+  // Campi per archiviazione annuale
+  archivedYear: integer("archived_year"), // Anno di archiviazione (null = attivo)
+  archivedAt: timestamp("archived_at"), // Data di archiviazione
 });
 
 // Default service prices
@@ -213,6 +216,9 @@ export const maintenanceRequests = pgTable("maintenance_requests", {
   assignedTo: text("assigned_to"),
   completedAt: timestamp("completed_at"),
   attachmentUrl: text("attachment_url"),
+  // Campi per archiviazione annuale
+  archivedYear: integer("archived_year"), // Anno di archiviazione (null = attivo)
+  archivedAt: timestamp("archived_at"), // Data di archiviazione
 });
 
 // Schema per l'inserimento di nuove richieste
@@ -302,6 +308,9 @@ export const paypalOrders = pgTable("paypal_orders", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
   paypalResponse: text("paypal_response"), // Risposta JSON da PayPal
+  // Campi per archiviazione annuale
+  archivedYear: integer("archived_year"), // Anno di archiviazione (null = attivo)
+  archivedAt: timestamp("archived_at"), // Data di archiviazione
 });
 
 // Schema per l'inserimento di ordini PayPal
@@ -352,6 +361,9 @@ export const receipts = pgTable("receipts", {
   paymentMethod: text("payment_method").notNull(),
   notes: text("notes"),
   pdfUrl: text("pdf_url"), // URL del PDF della ricevuta
+  // Campi per archiviazione annuale
+  archivedYear: integer("archived_year"), // Anno di archiviazione (null = attivo)
+  archivedAt: timestamp("archived_at"), // Data di archiviazione
 });
 
 // Schema per l'inserimento delle ricevute
@@ -465,6 +477,9 @@ export const secretariatPayments = pgTable("secretariat_payments", {
   metadata: text("metadata"), // JSON per dati extra
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  // Campi per archiviazione annuale
+  archivedYear: integer("archived_year"), // Anno di archiviazione (null = attivo)
+  archivedAt: timestamp("archived_at"), // Data di archiviazione
 });
 
 // Schema per i pagamenti della segreteria
@@ -507,6 +522,9 @@ export const bikeReservations = pgTable("bike_reservations", {
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  // Campi per archiviazione annuale
+  archivedYear: integer("archived_year"), // Anno di archiviazione (null = attivo)
+  archivedAt: timestamp("archived_at"), // Data di archiviazione
 });
 
 // Schema per l'inserimento delle prenotazioni bici
