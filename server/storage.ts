@@ -38,7 +38,7 @@ import {
   secretariatPayments
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, like, gte, lte, desc, count, sum, or, and } from "drizzle-orm";
+import { eq, like, gte, lte, desc, count, sum, or, and, isNull } from "drizzle-orm";
 
 // Storage interface for CRUD operations
 export interface IStorage {
@@ -55,7 +55,7 @@ export interface IStorage {
   deleteService(id: number): Promise<boolean>;
   
   // Dashboard operations
-  getServiceMetrics(dateFilter?: { startDate?: Date, endDate?: Date }): Promise<{
+  getServiceMetrics(dateFilter?: { startDate?: Date, endDate?: Date, includeArchived?: boolean }): Promise<{
     totalServices: number,
     pendingPayments: number,
     siglaturaCount: number,
@@ -64,8 +64,8 @@ export interface IStorage {
     totalAmount: number,
     pendingAmount: number
   }>;
-  getPendingPayments(dateFilter?: { startDate?: Date, endDate?: Date }): Promise<Service[]>;
-  getRecentServices(limit: number, dateFilter?: { startDate?: Date, endDate?: Date }): Promise<Service[]>;
+  getPendingPayments(dateFilter?: { startDate?: Date, endDate?: Date, includeArchived?: boolean }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]>;
+  getRecentServices(limit: number, dateFilter?: { startDate?: Date, endDate?: Date, includeArchived?: boolean }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]>;
   
   // Maintenance request operations
   getMaintenanceRequests(params: MaintenanceRequestSearch): Promise<{ requests: MaintenanceRequest[], total: number }>;
@@ -914,7 +914,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Dashboard operations
-  async getServiceMetrics(dateFilter?: { startDate?: Date, endDate?: Date }): Promise<{
+  async getServiceMetrics(dateFilter?: { startDate?: Date, endDate?: Date, includeArchived?: boolean }): Promise<{
     totalServices: number;
     pendingPayments: number;
     siglaturaCount: number;
@@ -923,9 +923,15 @@ export class DatabaseStorage implements IStorage {
     totalAmount: number;
     pendingAmount: number;
   }> {
-    // Funzione per applicare i filtri di data
-    const applyDateFilter = (query: any) => {
+    // Funzione per applicare i filtri di data e archivio
+    const applyFilters = (query: any) => {
       let filteredQuery = query;
+      
+      // Esclude dati archiviati di default (a meno che non sia specificato includeArchived=true)
+      if (!dateFilter?.includeArchived) {
+        filteredQuery = filteredQuery.where(isNull(services.archivedYear));
+      }
+      
       if (dateFilter?.startDate) {
         filteredQuery = filteredQuery.where(gte(services.date, dateFilter.startDate));
       }
@@ -938,36 +944,40 @@ export class DatabaseStorage implements IStorage {
     // Debugging temporaneo - stampare i parametri di filtro
     console.log("Filter startDate:", dateFilter?.startDate);
     console.log("Filter endDate:", dateFilter?.endDate);
+    console.log("Include archived:", dateFilter?.includeArchived);
     
-    // Definiamo le condizioni base per i filtri di data
-    const dateConditions = [];
+    // Definiamo le condizioni base combinando data e archivio
+    const allConditions = [];
+    
+    // Esclude dati archiviati di default
+    if (!dateFilter?.includeArchived) {
+      allConditions.push(isNull(services.archivedYear));
+    }
+    
     if (dateFilter?.startDate) {
-      dateConditions.push(gte(services.date, dateFilter.startDate));
+      allConditions.push(gte(services.date, dateFilter.startDate));
     }
     if (dateFilter?.endDate) {
-      dateConditions.push(lte(services.date, dateFilter.endDate));
+      allConditions.push(lte(services.date, dateFilter.endDate));
     }
     
-    // Funzione per combinare condizioni di filtro in modo corretto
+    // Funzione per combinare condizioni di filtro
     const getFilter = (baseCondition: any) => {
-      // Se non ci sono filtri di data, restituisci solo la condizione base
-      if (dateConditions.length === 0) {
+      if (allConditions.length === 0) {
         return baseCondition;
       }
       
-      // Altrimenti, combina la condizione base con filtri di data usando AND
       if (!baseCondition) {
-        // Solo filtri di data
-        return and(...dateConditions);
+        return allConditions.length === 1 ? allConditions[0] : and(...allConditions);
       }
       
-      return and(baseCondition, ...dateConditions);
+      return and(baseCondition, ...allConditions);
     };
     
     // Get total services count
     let totalQuery = db.select({ count: count() }).from(services);
-    if (dateConditions.length > 0) {
-      totalQuery = totalQuery.where(and(...dateConditions));
+    if (allConditions.length > 0) {
+      totalQuery = totalQuery.where(allConditions.length === 1 ? allConditions[0] : and(...allConditions));
     }
     const [{ count: totalServices }] = await totalQuery;
     
@@ -1001,8 +1011,8 @@ export class DatabaseStorage implements IStorage {
     let totalAmountQuery = db
       .select({ sum: sum(services.amount) })
       .from(services);
-    if (dateConditions.length > 0) {
-      totalAmountQuery = totalAmountQuery.where(and(...dateConditions));
+    if (allConditions.length > 0) {
+      totalAmountQuery = totalAmountQuery.where(allConditions.length === 1 ? allConditions[0] : and(...allConditions));
     }
     const totalResult = await totalAmountQuery;
     const totalAmount = totalResult[0]?.sum || 0;
@@ -1026,9 +1036,14 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getPendingPayments(dateFilter?: { startDate?: Date, endDate?: Date }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]> {
+  async getPendingPayments(dateFilter?: { startDate?: Date, endDate?: Date, includeArchived?: boolean }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]> {
     // Build the conditions array
     const conditions = [eq(services.status, PaymentStatus.UNPAID)];
+    
+    // Exclude archived data by default
+    if (!dateFilter?.includeArchived) {
+      conditions.push(isNull(services.archivedYear));
+    }
     
     // Add date filters if present
     if (dateFilter?.startDate) {
@@ -1063,7 +1078,23 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getRecentServices(limit: number, dateFilter?: { startDate?: Date, endDate?: Date }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]> {
+  async getRecentServices(limit: number, dateFilter?: { startDate?: Date, endDate?: Date, includeArchived?: boolean }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]> {
+    // Build the conditions array
+    const conditions = [];
+    
+    // Exclude archived data by default
+    if (!dateFilter?.includeArchived) {
+      conditions.push(isNull(services.archivedYear));
+    }
+    
+    // Add date filters if present
+    if (dateFilter?.startDate) {
+      conditions.push(gte(services.date, dateFilter.startDate));
+    }
+    if (dateFilter?.endDate) {
+      conditions.push(lte(services.date, dateFilter.endDate));
+    }
+    
     let query = db.select({
       service: services,
       student: {
@@ -1075,12 +1106,9 @@ export class DatabaseStorage implements IStorage {
     .from(services)
     .leftJoin(students, eq(services.sigla, students.sigla));
     
-    // Applicare i filtri di data se presenti
-    if (dateFilter?.startDate) {
-      query = query.where(gte(services.date, dateFilter.startDate));
-    }
-    if (dateFilter?.endDate) {
-      query = query.where(lte(services.date, dateFilter.endDate));
+    // Apply conditions if any
+    if (conditions.length > 0) {
+      query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions));
     }
     
     const results = await query

@@ -55,6 +55,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2025-05-28.basil",
 });
 
+import { archiveService } from './services/archiveService';
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
   
@@ -2153,6 +2155,108 @@ RifID: ${hashId}`
       SUMUP_CLIENT_SECRET: process.env.SUMUP_CLIENT_SECRET ? 'Present' : 'Missing',
       SUMUP_MERCHANT_CODE: process.env.SUMUP_MERCHANT_CODE ? `Present: ${process.env.SUMUP_MERCHANT_CODE}` : 'Missing'
     });
+  });
+
+  // Archive API Routes - REQUIRES ADMIN AUTHENTICATION
+  
+  /**
+   * POST /api/archive/close-year - Archivia tutti i dati di un anno (ADMIN ONLY)
+   * Body: { year: number, dryRun?: boolean }
+   */
+  app.post("/api/archive/close-year", async (req: Request, res: Response) => {
+    // CRITICAL SECURITY: Only authenticated admin users can archive data
+    if (!req.session?.user) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    
+    // ADMIN-ONLY: Check for admin privileges (username "admin" for now, role-based system can be added later)
+    if (req.session.user.username !== 'admin') {
+      return res.status(403).json({ error: "Admin privileges required for archive operations" });
+    }
+    try {
+      const { year, dryRun = false } = req.body;
+      
+      if (!year || typeof year !== 'number') {
+        return res.status(400).json({ 
+          error: "Year is required and must be a number" 
+        });
+      }
+      
+      if (year < 2020 || year > new Date().getFullYear()) {
+        return res.status(400).json({ 
+          error: "Year must be between 2020 and current year" 
+        });
+      }
+      
+      const result = await archiveService.closeYear(year, { dryRun });
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error in close-year operation:', error);
+      res.status(500).json({ 
+        error: "Failed to archive data", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  /**
+   * GET /api/archive/years - Ottiene tutti gli anni archiviati disponibili (ADMIN ONLY)
+   */
+  app.get("/api/archive/years", async (req: Request, res: Response) => {
+    // SECURITY: Only authenticated admin users can view archive data
+    if (!req.session?.user) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    
+    // ADMIN-ONLY: Check for admin privileges
+    if (req.session.user.username !== 'admin') {
+      return res.status(403).json({ error: "Admin privileges required for archive access" });
+    }
+    try {
+      const years = await archiveService.getArchivedYears();
+      res.json({ years });
+    } catch (error) {
+      console.error('Error getting archived years:', error);
+      res.status(500).json({ 
+        error: "Failed to get archived years", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  /**
+   * GET /api/archive/stats - Ottiene statistiche sui dati archiviati (ADMIN ONLY)
+   * Query: year? (opzionale, per stats di un anno specifico)
+   */
+  app.get("/api/archive/stats", async (req: Request, res: Response) => {
+    // SECURITY: Only authenticated admin users can view archive statistics
+    if (!req.session?.user) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    
+    // ADMIN-ONLY: Check for admin privileges
+    if (req.session.user.username !== 'admin') {
+      return res.status(403).json({ error: "Admin privileges required for archive statistics" });
+    }
+    try {
+      const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+      
+      if (year && (isNaN(year) || year < 2020 || year > new Date().getFullYear())) {
+        return res.status(400).json({ 
+          error: "Invalid year parameter" 
+        });
+      }
+      
+      const stats = await archiveService.getArchiveStats(year);
+      res.json({ stats });
+    } catch (error) {
+      console.error('Error getting archive stats:', error);
+      res.status(500).json({ 
+        error: "Failed to get archive stats", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
   });
 
   const httpServer = createServer(app);
