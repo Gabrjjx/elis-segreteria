@@ -121,6 +121,16 @@ This is a comprehensive web application for managing a residence's tailoring ser
 
 ## Changelog
 
+- September 12, 2025: Sistema versione 2.0.0 completato - SISTEMA ARCHIVIAZIONE ANNUALE
+  - ✅ ARCHIVIAZIONE COMPLETA: Sistema di archiviazione annuale per tutti i dati operativi
+  - ✅ 6 TABELLE SUPPORTATE: Services, maintenance_requests, paypal_orders, receipts, secretariat_payments, bike_reservations
+  - ✅ API ADMIN SICURE: 3 endpoint protetti (POST /api/archive/close-year, GET /api/archive/years, GET /api/archive/stats)
+  - ✅ TRANSAZIONI SICURE: Operazioni atomiche con rollback e supporto dry-run per test
+  - ✅ DASHBOARD PULITA: I dati archiviati sono esclusi automaticamente dalla dashboard
+  - ✅ REPORTING AVANZATO: Statistiche e anni archiviati aggregate da tutte le tabelle operative
+  - ✅ FILTERING INTELLIGENTE: Flag includeArchived per accesso dati storici quando necessario
+  - ✅ SICUREZZA ADMIN: Solo utenti admin possono accedere alle funzioni di archiviazione
+
 - July 03, 2025: Sistema versione 1.7.0 completato - PAGAMENTI PRODUZIONE + UX OTTIMIZZATA
   - ✅ SATISPAY QR CODE FUNZIONANTE: Generazione QR codes autentici da API live
   - ✅ STRIPE PAYMENT COMPLETO: Checkout Elements integrato e operativo
