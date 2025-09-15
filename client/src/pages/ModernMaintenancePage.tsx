@@ -424,7 +424,14 @@ export default function ModernMaintenancePage() {
                   </div>
                   
                   <div className="flex items-center space-x-2 ml-4">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRequestSelect(request);
+                      }}
+                    >
                       <Eye className="h-4 w-4 mr-2" />
                       Dettagli
                     </Button>
