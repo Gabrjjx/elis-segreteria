@@ -52,18 +52,26 @@ function CheckoutForm({ clientSecret, onSuccess, onError, amount, sigla }: {
 
     setIsProcessing(true);
 
-    const { error } = await stripe.confirmPayment({
+    const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/secretariat-payment?success=true&sigla=${encodeURIComponent(sigla)}`,
+        // Remove return_url to prevent redirect issues
       },
-      redirect: "if_required",
+      redirect: "never", // Handle confirmation without redirects
     });
 
     if (error) {
       onError(error.message || "Errore nel pagamento");
-    } else {
+    } else if (paymentIntent && paymentIntent.status === "succeeded") {
+      // Payment succeeded, trigger success callback
       onSuccess();
+    } else {
+      // Handle other payment states (requires_action, etc.)
+      if (paymentIntent?.status === "requires_action") {
+        onError("Il pagamento richiede un'azione aggiuntiva. Riprova.");
+      } else {
+        onError("Stato del pagamento non riconosciuto. Contatta il supporto.");
+      }
     }
 
     setIsProcessing(false);
