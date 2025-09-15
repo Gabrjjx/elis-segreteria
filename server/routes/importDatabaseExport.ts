@@ -179,7 +179,7 @@ router.post('/import/services/database-export', async (req, res) => {
       
       try {
         // Check for duplicates using the same logic as other importers
-        const existingServices = await storage.getServices({
+        const existingServicesResult = await storage.getServices({
           startDate: service.date,
           endDate: service.date,
           sigla: service.sigla,
@@ -187,6 +187,9 @@ router.post('/import/services/database-export', async (req, res) => {
           pieces: service.pieces,
           includeArchived: true
         });
+
+        // Extract services array from result object
+        const existingServices = existingServicesResult.services || [];
 
         // Check if a very similar service already exists
         const duplicate = existingServices.find(existing => 
