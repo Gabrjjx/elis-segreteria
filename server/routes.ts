@@ -59,6 +59,8 @@ import { archiveService } from './services/archiveService';
 import { transformHistoricalServiceRow } from './utils/historicalTransformer';
 import importTSVRouter from './routes/importTSV';
 import importNewTSVRouter from './routes/importNewTSV';
+import importDatabaseExportRouter from './routes/importDatabaseExport';
+import databaseRecoveryRouter from './routes/databaseRecovery';
 
 // Type definitions for historical import
 interface HistoricalServiceRow {
@@ -2523,6 +2525,8 @@ RifID: ${hashId}`
   // Register TSV import routers
   app.use('/api', importTSVRouter);
   app.use('/api', importNewTSVRouter);
+  app.use('/api', importDatabaseExportRouter);
+  app.use('/api', databaseRecoveryRouter);
 
   const httpServer = createServer(app);
   return httpServer;

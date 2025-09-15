@@ -1,0 +1,69 @@
+2 2025-04-29 00:00:00.000 177 1 siglatura 0.5 paid
+4 2025-04-09 00:00:00.000 140 1 happy_hour 1.0 paid
+6 2025-04-07 00:00:00.000 139 1 siglatura 0.5 paid
+7 2025-04-04 00:00:00.000 135 1 siglatura 0.5 paid
+8 2025-04-04 00:00:00.000 164 1 happy_hour 1.0 paid
+9 2025-04-01 00:00:00.000 28 1 siglatura 1.0 paid
+10 2025-04-08 00:00:00.000 142 1 siglatura 0.5 paid
+11 2025-04-08 00:00:00.000 177 1 siglatura 0.5 paid
+16 2025-05-08 00:00:00.000 177 5 siglatura 2.5 paid
+21 2025-05-08 00:00:00.000 102 12 siglatura 6.0 paid
+22 2025-05-08 00:00:00.000 102 1 happy_hour 1.5 paid
+15 2025-05-08 00:00:00.000 128 1 siglatura 0.5 paid
+18 2025-05-08 00:00:00.000 116 1 happy_hour 2.0 paid
+1 2025-05-05 00:00:00.000 145 1 siglatura 0.5 paid
+19 2025-05-08 00:00:00.000 115 1 happy_hour 1.0 paid
+28 2025-05-12 00:00:00.000 137 1 siglatura 0.5 paid
+29 2025-05-12 00:00:00.000 137 1 riparazione 0.5 paid Attaccare bottone
+30 2025-05-13 00:00:00.000 177 1 siglatura 0.5 paid
+17 2025-05-08 00:00:00.000 177 1 happy_hour 1.0 paid
+31 2025-05-14 00:00:00.000 185 1 siglatura 0.5 paid
+32 2025-05-16 00:00:00.000 163 3 siglatura 1.5 paid
+35 2025-05-19 00:00:00.000 163 3 siglatura 1.5 paid
+34 2025-05-19 00:00:00.000 143 15 siglatura 7.5 paid
+36 2025-05-21 00:00:00.000 166 6 siglatura 3.0 paid
+33 2025-05-16 00:00:00.000 157 1 siglatura 0.5 paid
+27 2025-05-12 00:00:00.000 132 1 siglatura 0.5 paid
+25 2025-05-09 00:00:00.000 115 1 happy_hour 1.0 paid
+38 2025-06-03 00:00:00.000 115 4 siglatura 2.0 paid CANGIANO
+64 2025-06-23 00:00:00.000 175 2 happy_hour 2.0 paid LOCONTE
+12 2025-05-27 00:00:00.000 177 5 siglatura 2.5 paid
+20 2025-05-28 00:00:00.000 169 2 siglatura 1.0 paid
+3 2025-04-11 00:00:00.000 157 1 siglatura 0.5 paid
+42 2025-06-05 00:00:00.000 163 1 siglatura 0.5 paid LAGANA
+41 2025-06-05 00:00:00.000 157 1 siglatura 0.5 paid card INGROSSO
+5 2025-05-22 00:00:00.000 139 1 siglatura 0.5 paid ERCOLINO
+14 2025-05-28 00:00:00.000 92 6 siglatura 3.0 paid BONGIOVANNI
+37 2025-05-30 00:00:00.000 157 8 siglatura 4.0 paid INGROSSO
+13 2025-05-27 00:00:00.000 135 1 siglatura 0.5 paid CIULLA
+39 2025-06-03 00:00:00.000 169 1 siglatura 0.5 paid PETRACCONE
+44 2025-06-06 00:00:00.000 127 3 siglatura 1.5 paid CALDERON
+65 2025-06-23 00:00:00.000 166 1 siglatura 0.5 paid PETTINATO
+43 2025-06-06 00:00:00.000 174 3 siglatura 1.5 paid RUTA
+46 2025-06-12 00:00:00.000 157 1 siglatura 0.5 paid INGROSSO
+26 2025-05-12 00:00:00.000 184 1 siglatura 0.5 paid BARTOLINI
+47 2025-06-13 00:00:00.000 166 1 siglatura 0.5 paid PETTINATO
+48 2025-06-16 00:00:00.000 145 9 siglatura 4.5 paid GIUNTA
+56 2025-06-20 00:00:00.000 177 1 happy_hour 1.0 paid SILEO
+49 2025-06-17 00:00:00.000 169 1 siglatura 0.5 paid PETRACCONE
+40 2025-06-03 00:00:00.000 175 2 riparazione 3.5 paid siglatura maglia + riparazione camicia LOCONTE
+55 2025-06-20 00:00:00.000 102 2 happy_hour 3.5 paid pantaloncino kipsta, maglietta nera Bershka, maglietta nera perfetta ALUTHDURAGE
+70 2025-07-03 00:00:00.000 183 1 happy_hour 1.0 paid Pagamenti esterni NAPOLITANO
+62 2025-06-23 00:00:00.000 161 2 siglatura 1.0 paid PALACIOS
+52 2025-06-20 00:00:00.000 134 2 happy_hour 5.0 paid Maglia bianca Nike LA MARCA
+53 2025-06-20 00:00:00.000 134 2 happy_hour 5.0 paid LA MARCA
+58 2025-06-20 00:00:00.000 87 1 happy_hour 1.0 paid maglietta blu GENCO
+54 2025-06-20 00:00:00.000 93 3 happy_hour 3.0 paid camicetta a righe, polo blu turchese, panciotto gilet (solo roba de merda, insomma) BOSCO
+66 2025-06-23 00:00:00.000 140 1 siglatura 0.5 paid FAZIO
+50 2025-06-18 00:00:00.000 116 1 siglatura 0.5 paid LAMMOGLIA
+57 2025-06-20 00:00:00.000 144 2 happy_hour 2.0 paid camicetta nera estiva, camicia nera perfetta satispay MARTINES
+61 2025-06-23 00:00:00.000 161 1 riparazione 2.0 paid PALACIOS
+59 2025-06-20 00:00:00.000 TS00 1 siglatura 0.5 paid NON TOCCARE - UTENTE DI TEST TEST
+45 2025-06-10 00:00:00.000 TS00 1 siglatura 0.5 paid NON TOCCARE - UTENTE DI TEST TEST
+67 2025-06-30 00:00:00.000 174 5 siglatura 2.5 paid RUTA
+69 2025-07-02 00:00:00.000 145 2 siglatura 1.0 paid GIUNTA
+51 2025-06-18 00:00:00.000 179 6 siglatura 3.0 paid MARINO
+68 2025-07-02 00:00:00.000 157 1 siglatura 0.5 paid TEST INGROSSO
+72 2025-07-08 00:00:00.000 157 4 siglatura 2.0 paid INGROSSO
+71 2025-07-03 00:00:00.000 TS00 1 siglatura 0.5 paid TEST
+73 2025-09-11 00:00:00.000 TS00 1 siglatura 0.5 paid TEST  

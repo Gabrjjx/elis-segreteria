@@ -3,10 +3,14 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage, DatabaseStorage } from "./storage";
 import { schedulerService } from "./services/schedulerService";
+import { maintenanceMiddleware } from "./maintenance";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Add maintenance mode middleware
+app.use(maintenanceMiddleware);
 
 app.use((req, res, next) => {
   const start = Date.now();
