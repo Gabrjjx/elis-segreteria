@@ -31,11 +31,12 @@ const CheckoutForm = ({ sigla }: { sigla: string }) => {
       return;
     }
 
-    const { error } = await stripe.confirmPayment({
+    const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/payment-success?sigla=${sigla}&method=stripe`,
+        // Remove return_url to prevent redirect issues
       },
+      redirect: "never", // Handle confirmation without redirects
     });
 
     if (error) {
@@ -44,11 +45,30 @@ const CheckoutForm = ({ sigla }: { sigla: string }) => {
         description: error.message,
         variant: "destructive",
       });
-    } else {
+    } else if (paymentIntent && paymentIntent.status === "succeeded") {
+      // Payment succeeded, navigate to success page manually
       toast({
         title: "Pagamento Completato",
         description: "Grazie per il tuo pagamento!",
       });
+      
+      // Navigate to success page with payment data
+      navigate(`/payment-success?payment_intent=${paymentIntent.id}&sigla=${sigla}&method=stripe&redirect_status=succeeded`);
+    } else {
+      // Handle other payment states
+      if (paymentIntent?.status === "requires_action") {
+        toast({
+          title: "Azione Richiesta",
+          description: "Il pagamento richiede un'azione aggiuntiva. Riprova.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Stato Sconosciuto",
+          description: "Stato del pagamento non riconosciuto. Contatta il supporto.",
+          variant: "destructive",
+        });
+      }
     }
     setIsLoading(false);
   }
