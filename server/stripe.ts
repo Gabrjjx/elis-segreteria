@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import { SecretariatPaymentStatus } from "@shared/schema";
+import { SecretariatPaymentStatus, BikeReservationStatus } from "@shared/schema";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
@@ -11,22 +11,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-12-18.acacia",
 });
 
-// Create Stripe payment intent for bike service (2.50 EUR)
+// Create Stripe payment intent for secretariat service (variable amount)
 export async function createBikePaymentIntent(req: Request, res: Response) {
   try {
-    const { customerEmail, customerName, sigla, amount } = req.body;
+    const { customerEmail, customerName, sigla } = req.body;
 
-    if (!customerEmail || !customerName || !sigla || !amount) {
+    if (!customerEmail || !customerName || !sigla) {
       return res.status(400).json({
-        error: "Missing required fields: customerEmail, customerName, sigla, amount"
-      });
-    }
-
-    // Validate amount
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount < 0.50 || numAmount > 100) {
-      return res.status(400).json({
-        error: "Invalid amount. Must be between 0.50 and 100.00 EUR"
+        error: "Missing required fields: customerEmail, customerName, sigla"
       });
     }
 
@@ -40,6 +32,32 @@ export async function createBikePaymentIntent(req: Request, res: Response) {
 
     // Generate unique order ID for the secretariat service
     const orderId = `SEC_${sigla}_${Date.now()}`;
+
+    // Get ALL unpaid services to track specific service IDs (no pagination limit)
+    const { services: unpaidServices } = await storage.getServices({
+      sigla: sigla,
+      status: "unpaid",
+      page: 1,
+      limit: 10000 // High limit to capture all unpaid services
+    });
+    
+    // SECURITY: Calculate authoritative amount server-side (never trust client)
+    const numAmount = unpaidServices.reduce((sum, service) => sum + service.amount, 0);
+    
+    // Validate calculated amount is reasonable
+    if (numAmount < 0.50 || numAmount > 1000) {
+      return res.status(400).json({
+        error: `Invalid calculated amount: €${numAmount.toFixed(2)}. Must be between 0.50 and 1000.00 EUR`
+      });
+    }
+    
+    if (unpaidServices.length === 0) {
+      return res.status(400).json({
+        error: "No unpaid services found for this sigla"
+      });
+    }
+    
+    const serviceIds = unpaidServices.map(s => s.id.toString());
 
     // Create secretariat payment record in database
     const paymentData = {
@@ -65,7 +83,8 @@ export async function createBikePaymentIntent(req: Request, res: Response) {
         customerEmail: customerEmail,
         paymentId: payment.id.toString(),
         service: "secretariat_service",
-        amount: numAmount.toString()
+        amount: numAmount.toString(),
+        serviceIds: serviceIds.join(',') // Store specific service IDs
       },
       description: "Servizio Segreteria ELIS - Pagamento",
       receipt_email: customerEmail,
@@ -138,25 +157,25 @@ export async function handleStripeWebhook(req: Request, res: Response) {
             }
           }
           
-          // Mark all unpaid services for this sigla as paid
-          const { services } = await storage.getServices({
-            sigla: sigla,
-            status: "unpaid",
-            page: 1,
-            limit: 100
-          });
+          // Mark specific services as paid (from metadata)
+          const serviceIdsStr = paymentIntent.metadata.serviceIds;
+          const serviceIds = serviceIdsStr ? serviceIdsStr.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [];
           
-          console.log(`Found ${services.length} unpaid services for sigla ${sigla}`);
+          console.log(`Processing specific service IDs: ${serviceIds.join(', ')}`);
           
-          // Update each service to paid status
-          for (const service of services) {
-            await storage.updateService(service.id, {
-              status: "paid"
-            });
-            console.log(`Updated service ${service.id} to paid status`);
+          // Update each specific service to paid status
+          for (const serviceId of serviceIds) {
+            try {
+              await storage.updateService(serviceId, {
+                status: "paid"
+              });
+              console.log(`Updated service ${serviceId} to paid status`);
+            } catch (error) {
+              console.error(`Failed to update service ${serviceId}:`, error);
+            }
           }
           
-          console.log(`Payment confirmed for sigla ${sigla}. Updated ${services.length} services from unpaid to paid`);
+          console.log(`Payment confirmed for sigla ${sigla}. Updated ${serviceIds.length} services from unpaid to paid`);
         } else {
           console.log('Missing sigla or orderId in payment metadata');
         }
@@ -165,17 +184,33 @@ export async function handleStripeWebhook(req: Request, res: Response) {
       case 'payment_intent.payment_failed':
         const failedPayment = event.data.object as Stripe.PaymentIntent;
         const failedOrderId = failedPayment.metadata.orderId;
+        const failedServiceType = failedPayment.metadata.service;
         
         if (failedOrderId) {
-          const reservation = await storage.getBikeReservationByOrderId(failedOrderId);
-          if (reservation) {
-            // Update reservation status to cancelled
-            await storage.updateBikeReservationStatus(
-              reservation.id, 
-              BikeReservationStatus.CANCELLED
-            );
-            
-            console.log(`Payment failed for bike reservation ${reservation.id}`);
+          // Handle secretariat payment failures
+          if (failedServiceType === "secretariat_service") {
+            try {
+              await storage.updateSecretariatPaymentStatus(
+                failedOrderId, 
+                SecretariatPaymentStatus.FAILED,
+                new Date()
+              );
+              console.log(`Secretariat payment ${failedOrderId} marked as failed`);
+            } catch (error) {
+              console.error(`Failed to update secretariat payment ${failedOrderId} to FAILED:`, error);
+            }
+          } else {
+            // Handle bike reservation failures (existing logic)
+            const reservation = await storage.getBikeReservationByOrderId(failedOrderId);
+            if (reservation) {
+              // Update reservation status to cancelled
+              await storage.updateBikeReservationStatus(
+                reservation.id, 
+                BikeReservationStatus.CANCELLED
+              );
+              
+              console.log(`Payment failed for bike reservation ${reservation.id}`);
+            }
           }
         }
         break;

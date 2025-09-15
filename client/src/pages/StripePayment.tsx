@@ -108,16 +108,16 @@ export default function StripePayment() {
     setIsLoading(true);
     
     try {
-      // Create Stripe payment intent
-      const response = await fetch('/api/create-payment-intent', {
+      // Use correct endpoint with proper metadata for webhook processing
+      const response = await fetch('/api/public/secretariat-payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: paymentState.totalAmount,
-          currency: 'EUR',
-          sigla: paymentState.sigla
+          sigla: paymentState.sigla,
+          customerName: paymentState.student ? `${paymentState.student.firstName} ${paymentState.student.lastName}` : 'N/A',
+          customerEmail: `${paymentState.sigla}@student.elis.org` // Default email pattern
         }),
       });
 

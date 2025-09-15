@@ -2036,7 +2036,7 @@ RifID: ${hashId}`
 
   // Stripe Payment Routes for Bike Service (2.50 EUR)
   app.post("/api/stripe/create-bike-payment", createBikePaymentIntent);
-  app.post("/api/stripe/webhook", handleStripeWebhook);
+  // Webhook route moved to server/index.ts with raw body parsing
   app.get("/api/stripe/verify/:orderId", verifyBikePaymentStatus);
 
   // Public endpoint for bike service payment (Stripe)

@@ -4,8 +4,14 @@ import { setupVite, serveStatic, log } from "./vite";
 import { storage, DatabaseStorage } from "./storage";
 import { schedulerService } from "./services/schedulerService";
 import { maintenanceMiddleware } from "./maintenance";
+import { handleStripeWebhook } from "./stripe";
 
 const app = express();
+
+// Configure webhook route with raw body parsing BEFORE express.json()
+app.post("/api/stripe/webhook", express.raw({type: 'application/json'}), handleStripeWebhook);
+
+// Global JSON parsing for all other routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
