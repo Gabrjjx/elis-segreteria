@@ -121,6 +121,16 @@ This is a comprehensive web application for managing a residence's tailoring ser
 
 ## Changelog
 
+- September 15, 2025: Sistema versione 2.1.0 completato - IMPORTAZIONE STORICA PDF COMPLETATA
+  - ✅ IMPORT STORICO FUNZIONALE: Importazione dati storici da PDF amministrazione sartoria 2020-2024
+  - ✅ 8 RECORD IMPORTATI: Dati storici separati automaticamente dalla dashboard corrente
+  - ✅ PARSER PDF COMPLETO: Parsing automatico date, sigla, importi, tipi servizio (siglatura, riparazione, orlo)
+  - ✅ SISTEMA ARCHIVIAZIONE INTEGRATO: Uso del sistema existing per separare dati storici (archivedYear)
+  - ✅ SICUREZZA ADMIN: Endpoint POST /api/import/services/historical protetto da autenticazione admin
+  - ✅ IDEMPOTENCY GARANTITA: Controlli duplicati prevengono importazioni multiple accidentali
+  - ✅ VALIDATION COMPLETA: Trasformazione e normalizzazione dati con error handling robusto
+  - ✅ PRODUCTION-READY: Tutti i bug critici risolti (year tagging, amount semantics, idempotency)
+
 - September 12, 2025: Sistema versione 2.0.0 completato - SISTEMA ARCHIVIAZIONE ANNUALE
   - ✅ ARCHIVIAZIONE COMPLETA: Sistema di archiviazione annuale per tutti i dati operativi
   - ✅ 6 TABELLE SUPPORTATE: Services, maintenance_requests, paypal_orders, receipts, secretariat_payments, bike_reservations

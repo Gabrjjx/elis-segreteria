@@ -63,7 +63,7 @@ interface HistoricalServiceRow {
   sigla: string;
   pieces: number;
   type: string; // "Siglatura", "Riparazione", "happy hour", etc.
-  amount: number; // Per piece amount
+  amount: number; // Total amount for all pieces (converted to per-piece internally)
   notes?: string;
 }
 
@@ -153,21 +153,24 @@ function transformHistoricalServiceRow(row: any, year: number): any {
       throw new Error(`Unknown service type: ${rawType}`);
   }
   
-  // Validate amount
-  let amount: number;
+  // Validate and convert amount (PDF provides total amount, we need per-piece amount)
+  let totalAmount: number;
   if (typeof row.amount === 'number') {
-    amount = row.amount;
+    totalAmount = row.amount;
   } else if (typeof row.amount === 'string') {
     // Handle € formatting like "€ 0,50" or "€ 1,20"
     const cleanAmount = row.amount.replace(/€|\s/g, '').replace(',', '.');
-    amount = parseFloat(cleanAmount);
+    totalAmount = parseFloat(cleanAmount);
   } else {
-    amount = parseFloat(row.amount);
+    totalAmount = parseFloat(row.amount);
   }
   
-  if (isNaN(amount) || amount < 0) {
+  if (isNaN(totalAmount) || totalAmount < 0) {
     throw new Error(`Invalid amount: ${row.amount}`);
   }
+  
+  // Convert total amount to per-piece amount
+  const amount = totalAmount / pieces;
   
   // Additional notes from input
   if (row.notes && notes) {
@@ -186,7 +189,7 @@ function transformHistoricalServiceRow(row: any, year: number): any {
     status: 'paid', // Historical data is assumed paid
     paymentMethod: null,
     notes,
-    archivedYear: year, // Mark as archived for the import year
+    archivedYear: parsedDate.getFullYear(), // Use the actual year from the record's date
     archivedAt: new Date() // Set archived timestamp
   };
 }
@@ -2481,7 +2484,7 @@ RifID: ${hashId}`
               existing.type === row.type &&
               existing.pieces === row.pieces &&
               existing.amount === row.amount &&
-              existing.archivedYear === year
+              existing.archivedYear === row.archivedYear
             );
             
             if (isDuplicate) {
