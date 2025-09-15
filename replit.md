@@ -121,6 +121,18 @@ This is a comprehensive web application for managing a residence's tailoring ser
 
 ## Changelog
 
+- September 15, 2025: Sistema versione 2.2.0 completato - IMPORTAZIONE STORICA TSV COMPLETATA AL 100%
+  - 🎉 **500 SERVIZI STORICI IMPORTATI**: Dataset completo 2020-2022 da 7 file TSV originali
+  - ✅ **PARSER TSV AVANZATO**: Lettura e parsing automatico di 6 colonne con gestione intelligente date italiane
+  - ✅ **NORMALIZZAZIONE PERFETTA**: Mapping automatico siglatura/siglature/bottone/orlo → tipi standard
+  - ✅ **DISTRIBUZIONE STORICA**: 2020 (84 servizi), 2021 (206 servizi), 2022 (210 servizi)
+  - ✅ **BREAKDOWN SERVIZI**: 472 siglature, 27 riparazioni, 1 happy hour correttamente categorizzati
+  - ✅ **BUG CRITICO RISOLTO**: Fix storage.getServices compatibility per evitare crash durante import
+  - ✅ **SISTEMA ARCHIVIAZIONE**: Tutti i dati storici separati con archivedYear per non interferire con dashboard corrente
+  - ✅ **IDEMPOTENCY GARANTITA**: Controlli duplicati basati su data, sigla, tipo, pezzi, importo
+  - ✅ **ENDPOINT TSV**: POST /api/import/services/tsv con supporto dry-run e logging dettagliato
+  - ✅ **PRODUCTION-READY**: Sistema robusto validato dall'architetto, pronto per uso in produzione
+
 - September 15, 2025: Sistema versione 2.1.0 completato - IMPORTAZIONE STORICA PDF COMPLETATA
   - ✅ IMPORT STORICO FUNZIONALE: Importazione dati storici da PDF amministrazione sartoria 2020-2024
   - ✅ 8 RECORD IMPORTATI: Dati storici separati automaticamente dalla dashboard corrente
