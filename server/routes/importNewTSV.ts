@@ -52,33 +52,59 @@ function parseNewTSVFormat(filePath: string): ParsedService[] {
       // Parse pieces
       const pieces = parseInt(piecesStr) || 1;
 
-      // Parse amount - remove € symbol and convert comma to dot
+      // Parse amount - handle various formats
       let amount = 0;
       if (amountStr) {
-        const cleanAmount = amountStr.replace('€', '').replace(',', '.').trim();
+        let cleanAmount = amountStr.replace(/€/g, '').trim();
+        
+        // Handle special cases like "0,5+2,50" (take first value for now)
+        if (cleanAmount.includes('+')) {
+          cleanAmount = cleanAmount.split('+')[0];
+        }
+        
+        // Convert comma to dot for decimal separator
+        cleanAmount = cleanAmount.replace(',', '.');
         amount = parseFloat(cleanAmount) || 0;
       }
 
-      // Normalize service type
+      // Normalize service type with expanded mappings
       let type = 'siglatura';
       let notes = '';
 
-      const lowerType = typeStr.toLowerCase();
-      if (lowerType.includes('riparazione') || lowerType.includes('orlo') || lowerType.includes('bottone') || lowerType.includes('zip')) {
+      const lowerType = typeStr.toLowerCase().trim();
+      
+      // Happy Hour variations
+      if (lowerType === 'hh' || lowerType === 'happy hour') {
+        type = 'happy_hour';
+      }
+      // Riparazione and special repairs
+      else if (lowerType.includes('riparazione') || lowerType.includes('orlo') || 
+               lowerType.includes('bottone') || lowerType.includes('zip') ||
+               lowerType.includes('ricucire')) {
         type = 'riparazione';
         if (lowerType !== 'riparazione') {
           notes = typeStr; // Keep original description as notes
         }
-      } else if (lowerType.includes('siglatur')) {
+      }
+      // Siglatura variations (including typos)
+      else if (lowerType.includes('siglatur') || lowerType.includes('siglitur') || 
+               lowerType.includes('sigaltur') || lowerType.includes('singlatur')) {
         type = 'siglatura';
         if (lowerType.includes('+')) {
           notes = typeStr; // Mixed service, keep full description
         }
-      } else {
-        // Default to siglatura for unknown types
+      }
+      // Special items that go under riparazione category
+      else if (lowerType.includes('tablet') || lowerType.includes('fono') || 
+               lowerType.includes('cappello') || lowerType.includes('telecomando')) {
+        type = 'riparazione';
+        notes = typeStr; // Keep original description as notes
+      }
+      // Default to siglatura for any other variations
+      else {
         type = 'siglatura';
         if (typeStr.toLowerCase() !== 'siglatura') {
-          notes = typeStr;
+          notes = typeStr; // Keep original for reference
         }
       }
 
@@ -109,7 +135,11 @@ router.post('/import/services/new-tsv', async (req, res) => {
     const { dryRun = true } = req.body;
     
     // File path for the new TSV data
-    const filePath = path.join(process.cwd(), 'attached_assets/Pasted-06-02-2020-97-1-Siglatura-0-40-11-02-2020-93-2-Siglatura-0-80-11-02-2020-135-2-Siglatura--1757939527048_1757939527049.txt');
+    const { filePath: providedFilePath } = req.body;
+    
+    // Default to the first file if no file path is provided
+    const filePath = providedFilePath || 
+      path.join(process.cwd(), 'attached_assets/Pasted-06-02-2020-97-1-Siglatura-0-40-11-02-2020-93-2-Siglatura-0-80-11-02-2020-135-2-Siglatura--1757939527048_1757939527049.txt');
     
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'File not found' });
