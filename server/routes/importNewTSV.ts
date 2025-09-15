@@ -141,7 +141,7 @@ router.post('/import/services/new-tsv', async (req, res) => {
     }
 
     // Actual import
-    const { default: storage } = await import('../storage.js');
+    const { storage } = await import('../storage.js');
     let imported = 0;
     let skipped = 0;
     const errors = [];
