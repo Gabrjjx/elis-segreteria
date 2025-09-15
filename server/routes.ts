@@ -57,6 +57,140 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 
 import { archiveService } from './services/archiveService';
 
+// Type definitions for historical import
+interface HistoricalServiceRow {
+  date: string; // DD/MM/YYYY format from PDF
+  sigla: string;
+  pieces: number;
+  type: string; // "Siglatura", "Riparazione", "happy hour", etc.
+  amount: number; // Per piece amount
+  notes?: string;
+}
+
+// Transform historical service row from PDF format to database format
+function transformHistoricalServiceRow(row: any, year: number): any {
+  if (!row || typeof row !== 'object') {
+    throw new Error('Invalid row data');
+  }
+  
+  // Parse and validate date
+  const dateStr = row.date?.toString().trim();
+  if (!dateStr) {
+    throw new Error('Date is required');
+  }
+  
+  // Convert DD/MM/YYYY to Date object
+  const dateParts = dateStr.split('/');
+  if (dateParts.length !== 3) {
+    throw new Error(`Invalid date format: ${dateStr}. Expected DD/MM/YYYY`);
+  }
+  
+  const day = parseInt(dateParts[0]);
+  const month = parseInt(dateParts[1]);
+  const rowYear = parseInt(dateParts[2]);
+  
+  if (isNaN(day) || isNaN(month) || isNaN(rowYear)) {
+    throw new Error(`Invalid date components: ${dateStr}`);
+  }
+  
+  const parsedDate = new Date(rowYear, month - 1, day);
+  if (isNaN(parsedDate.getTime())) {
+    throw new Error(`Invalid date: ${dateStr}`);
+  }
+  
+  // Validate sigla
+  const sigla = row.sigla?.toString().trim();
+  if (!sigla) {
+    throw new Error('Sigla is required');
+  }
+  
+  // Validate pieces
+  const pieces = parseInt(row.pieces);
+  if (isNaN(pieces) || pieces < 1) {
+    throw new Error(`Invalid pieces: ${row.pieces}`);
+  }
+  
+  // Validate and map service type
+  const rawType = row.type?.toString().toLowerCase().trim();
+  if (!rawType) {
+    throw new Error('Service type is required');
+  }
+  
+  let mappedType: string;
+  let notes: string | null = null;
+  
+  switch (rawType) {
+    case 'siglatura':
+      mappedType = 'siglatura';
+      break;
+    case 'riparazione':
+      mappedType = 'riparazione';
+      break;
+    case 'happy hour':
+      mappedType = 'happy_hour';
+      break;
+    case 'orlo':
+      mappedType = 'riparazione';
+      notes = 'orlo';
+      break;
+    case 'bottone':
+      mappedType = 'riparazione';
+      notes = 'bottone';
+      break;
+    case 'riparazione zip':
+      mappedType = 'riparazione';
+      notes = 'zip';
+      break;
+    case 'riparazione+siglatura':
+      mappedType = 'riparazione';
+      notes = 'riparazione+siglatura';
+      break;
+    case 'siglatura + kit':
+      mappedType = 'siglatura';
+      notes = 'kit';
+      break;
+    default:
+      throw new Error(`Unknown service type: ${rawType}`);
+  }
+  
+  // Validate amount
+  let amount: number;
+  if (typeof row.amount === 'number') {
+    amount = row.amount;
+  } else if (typeof row.amount === 'string') {
+    // Handle € formatting like "€ 0,50" or "€ 1,20"
+    const cleanAmount = row.amount.replace(/€|\s/g, '').replace(',', '.');
+    amount = parseFloat(cleanAmount);
+  } else {
+    amount = parseFloat(row.amount);
+  }
+  
+  if (isNaN(amount) || amount < 0) {
+    throw new Error(`Invalid amount: ${row.amount}`);
+  }
+  
+  // Additional notes from input
+  if (row.notes && notes) {
+    notes = `${notes}; ${row.notes}`;
+  } else if (row.notes) {
+    notes = row.notes;
+  }
+  
+  return {
+    date: parsedDate,
+    sigla,
+    cognome: null, // Not available in PDF
+    pieces,
+    type: mappedType,
+    amount,
+    status: 'paid', // Historical data is assumed paid
+    paymentMethod: null,
+    notes,
+    archivedYear: year, // Mark as archived for the import year
+    archivedAt: new Date() // Set archived timestamp
+  };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
   
@@ -2254,6 +2388,136 @@ RifID: ${hashId}`
       console.error('Error getting archive stats:', error);
       res.status(500).json({ 
         error: "Failed to get archive stats", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  // ========================================
+  // HISTORICAL DATA IMPORT ENDPOINTS (ADMIN)
+  // ========================================
+
+  /**
+   * POST /api/import/services/historical - Import historical services data (ADMIN ONLY)
+   * Body: { year: number, rows: HistoricalServiceRow[], dryRun?: boolean }
+   * Response: { success: boolean, inserted: number, skipped: number, failed: number, errors?: string[] }
+   */
+  app.post("/api/import/services/historical", async (req: Request, res: Response) => {
+    // CRITICAL SECURITY: Only authenticated admin users can import historical data
+    if (!req.session?.user) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    
+    // ADMIN-ONLY: Check for admin privileges
+    if (req.session.user.username !== 'admin') {
+      return res.status(403).json({ error: "Admin privileges required for historical data import" });
+    }
+
+    try {
+      const { year, rows, dryRun = true } = req.body;
+      
+      // Validate input
+      if (!year || typeof year !== 'number' || year < 2020 || year > new Date().getFullYear()) {
+        return res.status(400).json({ error: "Invalid year parameter. Must be between 2020 and current year." });
+      }
+      
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({ error: "Rows array is required and must not be empty" });
+      }
+      
+      console.log(`Starting historical import for year ${year}, ${rows.length} rows, dryRun: ${dryRun}`);
+      
+      // Transform and validate each row
+      const transformedRows = [];
+      const errors = [];
+      
+      for (let i = 0; i < rows.length; i++) {
+        try {
+          const transformedRow = transformHistoricalServiceRow(rows[i], year);
+          transformedRows.push(transformedRow);
+        } catch (error) {
+          const errorMsg = `Row ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMsg);
+          console.error(`Transform error for row ${i + 1}:`, error);
+        }
+      }
+      
+      if (errors.length > 0 && errors.length === rows.length) {
+        return res.status(400).json({ 
+          error: "All rows failed transformation", 
+          errors: errors.slice(0, 10) // Limit error details
+        });
+      }
+      
+      // Import logic (dry-run vs real import)
+      let inserted = 0;
+      let skipped = 0;
+      let failed = 0;
+      const importErrors = [];
+      
+      if (dryRun) {
+        // Dry run: just validate and count
+        console.log(`DRY RUN: Would import ${transformedRows.length} historical services`);
+        inserted = transformedRows.length;
+      } else {
+        // Real import with idempotency check
+        for (const row of transformedRows) {
+          try {
+            // Check for existing record to avoid duplicates
+            const existingServices = await storage.getServices({
+              startDate: row.date,
+              endDate: row.date,
+              sigla: row.sigla,
+              type: row.type,
+              pieces: row.pieces,
+              amount: row.amount,
+              page: 1,
+              limit: 1
+            });
+            
+            // Check if identical record exists in archived data
+            const isDuplicate = existingServices.services.some(existing => 
+              existing.sigla === row.sigla &&
+              existing.type === row.type &&
+              existing.pieces === row.pieces &&
+              existing.amount === row.amount &&
+              existing.archivedYear === year
+            );
+            
+            if (isDuplicate) {
+              skipped++;
+              console.log(`Skipping duplicate service: ${row.sigla} - ${row.type} on ${row.date}`);
+            } else {
+              await storage.createService(row);
+              inserted++;
+              console.log(`Imported service: ${row.sigla} - ${row.type} on ${row.date}`);
+            }
+          } catch (error) {
+            failed++;
+            const errorMsg = `Failed to import ${row.sigla} - ${row.type}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            importErrors.push(errorMsg);
+            console.error('Import error:', error);
+          }
+        }
+      }
+      
+      console.log(`Import completed - Inserted: ${inserted}, Skipped: ${skipped}, Failed: ${failed}`);
+      
+      res.json({
+        success: true,
+        year,
+        dryRun,
+        inserted,
+        skipped,
+        failed,
+        totalProcessed: transformedRows.length,
+        errors: [...errors, ...importErrors].slice(0, 20) // Limit error output
+      });
+      
+    } catch (error) {
+      console.error('Error importing historical services:', error);
+      res.status(500).json({ 
+        error: "Failed to import historical services", 
         details: error instanceof Error ? error.message : 'Unknown error' 
       });
     }
