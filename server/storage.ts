@@ -819,6 +819,8 @@ export class DatabaseStorage implements IStorage {
       // Trasforma i risultati nel formato atteso
       const formattedServices = results.map(result => ({
         ...result.service,
+        // CRITICAL FIX: Ensure amount is always returned as number, not string
+        amount: Number(result.service.amount),
         student: result.student?.firstName ? {
           firstName: result.student.firstName,
           lastName: result.student.lastName,
@@ -858,6 +860,8 @@ export class DatabaseStorage implements IStorage {
     // Trasforma i risultati nel formato atteso
     return {
       ...result[0].service,
+      // CRITICAL FIX: Ensure amount is always returned as number, not string
+      amount: Number(result[0].service.amount),
       student: result[0].student.firstName ? {
         firstName: result[0].student.firstName,
         lastName: result[0].student.lastName,

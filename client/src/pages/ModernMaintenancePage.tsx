@@ -397,7 +397,7 @@ export default function ModernMaintenancePage() {
                       <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <span className="flex items-center space-x-1">
                           <User className="h-3 w-3" />
-                          <span>{request.studentName}</span>
+                          <span>{request.requesterName || "N/D"}</span>
                         </span>
                         <span className="flex items-center space-x-1">
                           <MapPin className="h-3 w-3" />
@@ -408,7 +408,7 @@ export default function ModernMaintenancePage() {
                           <span>{
                             (() => {
                               try {
-                                const date = new Date(request.createdAt);
+                                const date = new Date(request.timestamp);
                                 if (!isNaN(date.getTime())) {
                                   return format(date, 'dd/MM/yyyy HH:mm', { locale: it });
                                 }

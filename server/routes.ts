@@ -14,7 +14,6 @@ import {
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { getMaintenanceRequestsCSV, readGoogleSheet, isSheetLoaded, findRequestRowInGoogleSheet, updateGoogleSheetStatus } from "./services/googleSheets";
-import Stripe from "stripe";
 import { semanticSearch, analyzeSearchQuery } from "./services/aiService";
 import { 
   hasOAuth2Credentials, 
@@ -47,13 +46,7 @@ import {
   handleSumUpWebhook
 } from "./sumup";
 
-// Initialize Stripe
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
-}
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-05-28.basil",
-});
+// REMOVED: Duplicate Stripe initialization - using stripe.ts client instead
 
 import { archiveService } from './services/archiveService';
 import { transformHistoricalServiceRow } from './utils/historicalTransformer';
@@ -2086,16 +2079,9 @@ RifID: ${hashId}`
     try {
       const { amount } = req.body;
       
-      // Initialize Stripe instance within the request context
-      const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-        apiVersion: "2025-05-28.basil",
-      });
-      
-      const paymentIntent = await stripeInstance.paymentIntents.create({
-        amount: Math.round(amount * 100), // Convert to cents
-        currency: "eur",
-      });
-      res.json({ clientSecret: paymentIntent.client_secret });
+      // REMOVED: Another duplicate Stripe initialization - should use stripe.ts client
+      // This endpoint seems obsolete since we use createBikePaymentIntent 
+      res.status(501).json({ message: "This endpoint is deprecated. Use /api/public/secretariat-payment instead." });
     } catch (error: any) {
       res.status(500).json({ message: "Error creating payment intent: " + error.message });
     }

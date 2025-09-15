@@ -161,7 +161,7 @@ export default function MaintenanceDetail({
             </div>
           </DialogTitle>
           <DialogDescription className="text-sm">
-            Creata il {formatDateTime(request.timestamp)}
+            Creata il {request.timestamp ? formatDateTime(request.timestamp) : "Data non disponibile"}
           </DialogDescription>
         </DialogHeader>
 
@@ -197,7 +197,7 @@ export default function MaintenanceDetail({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium text-muted-foreground mb-1">Risolvibile da manutentori autarchici</p>
-              <p className="text-sm">{request.canBeSolvedByMaintainers ? "Sì" : "No"}</p>
+              <p className="text-sm">{request.canBeSolvedByMaintainers !== undefined ? (request.canBeSolvedByMaintainers ? "Sì" : "No") : "N/D"}</p>
             </div>
           </div>
 

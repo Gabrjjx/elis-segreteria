@@ -42,12 +42,23 @@ export async function createBikePaymentIntent(req: Request, res: Response) {
     });
     
     // SECURITY: Calculate authoritative amount server-side (never trust client)
-    const numAmount = unpaidServices.reduce((sum, service) => sum + service.amount, 0);
+    // CRITICAL FIX: Ensure each amount is a number and handle potential NaN
+    const numAmount = unpaidServices.reduce((sum, service) => {
+      const amount = Number(service.amount);
+      if (!Number.isFinite(amount)) {
+        console.error(`Invalid service amount for service ${service.id}: ${service.amount}`);
+        return sum;
+      }
+      return sum + amount;
+    }, 0);
     
-    // Validate calculated amount is reasonable
-    if (numAmount < 0.50 || numAmount > 1000) {
+    console.log(`Payment calculation for sigla ${sigla}: ${unpaidServices.length} services, total €${numAmount.toFixed(2)}`);
+    
+    // Validate calculated amount is reasonable and not NaN
+    if (!Number.isFinite(numAmount) || numAmount < 0.50 || numAmount > 1000) {
+      console.error(`Invalid calculated amount: ${numAmount}, services: ${unpaidServices.map(s => ({id: s.id, amount: s.amount})).join(', ')}`);
       return res.status(400).json({
-        error: `Invalid calculated amount: €${numAmount.toFixed(2)}. Must be between 0.50 and 1000.00 EUR`
+        error: `Invalid calculated amount: €${Number.isFinite(numAmount) ? numAmount.toFixed(2) : 'NaN'}. Must be between 0.50 and 1000.00 EUR`
       });
     }
     
