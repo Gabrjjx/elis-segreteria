@@ -117,6 +117,8 @@ interface PaymentState {
     sigla: string;
     firstName: string;
     lastName: string;
+    email?: string;
+    phone?: string;
   };
   pendingServices: PendingService[];
   totalAmount: number;

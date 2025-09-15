@@ -284,7 +284,10 @@ export default function ModernPaymentsPage() {
                       <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <span className="flex items-center space-x-1">
                           <User className="h-3 w-3" />
-                          <span>{service.cognome || 'N/A'}</span>
+                          <span>{service.student ? 
+                            `${service.student.firstName} ${service.student.lastName}` : 
+                            (service.cognome || 'N/A')
+                          }</span>
                         </span>
                         <span className="flex items-center space-x-1">
                           <Calendar className="h-3 w-3" />

@@ -424,7 +424,10 @@ export default function ModernDashboard() {
                       <div>
                         <div className="font-medium">{service.sigla}</div>
                         <div className="text-sm text-gray-500">
-                          {service.cognome || 'N/A'} • {format(new Date(service.date), 'dd/MM', { locale: it })}
+                          {service.student ? 
+                            `${service.student.firstName} ${service.student.lastName}` : 
+                            (service.cognome || 'N/A')
+                          } • {format(new Date(service.date), 'dd/MM', { locale: it })}
                         </div>
                       </div>
                     </div>

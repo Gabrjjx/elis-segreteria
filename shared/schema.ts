@@ -412,6 +412,8 @@ export const students = pgTable("students", {
   sigla: text("sigla").notNull().unique(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
+  email: text("email"), // Optional email field
+  phone: text("phone"), // Optional phone field
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -421,6 +423,8 @@ export const insertStudentSchema = createInsertSchema(students).pick({
   sigla: true,
   firstName: true,
   lastName: true,
+  email: true,
+  phone: true,
 });
 
 // Schema per la ricerca degli studenti
@@ -428,6 +432,8 @@ export const studentSearchSchema = z.object({
   sigla: z.string().optional(),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
   page: z.number().int().positive().optional().default(1),
   limit: z.number().int().positive().optional().default(10),
 });
