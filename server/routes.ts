@@ -56,6 +56,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 import { archiveService } from './services/archiveService';
+import { transformHistoricalServiceRow } from './utils/historicalTransformer';
+import importTSVRouter from './routes/importTSV';
 
 // Type definitions for historical import
 interface HistoricalServiceRow {
@@ -67,8 +69,10 @@ interface HistoricalServiceRow {
   notes?: string;
 }
 
-// Transform historical service row from PDF format to database format
-function transformHistoricalServiceRow(row: any, year: number): any {
+// Historical transformer moved to utils/historicalTransformer.ts to avoid circular imports
+export { transformHistoricalServiceRow };
+
+function _transformHistoricalServiceRow_MOVED_TO_UTILS(row: any): any {
   if (!row || typeof row !== 'object') {
     throw new Error('Invalid row data');
   }
@@ -179,19 +183,8 @@ function transformHistoricalServiceRow(row: any, year: number): any {
     notes = row.notes;
   }
   
-  return {
-    date: parsedDate,
-    sigla,
-    cognome: null, // Not available in PDF
-    pieces,
-    type: mappedType,
-    amount,
-    status: 'paid', // Historical data is assumed paid
-    paymentMethod: null,
-    notes,
-    archivedYear: parsedDate.getFullYear(), // Use the actual year from the record's date
-    archivedAt: new Date() // Set archived timestamp
-  };
+  // MOVED TO utils/historicalTransformer.ts - remove this old implementation
+  return null; // This function is now imported from utils
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -2436,7 +2429,7 @@ RifID: ${hashId}`
       
       for (let i = 0; i < rows.length; i++) {
         try {
-          const transformedRow = transformHistoricalServiceRow(rows[i], year);
+          const transformedRow = transformHistoricalServiceRow(rows[i]);
           transformedRows.push(transformedRow);
         } catch (error) {
           const errorMsg = `Row ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`;
@@ -2525,6 +2518,9 @@ RifID: ${hashId}`
       });
     }
   });
+
+  // Register TSV import router
+  app.use('/api', importTSVRouter);
 
   const httpServer = createServer(app);
   return httpServer;
