@@ -58,6 +58,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 import { archiveService } from './services/archiveService';
 import { transformHistoricalServiceRow } from './utils/historicalTransformer';
 import importTSVRouter from './routes/importTSV';
+import importNewTSVRouter from './routes/importNewTSV';
 
 // Type definitions for historical import
 interface HistoricalServiceRow {
@@ -2519,8 +2520,9 @@ RifID: ${hashId}`
     }
   });
 
-  // Register TSV import router
+  // Register TSV import routers
   app.use('/api', importTSVRouter);
+  app.use('/api', importNewTSVRouter);
 
   const httpServer = createServer(app);
   return httpServer;
