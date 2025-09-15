@@ -83,7 +83,7 @@ router.post('/import/services/tsv', async (req, res) => {
         
         try {
           // Check for existing service to avoid duplicates
-          const existing = await storage.getServices({
+          const existingResult = await storage.getServices({
             startDate: service.date,
             endDate: service.date,
             sigla: service.sigla,
@@ -92,7 +92,10 @@ router.post('/import/services/tsv', async (req, res) => {
             includeArchived: true // Include archived data in duplicate check
           });
           
-          const duplicate = existing.find(s => 
+          // Handle case where getServices returns {services: [...]} not array directly
+          const existingServices = Array.isArray(existingResult) ? existingResult : existingResult.services || [];
+          
+          const duplicate = existingServices.find(s => 
             s.sigla === service.sigla && 
             s.type === service.type && 
             s.pieces === service.pieces &&
