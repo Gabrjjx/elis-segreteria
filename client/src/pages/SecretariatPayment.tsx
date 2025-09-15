@@ -55,9 +55,9 @@ function CheckoutForm({ clientSecret, onSuccess, onError, amount, sigla }: {
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        // Remove return_url to prevent redirect issues
+        // No return_url specified - prevents automatic redirects
       },
-      redirect: "never", // Handle confirmation without redirects
+      redirect: "if_required", // Valid Stripe option
     });
 
     if (error) {
