@@ -16,35 +16,49 @@ interface ParsedDatabaseService {
   archivedYear: number;
 }
 
-// Parse database export format
-export function parseDatabaseExportFile(filePath: string): { services: ParsedDatabaseService[], errors: string[] } {
+// Parse database export format - REBUILT FROM SCRATCH
+function parseDatabaseExportFile(filePath: string): { services: ParsedDatabaseService[], errors: string[] } {
   const content = fs.readFileSync(filePath, 'utf8');
   const lines = content.split('\n').filter(line => line.trim().length > 0);
   
   const services: ParsedDatabaseService[] = [];
   const errors: string[] = [];
   
-  console.log(`Processing ${lines.length} lines from database export format`);
+  console.log(`🔍 Processing ${lines.length} lines from database export format`);
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
     
     try {
-      // Parse line with fixed column positions to handle datetime properly
-      // Format: ID datetime sigla pieces type amount status [notes...]
-      // Example: 2 2025-04-29 00:00:00.000 177 1 siglatura 0.5 paid
+      // EXACT FORMAT: ID date time sigla pieces type amount status [notes...]
+      // EXAMPLE: "2 2025-04-29 00:00:00.000 177 1 siglatura 0.5 paid"
+      // COLUMNS:  0  1         2            3   4  5        6   7
+      
+      console.log(`🔍 RAW LINE ${i + 1}: "${line}"`);
       
       const parts = line.split(/\s+/);
+      console.log(`🔍 SPLIT PARTS ${i + 1}: [${parts.map(p => `"${p}"`).join(', ')}] (${parts.length} parts)`);
+      
       if (parts.length < 8) {
         errors.push(`Line ${i + 1}: insufficient columns (${parts.length}) - ${line}`);
         continue;
       }
       
-      // Extract parts: ID date time sigla pieces type amount status [notes...]
-      const [idStr, dateStr, timeStr, sigla, piecesStr, type, amountStr, status, ...notesParts] = parts;
+      // Extract by exact position
+      const idStr = parts[0];      // "2"
+      const dateStr = parts[1];    // "2025-04-29"
+      const timeStr = parts[2];    // "00:00:00.000"
+      const sigla = parts[3];      // "177" 
+      const piecesStr = parts[4];  // "1"
+      const type = parts[5];       // "siglatura"
+      const amountStr = parts[6];  // "0.5"
+      const status = parts[7];     // "paid"
+      const notesParts = parts.slice(8); // remaining parts
       
-      // Combine date and time back together
+      console.log(`🔍 EXTRACTED ${i + 1}: id=${idStr}, date=${dateStr}, time=${timeStr}, sigla=${sigla}, pieces=${piecesStr}, type=${type}, amount=${amountStr}, status=${status}`);
+      
+      // Combine date and time
       const dateTimeStr = `${dateStr} ${timeStr}`;
       
       // Parse ID
@@ -54,7 +68,7 @@ export function parseDatabaseExportFile(filePath: string): { services: ParsedDat
         continue;
       }
       
-      // Parse datetime (ISO format: 2025-04-29 00:00:00.000)
+      // Parse datetime
       const date = new Date(dateTimeStr);
       if (isNaN(date.getTime())) {
         errors.push(`Line ${i + 1}: invalid datetime - ${dateTimeStr}`);
@@ -70,18 +84,11 @@ export function parseDatabaseExportFile(filePath: string): { services: ParsedDat
       // Parse pieces
       const pieces = parseInt(piecesStr) || 1;
       
-      // Parse amount (already per-piece in database export format)
+      // Parse amount
       const amount = parseFloat(amountStr) || 0;
       
-      // Normalize type
-      let normalizedType = type.toLowerCase();
-      if (normalizedType === 'happy_hour') {
-        normalizedType = 'happy_hour';
-      } else if (normalizedType === 'siglatura') {
-        normalizedType = 'siglatura';
-      } else if (normalizedType === 'riparazione') {
-        normalizedType = 'riparazione';
-      }
+      // Type is already normalized in the file
+      const normalizedType = type.toLowerCase();
       
       // Combine notes if any
       const notes = notesParts.length > 0 ? notesParts.join(' ') : undefined;
@@ -89,7 +96,7 @@ export function parseDatabaseExportFile(filePath: string): { services: ParsedDat
       // Determine archived year
       const archivedYear = date.getFullYear();
       
-      services.push({
+      const service = {
         id,
         date,
         sigla,
@@ -99,14 +106,17 @@ export function parseDatabaseExportFile(filePath: string): { services: ParsedDat
         status,
         notes,
         archivedYear
-      });
+      };
+      
+      console.log(`✅ SERVICE CREATED ${i + 1}: ${JSON.stringify(service)}`);
+      services.push(service);
       
     } catch (error) {
       errors.push(`Line ${i + 1}: parsing error - ${error.message}`);
     }
   }
   
-  console.log(`Successfully parsed ${services.length} services from database export format`);
+  console.log(`✅ Successfully parsed ${services.length} services from database export format`);
   return { services, errors };
 }
 
