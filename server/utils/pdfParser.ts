@@ -8,7 +8,7 @@ export interface PDFServiceRow {
   sigla: string;
   pieces: number;
   type: string;
-  amount: number; // Per piece amount in euros
+  totalAmount: number; // Total amount for all pieces in euros
   notes?: string;
 }
 
@@ -61,8 +61,9 @@ export function parsePDFServices(pdfLines: string[]): PDFServiceRow[] {
 
 /**
  * Parse a single service line from PDF
- * Expected format: "DD/MM/YYYY SIGLA PIECES TYPE AMOUNT"
- * Example: "06/02/2020 97 1 Siglatura € 0,40"
+ * Expected format: "DD/MM/YYYY SIGLA PIECES TYPE TOTAL_AMOUNT"
+ * Example: "06/02/2020 97 1 Siglatura € 0,40" (total for 1 piece)
+ * Example: "11/02/2020 93 2 Siglatura € 0,80" (total for 2 pieces = 0.40 per piece)
  */
 function parseServiceLine(line: string): PDFServiceRow | null {
   // Clean up the line
@@ -109,7 +110,7 @@ function parseServiceLine(line: string): PDFServiceRow | null {
   }
   
   if (amountIndex === -1) {
-    throw new Error('No amount found in line');
+    throw new Error('No total amount found in line');
   }
   
   // Extract type (everything between pieces and amount)
@@ -119,16 +120,16 @@ function parseServiceLine(line: string): PDFServiceRow | null {
   
   type = normalizeServiceType(type.trim());
   
-  // Parse amount (remove € and convert to number)
+  // Parse total amount (remove € and convert to number)
   const amountStr = parts.slice(amountIndex).join(' ');
-  const amount = parseAmount(amountStr);
+  const totalAmount = parseAmount(amountStr);
   
   return {
     date: normalizeDateFormat(dateStr),
     sigla,
     pieces,
     type,
-    amount
+    totalAmount
   };
 }
 
@@ -202,8 +203,9 @@ function normalizeServiceType(rawType: string): string {
 }
 
 /**
- * Parse amount string to number
+ * Parse total amount string to number
  * Handles formats like "€ 0,40", "€ 1,20", "€ 5,00"
+ * Returns the total amount for all pieces as found in the PDF
  */
 function parseAmount(amountStr: string): number {
   // Remove currency symbols and spaces
@@ -218,16 +220,20 @@ function parseAmount(amountStr: string): number {
     throw new Error(`Invalid amount format: ${amountStr}`);
   }
   
-  const amount = parseFloat(match[0]);
-  if (isNaN(amount) || amount < 0) {
+  const totalAmount = parseFloat(match[0]);
+  if (isNaN(totalAmount) || totalAmount < 0) {
     throw new Error(`Invalid amount value: ${amountStr}`);
   }
   
-  return amount;
+  return totalAmount;
 }
 
 /**
  * Create sample test data for testing the import endpoint
+ * Note: totalAmount represents the total cost for all pieces
+ * - pieces=1, totalAmount=0.40 means 0.40 per piece
+ * - pieces=2, totalAmount=0.80 means 0.40 per piece (total = 2 × 0.40)
+ * - pieces=2, totalAmount=9.50 means 4.75 per piece (total = 2 × 4.75)
  */
 export function createSampleHistoricalData(): PDFServiceRow[] {
   return [
@@ -236,28 +242,28 @@ export function createSampleHistoricalData(): PDFServiceRow[] {
       sigla: '97',
       pieces: 1,
       type: 'siglatura',
-      amount: 0.40
+      totalAmount: 0.40  // 1 piece × 0.40 per piece = 0.40 total
     },
     {
       date: '11/02/2020',
       sigla: '93',
       pieces: 2,
       type: 'siglatura',
-      amount: 0.80
+      totalAmount: 0.80  // 2 pieces × 0.40 per piece = 0.80 total
     },
     {
       date: '18/10/2024',
       sigla: '102',
       pieces: 2,
       type: 'happy hour',
-      amount: 9.50
+      totalAmount: 9.50  // 2 pieces × 4.75 per piece = 9.50 total
     },
     {
       date: '26/01/2021',
       sigla: '198',
       pieces: 1,
       type: 'orlo',
-      amount: 5.00
+      totalAmount: 5.00  // 1 piece × 5.00 per piece = 5.00 total
     }
   ];
 }
