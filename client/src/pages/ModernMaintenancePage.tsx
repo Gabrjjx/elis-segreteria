@@ -507,12 +507,12 @@ export default function ModernMaintenancePage() {
       {selectedRequest && (
         <MaintenanceDetail
           request={selectedRequest}
-          open={isDetailOpen}
+          isOpen={isDetailOpen}
           onClose={() => {
             setIsDetailOpen(false);
             setSelectedRequest(null);
           }}
-          onUpdate={() => {
+          onStatusChange={() => {
             refetch();
             toast({
               title: "Richiesta aggiornata",
