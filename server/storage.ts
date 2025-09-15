@@ -1,5 +1,6 @@
 import { 
   Service,
+  ServiceWithStudent,
   InsertService,
   ServiceSearch,
   User, 
@@ -48,8 +49,8 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   
   // Service operations
-  getServices(params: ServiceSearch): Promise<{ services: Service[], total: number }>;
-  getService(id: number): Promise<Service | undefined>;
+  getServices(params: ServiceSearch): Promise<{ services: ServiceWithStudent[], total: number }>;
+  getService(id: number): Promise<ServiceWithStudent | undefined>;
   createService(service: InsertService): Promise<Service>;
   updateService(id: number, service: Partial<InsertService>): Promise<Service | undefined>;
   deleteService(id: number): Promise<boolean>;
@@ -64,8 +65,8 @@ export interface IStorage {
     totalAmount: number,
     pendingAmount: number
   }>;
-  getPendingPayments(dateFilter?: { startDate?: Date, endDate?: Date, includeArchived?: boolean }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]>;
-  getRecentServices(limit: number, dateFilter?: { startDate?: Date, endDate?: Date, includeArchived?: boolean }): Promise<(Service & { student?: { firstName: string, lastName: string } })[]>;
+  getPendingPayments(dateFilter?: { startDate?: Date, endDate?: Date, includeArchived?: boolean }): Promise<(Service & { student?: { firstName: string, lastName: string, email?: string, phone?: string } })[]>;
+  getRecentServices(limit: number, dateFilter?: { startDate?: Date, endDate?: Date, includeArchived?: boolean }): Promise<(Service & { student?: { firstName: string, lastName: string, email?: string, phone?: string } })[]>;
   
   // Maintenance request operations
   getMaintenanceRequests(params: MaintenanceRequestSearch): Promise<{ requests: MaintenanceRequest[], total: number }>;
@@ -726,7 +727,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Service operations
-  async getServices(params: ServiceSearch): Promise<{ services: Service[], total: number }> {
+  async getServices(params: ServiceSearch): Promise<{ services: ServiceWithStudent[], total: number }> {
     // Costruisci le condizioni di query
     const whereConditions = [];
     
@@ -763,7 +764,9 @@ export class DatabaseStorage implements IStorage {
       service: services,
       student: {
         firstName: students.firstName,
-        lastName: students.lastName
+        lastName: students.lastName,
+        email: students.email,
+        phone: students.phone
       }
     })
     .from(services)
@@ -818,8 +821,10 @@ export class DatabaseStorage implements IStorage {
         ...result.service,
         student: result.student?.firstName ? {
           firstName: result.student.firstName,
-          lastName: result.student.lastName
-        } : null
+          lastName: result.student.lastName,
+          email: result.student.email,
+          phone: result.student.phone
+        } : undefined
       }));
       
       return {
@@ -832,12 +837,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getService(id: number): Promise<(Service & { student?: { firstName: string, lastName: string } }) | undefined> {
+  async getService(id: number): Promise<ServiceWithStudent | undefined> {
     const result = await db.select({
       service: services,
       student: {
         firstName: students.firstName,
-        lastName: students.lastName
+        lastName: students.lastName,
+        email: students.email,
+        phone: students.phone
       }
     })
     .from(services)
@@ -853,7 +860,9 @@ export class DatabaseStorage implements IStorage {
       ...result[0].service,
       student: result[0].student.firstName ? {
         firstName: result[0].student.firstName,
-        lastName: result[0].student.lastName
+        lastName: result[0].student.lastName,
+        email: result[0].student.email,
+        phone: result[0].student.phone
       } : undefined
     };
   }
@@ -1058,7 +1067,9 @@ export class DatabaseStorage implements IStorage {
       student: {
         // Map the database snake_case to camelCase for frontend
         firstName: students.firstName,
-        lastName: students.lastName
+        lastName: students.lastName,
+        email: students.email,
+        phone: students.phone
       }
     })
     .from(services)
@@ -1100,7 +1111,9 @@ export class DatabaseStorage implements IStorage {
       student: {
         // Map the database snake_case to camelCase for frontend
         firstName: students.firstName,
-        lastName: students.lastName
+        lastName: students.lastName,
+        email: students.email,
+        phone: students.phone
       }
     })
     .from(services)

@@ -32,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import FloatingActionButton from "@/components/ui/floating-action-button";
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { ServiceWithStudent } from "@shared/schema";
 
 // Interfacce per il dashboard moderno
 interface DashboardMetrics {
@@ -44,15 +45,8 @@ interface DashboardMetrics {
   pendingAmount: number;
 }
 
-interface RecentService {
-  id: number;
-  date: string;
-  sigla: string;
-  cognome: string;
-  type: string;
-  amount: number;
-  status: string;
-}
+// Using ServiceWithStudent from shared schema instead of local interface
+type RecentService = ServiceWithStudent;
 
 export default function ModernDashboard() {
   const [, setLocation] = useLocation();

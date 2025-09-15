@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useRouter } from "wouter";
+import { useLocation } from "wouter";
 import { CheckCircle, Download, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,8 +22,7 @@ interface PaymentSuccessData {
 }
 
 export default function PaymentSuccess() {
-  const [location] = useLocation();
-  const [, navigate] = useRouter();
+  const [location, navigate] = useLocation();
   const [paymentData, setPaymentData] = useState<PaymentSuccessData | null>(null);
 
   useEffect(() => {

@@ -150,6 +150,8 @@ export type ServiceWithStudent = Service & {
   student?: {
     firstName: string;
     lastName: string;
+    email?: string;
+    phone?: string;
   }
 };
 

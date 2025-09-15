@@ -405,7 +405,19 @@ export default function ModernMaintenancePage() {
                         </span>
                         <span className="flex items-center space-x-1">
                           <Calendar className="h-3 w-3" />
-                          <span>{format(new Date(request.createdAt), 'dd/MM/yyyy HH:mm', { locale: it })}</span>
+                          <span>{
+                            (() => {
+                              try {
+                                const date = new Date(request.createdAt);
+                                if (!isNaN(date.getTime())) {
+                                  return format(date, 'dd/MM/yyyy HH:mm', { locale: it });
+                                }
+                                return 'Data non valida';
+                              } catch {
+                                return 'Data non disponibile';
+                              }
+                            })()
+                          }</span>
                         </span>
                       </div>
                     </div>

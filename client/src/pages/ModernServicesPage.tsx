@@ -24,26 +24,20 @@ import {
   Edit,
   Trash2
 } from "lucide-react";
-import { ServiceTypeValue, PaymentStatusValue } from "@shared/schema";
+import { ServiceTypeValue, PaymentStatusValue, ServiceWithStudent } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
-interface Service {
-  id: number;
-  date: string;
-  sigla: string;
-  cognome: string;
-  pieces: number;
-  type: string;
-  amount: number;
-  status: string;
-  notes?: string;
-}
+// Utility function to format student name with fallback
+const formatStudentName = (student?: { firstName: string; lastName: string; email?: string; phone?: string } | null): string => {
+  if (!student?.firstName) return 'Senza studente';
+  return `${student.firstName} ${student.lastName}`;
+};
 
 interface ServiceResponse {
-  services: Service[];
+  services: ServiceWithStudent[];
   total: number;
 }
 
@@ -244,7 +238,7 @@ export default function ModernServicesPage() {
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     type="text"
-                    placeholder="Sigla, nome, note..."
+                    placeholder="Sigla, nome studente, email, note..."
                     value={filters.query}
                     onChange={(e) => setFilters(prev => ({ ...prev, query: e.target.value }))}
                     className="pl-9 premium-input"
@@ -344,10 +338,14 @@ export default function ModernServicesPage() {
                       <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <span className="flex items-center space-x-1">
                           <User className="h-3 w-3" />
-                          <span>{service.student ? 
-                            `${service.student.firstName} ${service.student.lastName}` : 
-                            (service.cognome || 'N/A')
-                          }</span>
+                          <div>
+                            <span>{formatStudentName(service.student)}</span>
+                            {service.student?.email && (
+                              <div className="text-xs text-gray-400 mt-1">
+                                📧 {service.student.email}
+                              </div>
+                            )}
+                          </div>
                         </span>
                         <span className="flex items-center space-x-1">
                           <Calendar className="h-3 w-3" />

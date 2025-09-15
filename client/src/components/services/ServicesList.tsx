@@ -22,6 +22,12 @@ type ServiceWithStudent = Service & {
 import { Pencil, Receipt, Trash2, AlertTriangle, ChevronLeft, ChevronRight, Tag, Beer, Drill } from "lucide-react";
 import { PaymentActions } from "@/components/payments/PaymentActions";
 
+// Utility function to format student name with fallback
+const formatStudentName = (student?: { firstName: string; lastName: string; email?: string; phone?: string } | null): string => {
+  if (!student?.firstName) return 'Senza studente';
+  return `${student.firstName} ${student.lastName}`;
+};
+
 interface ServicesListProps {
   services: ServiceWithStudent[];
   total?: number;
@@ -208,19 +214,9 @@ export default function ServiceList({
                 </TableCell>
                 <TableCell className="font-medium">
                   {service.sigla}
-                  {service.student ? (
-                    <div className="text-xs text-gray-500">
-                      {service.student.firstName} {service.student.lastName}
-                    </div>
-                  ) : service.cognome ? (
-                    <div className="text-xs text-gray-500">
-                      {service.cognome}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-400 italic">
-                      Nessun studente associato
-                    </div>
-                  )}
+                  <div className="text-xs text-gray-500">
+                    {formatStudentName(service.student)}
+                  </div>
                 </TableCell>
                 <TableCell>{service.pieces}</TableCell>
                 <TableCell>{getServiceTypeBadge(service.type)}</TableCell>

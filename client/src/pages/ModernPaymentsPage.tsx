@@ -26,21 +26,16 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ServiceWithStudent } from "@shared/schema";
 
-interface Service {
-  id: number;
-  sigla: string;
-  cognome: string;
-  type: string;
-  amount: number;
-  status: string;
-  date: string;
-  notes?: string;
-  pieces: number;
-}
+// Utility function to format student name with fallback
+const formatStudentName = (student?: { firstName: string; lastName: string; email?: string; phone?: string } | null): string => {
+  if (!student?.firstName) return 'Senza studente';
+  return `${student.firstName} ${student.lastName}`;
+};
 
 interface ServicesResponse {
-  services: Service[];
+  services: ServiceWithStudent[];
   total: number;
 }
 
@@ -93,10 +88,15 @@ export default function ModernPaymentsPage() {
     markAsPaidMutation.mutate(serviceId);
   };
 
-  const filteredServices = data?.services?.filter(service =>
-    service.sigla.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    service.cognome.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredServices = data?.services?.filter(service => {
+    const searchLower = searchTerm.toLowerCase();
+    const studentName = formatStudentName(service.student);
+    const studentEmail = service.student?.email || '';
+    
+    return service.sigla.toLowerCase().includes(searchLower) ||
+           studentName.toLowerCase().includes(searchLower) ||
+           studentEmail.toLowerCase().includes(searchLower);
+  }) || [];
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -284,10 +284,14 @@ export default function ModernPaymentsPage() {
                       <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <span className="flex items-center space-x-1">
                           <User className="h-3 w-3" />
-                          <span>{service.student ? 
-                            `${service.student.firstName} ${service.student.lastName}` : 
-                            (service.cognome || 'N/A')
-                          }</span>
+                          <div>
+                            <span>{formatStudentName(service.student)}</span>
+                            {service.student?.email && (
+                              <div className="text-xs text-gray-400 mt-1">
+                                📧 {service.student.email}
+                              </div>
+                            )}
+                          </div>
                         </span>
                         <span className="flex items-center space-x-1">
                           <Calendar className="h-3 w-3" />
