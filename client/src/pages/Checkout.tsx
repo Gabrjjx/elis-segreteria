@@ -15,7 +15,7 @@ if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
 }
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
-const CheckoutForm = ({ sigla }: { sigla: string }) => {
+const CheckoutForm = ({ sigla, clientSecret }: { sigla: string; clientSecret: string }) => {
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
@@ -31,45 +31,157 @@ const CheckoutForm = ({ sigla }: { sigla: string }) => {
       return;
     }
 
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        // No return_url specified - prevents automatic redirects
-      },
-      redirect: "if_required", // Valid Stripe option
-    });
-
-    if (error) {
-      toast({
-        title: "Errore nel Pagamento",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else if (paymentIntent && paymentIntent.status === "succeeded") {
-      // Payment succeeded, navigate to success page manually
-      toast({
-        title: "Pagamento Completato",
-        description: "Grazie per il tuo pagamento!",
-      });
+    try {
+      console.log('🔄 Initiating payment confirmation...');
       
-      // Navigate to success page with payment data
-      navigate(`/payment-success?payment_intent=${paymentIntent.id}&sigla=${sigla}&method=stripe&redirect_status=succeeded`);
-    } else {
-      // Handle other payment states
-      if (paymentIntent?.status === "requires_action") {
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          // No return_url specified - prevents automatic redirects
+        },
+        redirect: "if_required", // Valid Stripe option
+      });
+
+      console.log('💳 Payment confirmation result:', { error, paymentIntentStatus: paymentIntent?.status });
+
+      if (error) {
+        console.error('❌ Payment error:', error);
         toast({
-          title: "Azione Richiesta",
-          description: "Il pagamento richiede un'azione aggiuntiva. Riprova.",
+          title: "Errore nel Pagamento",
+          description: error.message,
           variant: "destructive",
         });
+        setIsLoading(false);
+        return;
+      }
+
+      if (paymentIntent) {
+        console.log('🔍 Processing payment intent with status:', paymentIntent.status);
+        
+        if (paymentIntent.status === "succeeded") {
+          console.log('✅ Payment succeeded immediately, navigating...');
+          console.log('🔧 Navigation params:', { paymentIntentId: paymentIntent.id, sigla, method: 'stripe' });
+          
+          // Get amount from paymentIntent (convert from cents to euros)
+          const amountEuros = paymentIntent.amount / 100;
+          const navigationUrl = `/payment-success?payment_intent=${paymentIntent.id}&sigla=${sigla}&method=stripe&amount=${amountEuros}&redirect_status=succeeded`;
+          console.log('🔗 Navigation URL:', navigationUrl);
+          
+          toast({
+            title: "Pagamento Completato",
+            description: "Grazie per il tuo pagamento!",
+          });
+          
+          // Navigate to success page with payment data
+          navigate(navigationUrl);
+          return;
+        } 
+        
+        if (paymentIntent.status === "processing") {
+          console.log('⏳ Payment processing, polling for status...');
+          // Payment is processing, poll for status update
+          let attempts = 0;
+          const maxAttempts = 10; // Maximum 20 seconds of polling
+          
+          const pollPaymentStatus = async () => {
+            attempts++;
+            console.log(`🔄 Polling attempt ${attempts}/${maxAttempts}...`);
+            
+            try {
+              const { paymentIntent: updatedPI } = await stripe.retrievePaymentIntent(clientSecret!);
+              console.log('📡 Retrieved payment status:', updatedPI?.status);
+              
+              if (updatedPI?.status === "succeeded") {
+                console.log('✅ Payment succeeded after polling, navigating...');
+                console.log('🔧 Polling navigation params:', { paymentIntentId: updatedPI.id, sigla, method: 'stripe' });
+                
+                // Get amount from paymentIntent (convert from cents to euros)
+                const amountEuros = updatedPI.amount / 100;
+                const navigationUrl = `/payment-success?payment_intent=${updatedPI.id}&sigla=${sigla}&method=stripe&amount=${amountEuros}&redirect_status=succeeded`;
+                console.log('🔗 Polling navigation URL:', navigationUrl);
+                
+                toast({
+                  title: "Pagamento Completato",
+                  description: "Grazie per il tuo pagamento!",
+                });
+                navigate(navigationUrl);
+                setIsLoading(false);
+                return;
+              } 
+              
+              if (updatedPI?.status === "requires_payment_method" || updatedPI?.status === "canceled") {
+                console.log('❌ Payment failed during polling:', updatedPI.status);
+                toast({
+                  title: "Pagamento Fallito",
+                  description: "Il pagamento non è andato a buon fine. Riprova.",
+                  variant: "destructive",
+                });
+                setIsLoading(false);
+                return;
+              }
+              
+              // Still processing, continue polling if we have attempts left
+              if (attempts < maxAttempts && (updatedPI?.status === "processing" || updatedPI?.status === "requires_action")) {
+                setTimeout(pollPaymentStatus, 2000); // Poll every 2 seconds
+              } else {
+                console.log('⏰ Polling timeout or final status:', updatedPI?.status);
+                // Timeout or final status reached
+                toast({
+                  title: "Verifica Pagamento",
+                  description: "Il pagamento potrebbe essere in elaborazione. Controlla lo stato del pagamento.",
+                  variant: "default",
+                });
+                setIsLoading(false);
+              }
+            } catch (pollError) {
+              console.error('❌ Error polling payment status:', pollError);
+              toast({
+                title: "Errore di Connessione",
+                description: "Errore nel verificare lo stato del pagamento. Riprova.",
+                variant: "destructive",
+              });
+              setIsLoading(false);
+            }
+          };
+          
+          // Start polling after a short delay
+          setTimeout(pollPaymentStatus, 1000);
+          return;
+        }
+        
+        if (paymentIntent.status === "requires_action") {
+          console.log('🔐 Payment requires action');
+          toast({
+            title: "Azione Richiesta",
+            description: "Il pagamento richiede un'azione aggiuntiva. Riprova.",
+            variant: "destructive",
+          });
+        } else {
+          console.log('❓ Unknown payment status:', paymentIntent.status);
+          toast({
+            title: "Stato Sconosciuto",
+            description: `Stato del pagamento: ${paymentIntent.status}. Contatta il supporto se necessario.`,
+            variant: "default",
+          });
+        }
       } else {
+        console.log('❌ No payment intent returned');
         toast({
-          title: "Stato Sconosciuto",
-          description: "Stato del pagamento non riconosciuto. Contatta il supporto.",
+          title: "Errore",
+          description: "Nessun risultato di pagamento ricevuto. Riprova.",
           variant: "destructive",
         });
       }
+      
+    } catch (submitError) {
+      console.error('❌ Error in handleSubmit:', submitError);
+      toast({
+        title: "Errore Imprevisto",
+        description: "Si è verificato un errore. Riprova.",
+        variant: "destructive",
+      });
     }
+    
     setIsLoading(false);
   }
 
@@ -148,7 +260,7 @@ export default function Checkout() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Elements stripe={stripePromise} options={{ clientSecret }}>
-        <CheckoutForm sigla={sigla} />
+        <CheckoutForm sigla={sigla} clientSecret={clientSecret} />
       </Elements>
     </div>
   );
