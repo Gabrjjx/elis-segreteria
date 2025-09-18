@@ -29,7 +29,7 @@ import {
   captureOrder as capturePaypalOrder,
   checkOrderStatus as checkPaypalOrderStatus
 } from "./services/paypalService";
-import { createBikePaymentIntent, handleStripeWebhook, verifyBikePaymentStatus } from "./stripe";
+import { createBikePaymentIntent, handleStripeWebhook, verifyBikePaymentStatus, verifySecretariatPaymentStatus } from "./stripe";
 import {
   createSatispayPayment,
   checkSatispayPaymentStatus,
@@ -2031,6 +2031,9 @@ RifID: ${hashId}`
   app.post("/api/stripe/create-bike-payment", createBikePaymentIntent);
   // Webhook route moved to server/index.ts with raw body parsing
   app.get("/api/stripe/verify/:orderId", verifyBikePaymentStatus);
+  
+  // BACKUP SYSTEM: Manual verification endpoint for secretariat payments
+  app.get("/api/stripe/verify-secretariat/:orderId", verifySecretariatPaymentStatus);
 
   // Public endpoint for bike service payment (Stripe)
   app.post("/api/public/bike-payment", createBikePaymentIntent);
