@@ -2,9 +2,18 @@ import * as cron from 'node-cron';
 import { reportService } from './reportService';
 import * as fs from 'fs';
 import * as path from 'path';
+import { storage } from '../storage';
+import { SecretariatPaymentStatus } from '@shared/schema';
+import Stripe from 'stripe';
+
+// Initialize Stripe client for scheduled reconciliation
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: "2024-12-18.acacia",
+});
 
 export class SchedulerService {
   private reportJob: any = null;
+  private paymentReconciliationJob: any = null;
 
   async start() {
     console.log('Starting scheduler service...');
@@ -17,6 +26,15 @@ export class SchedulerService {
     });
 
     console.log('Daily report job scheduled for 23:00 (Europe/Rome timezone)');
+    
+    // 🚀 AUTOMAZIONE 100%: Schedule payment reconciliation every 5 minutes
+    this.paymentReconciliationJob = cron.schedule('*/5 * * * *', async () => {
+      await this.reconcileStuckPayments();
+    }, {
+      timezone: 'Europe/Rome'
+    });
+
+    console.log('🔄 Payment reconciliation job scheduled every 5 minutes for 100% automation');
     
     // Optional: Generate a test report immediately on startup (for development)
     if (process.env.NODE_ENV === 'development') {
@@ -114,10 +132,120 @@ export class SchedulerService {
     console.log(`Cleaned ${deletedCount} old reports`);
   }
 
+  // 🎯 AUTOMATIC RECONCILIATION: Check and fix stuck payments every 5 minutes
+  private async reconcileStuckPayments() {
+    try {
+      console.log('🔍 Starting automatic payment reconciliation...');
+
+      // Find payments stuck in PROCESSING status
+      const processingPayments = await storage.getSecretariatPayments({
+        status: SecretariatPaymentStatus.PROCESSING
+      });
+      
+      if (processingPayments.length === 0) {
+        console.log('✅ No processing payments found');
+        return;
+      }
+
+      // Filter payments that are older than 5 minutes
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const stuckPayments = processingPayments.filter(payment => 
+        new Date(payment.createdAt) < fiveMinutesAgo
+      );
+
+      if (stuckPayments.length === 0) {
+        console.log(`⏳ Found ${processingPayments.length} processing payments but none older than 5 minutes`);
+        return;
+      }
+
+      console.log(`🔧 Found ${stuckPayments.length} stuck payments to reconcile`);
+
+      let reconciledCount = 0;
+      let failedCount = 0;
+
+      for (const payment of stuckPayments) {
+        try {
+          console.log(`🔄 Reconciling payment ${payment.orderId} (${payment.sigla})...`);
+
+          // Query Stripe for payment intent status using metadata search
+          const paymentIntents = await stripe.paymentIntents.list({
+            limit: 100
+          });
+
+          const stripePayment = paymentIntents.data.find(pi => pi.metadata.orderId === payment.orderId);
+
+          if (!stripePayment) {
+            console.log(`⚠️  No Stripe payment found for ${payment.orderId}, skipping...`);
+            continue;
+          }
+
+          console.log(`💳 Found Stripe payment ${stripePayment.id} with status: ${stripePayment.status}`);
+
+          // If Stripe shows succeeded, update our database
+          if (stripePayment.status === 'succeeded') {
+            console.log(`💰 Reconciling succeeded payment: ${payment.orderId}`);
+
+            // Update payment status
+            await storage.updateSecretariatPaymentStatus(
+              payment.orderId,
+              SecretariatPaymentStatus.COMPLETED,
+              new Date()
+            );
+
+            // Update associated services
+            const serviceIdsStr = stripePayment.metadata.serviceIds;
+            const serviceIds = serviceIdsStr ? 
+              serviceIdsStr.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [];
+
+            for (const serviceId of serviceIds) {
+              try {
+                await storage.updateService(serviceId, { status: "paid" });
+                console.log(`✅ Reconciled service ${serviceId} to paid`);
+              } catch (serviceError) {
+                console.error(`❌ Failed to reconcile service ${serviceId}:`, serviceError);
+              }
+            }
+
+            reconciledCount++;
+            console.log(`🎉 Successfully reconciled payment ${payment.orderId} for sigla ${payment.sigla} (${serviceIds.length} services)`);
+
+          } else if (stripePayment.status === 'canceled' || stripePayment.status === 'requires_payment_method') {
+            // Update to failed status
+            await storage.updateSecretariatPaymentStatus(
+              payment.orderId,
+              SecretariatPaymentStatus.FAILED,
+              new Date()
+            );
+            console.log(`❌ Marked payment ${payment.orderId} as failed (Stripe status: ${stripePayment.status})`);
+
+          } else {
+            console.log(`⏳ Payment ${payment.orderId} still ${stripePayment.status} on Stripe, keeping as processing`);
+          }
+
+        } catch (paymentError) {
+          console.error(`❌ Failed to reconcile payment ${payment.orderId}:`, paymentError);
+          failedCount++;
+        }
+      }
+
+      if (reconciledCount > 0 || failedCount > 0) {
+        console.log(`🎯 Payment reconciliation completed: ${reconciledCount} reconciled, ${failedCount} failed`);
+      }
+
+    } catch (error) {
+      console.error('❌ Payment reconciliation job failed:', error);
+    }
+  }
+
   stop() {
     if (this.reportJob) {
       this.reportJob.stop();
       console.log('Daily report job stopped');
+    }
+    
+    if (this.paymentReconciliationJob) {
+      this.paymentReconciliationJob.stop();
+      console.log('Payment reconciliation job stopped');
     }
   }
 
