@@ -26,26 +26,41 @@ export default function PaymentSuccess() {
   const [paymentData, setPaymentData] = useState<PaymentSuccessData | null>(null);
 
   useEffect(() => {
-    // Estrai i parametri dall'URL
-    const [path, search] = location.split('?');
-    const urlParams = new URLSearchParams(search || '');
-    const paymentId = urlParams.get('payment_id');
+    // Estrai i parametri dall'URL usando window.location.search invece di wouter location
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Gestisci sia i nuovi parametri (payment_intent, sigla) che i vecchi (payment_id, amount)
+    const paymentId = urlParams.get('payment_intent') || urlParams.get('payment_id');
+    const sigla = urlParams.get('sigla');
     const method = urlParams.get('method');
     const amount = urlParams.get('amount');
+    const redirectStatus = urlParams.get('redirect_status');
+    
+    console.log('PaymentSuccess - Current URL:', window.location.href);
+    console.log('PaymentSuccess - Search params:', window.location.search);
+    console.log('PaymentSuccess - URL params:', { paymentId, sigla, method, amount, redirectStatus });
     
     // Recupera i dati dal localStorage se disponibili
     const storedData = localStorage.getItem('paymentSuccessData');
     if (storedData) {
+      console.log('PaymentSuccess - Using stored data from localStorage');
       setPaymentData(JSON.parse(storedData));
       // Pulisci il localStorage dopo aver recuperato i dati
       localStorage.removeItem('paymentSuccessData');
-    } else if (paymentId && method && amount) {
+    } else if (paymentId && method) {
+      console.log('PaymentSuccess - Creating minimal data from URL params');
+      // Se abbiamo sigla, recupera i dati del pagamento dal server
+      if (sigla && redirectStatus === 'succeeded') {
+        // TODO: Fetch payment data from server using sigla
+        console.log('PaymentSuccess - Should fetch data for sigla:', sigla);
+      }
+      
       // Crea dati minimi se non sono disponibili nel localStorage
       setPaymentData({
         paymentId,
         method,
-        amount: parseFloat(amount),
-        services: [],
+        amount: amount ? parseFloat(amount) : 0,
+        services: [], // TODO: fetch services from server if sigla is available
         timestamp: new Date().toISOString()
       });
     }
